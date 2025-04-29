@@ -14,5 +14,5 @@
 
 ### v1.0.0
 
-- :rocket: Initial Release using Authentik
+- :tada: Initial Release using Authentik
 

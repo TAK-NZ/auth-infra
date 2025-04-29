@@ -31,9 +31,9 @@ export default {
                     IpProtocol: 'tcp',
                     FromPort: 2049,
                     ToPort: 2049,
-                    CidrIp: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc-cidr']))
+                    CidrIp: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-cidr']))
                 }],
-                VpcId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
             }
         },
         EFSAccessPointMedia: {
@@ -62,7 +62,7 @@ export default {
             Type: 'AWS::EFS::MountTarget',
             Properties: {
                 FileSystemId: cf.ref('EFS'),
-                SubnetId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-a'])),
+                SubnetId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-a'])),
                 SecurityGroups: [cf.ref('EFSMountTargetSecurityGroup')]
             }
         },
@@ -70,7 +70,7 @@ export default {
             Type: 'AWS::EFS::MountTarget',
             Properties: {
                 FileSystemId: cf.ref('EFS'),
-                SubnetId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-b'])),
+                SubnetId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-b'])),
                 SecurityGroups: [cf.ref('EFSMountTargetSecurityGroup')]
             }
         }

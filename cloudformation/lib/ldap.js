@@ -26,8 +26,8 @@ export default {
                 Scheme: 'internal',
                 SecurityGroups: [cf.ref('NLBSecurityGroup')],
                 Subnets:  [
-                    cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-a'])),
-                    cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-b']))
+                    cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-a'])),
+                    cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-b']))
                 ]
             }
 
@@ -52,7 +52,7 @@ export default {
                     FromPort: 80,
                     ToPort: 80
                 }],
-                VpcId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
             }
         },
         LDAPListener: {
@@ -89,7 +89,7 @@ export default {
                 Port: 3389,
                 Protocol: 'TCP',
                 TargetType: 'ip',
-                VpcId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc'])),
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc'])),
 
                 HealthCheckEnabled: true,
                 HealthCheckIntervalSeconds: 30,
@@ -106,7 +106,7 @@ export default {
                 Port: 6636,
                 Protocol: 'TCP',
                 TargetType: 'ip',
-                VpcId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc'])),
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc'])),
 
                 HealthCheckEnabled: true,
                 HealthCheckIntervalSeconds: 30,
@@ -235,7 +235,7 @@ export default {
             Type: 'AWS::ECS::Service',
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'LDAP-Outpost']),
-                Cluster: cf.join(['coe-ecs-', cf.ref('Environment')]),
+                Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
                 DeploymentConfiguration: {
                     Alarms: {
                         AlarmNames: [],
@@ -255,8 +255,8 @@ export default {
                         AssignPublicIp: 'DISABLED',
                         SecurityGroups: [cf.ref('ServiceSecurityGroup')],
                         Subnets:  [
-                            cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-a'])),
-                            cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-b']))
+                            cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-a'])),
+                            cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-b']))
                         ]
                     }
                 },
@@ -280,7 +280,7 @@ export default {
                 }],
                 GroupName: cf.join('-', [cf.stackName, 'ecs-ldap-sg']),
                 GroupDescription: cf.join('-', [cf.stackName, 'ecs-sg']),
-                VpcId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc'])),
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc'])),
                 SecurityGroupIngress: [{
                     Description: 'LDAP Traffic',
                     SourceSecurityGroupId: cf.ref('NLBSecurityGroup'),

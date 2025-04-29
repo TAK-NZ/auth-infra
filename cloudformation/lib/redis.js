@@ -25,8 +25,8 @@ export default {
             Properties: {
                 Description: cf.join('-', [cf.stackName, 'redis-subnets']),
                 SubnetIds: [
-                    cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-a'])),
-                    cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-b']))
+                    cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-a'])),
+                    cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-b']))
                 ]
             }
         },
@@ -45,7 +45,7 @@ export default {
                     ToPort: 6379,
                     SourceSecurityGroupId: cf.getAtt('ServiceSecurityGroup', 'GroupId')         
                 }],
-                VpcId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
             }
         }
     },
