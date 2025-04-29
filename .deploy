@@ -1,0 +1,17 @@
+{
+    "name": "coe-auth",
+    "profile": "coegc",
+    "region": "us-gov-east-1",
+    "tags": [
+        {
+            "Key": "Project",
+            "Value": "infra-auth"
+        },
+        "Owner",
+        "Client"
+    ],
+    "artifacts": {
+        "docker": [            
+        ]
+    }
+}

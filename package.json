@@ -1,0 +1,35 @@
+{
+    "name": "@TAK-NZ/auth-infra",
+    "type": "module",
+    "private": true,
+    "version": "1.0.0",
+    "description": "TAK Authentication Layer using Authentik",
+    "scripts": {
+        "lint": "eslint *.js cloudformation/",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "engines": {
+        "node": ">= 18"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/TAK-NZ/auth-infra.git"
+    },
+    "author": "TAK.NZ - https://tak.nz",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/TAK-NZ/auth-infra/issues"
+    },
+    "homepage": "https://github.com/TAK-NZ/auth-infra#readme",
+    "dependencies": {
+        "@openaddresses/batch-alarms": "^4.3.1",
+        "@openaddresses/cloudfriend": "^7.0.0",
+        "@openaddresses/deploy": "^9.0.0"
+    },
+    "devDependencies": {
+        "@types/xml2js": "^0.4.11",
+        "eslint": "^9.0.0",
+        "eslint-plugin-n": "^17.11.1",
+        "eslint-plugin-node": "^11.1.0"
+    }
+}
