@@ -105,8 +105,8 @@ export default {
                 Scheme: 'internet-facing',
                 SecurityGroups: [cf.ref('ALBSecurityGroup')],
                 Subnets:  [
-                    cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-public-a'])),
-                    cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-public-b']))
+                    cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-public-a'])),
+                    cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-public-b']))
                 ]
             }
 
@@ -131,7 +131,7 @@ export default {
                     FromPort: 80,
                     ToPort: 80
                 }],
-                VpcId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
             }
         },
         HTTPListener: {
@@ -181,7 +181,7 @@ export default {
                     }
                 ],
                 TargetType: "ip",
-                VpcId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
             }
         },
         TaskRole: {
@@ -492,7 +492,7 @@ export default {
             Type: 'AWS::ECS::Service',
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'Server']),
-                Cluster: cf.join(['coe-ecs-', cf.ref('Environment')]),
+                Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
                 DeploymentConfiguration: {
                     Alarms: {
                         AlarmNames: [],
@@ -512,8 +512,8 @@ export default {
                         AssignPublicIp: 'DISABLED',
                         SecurityGroups: [cf.ref('ServiceSecurityGroup')],
                         Subnets:  [
-                            cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-a'])),
-                            cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-b']))
+                            cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-a'])),
+                            cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-b']))
                         ]
                     }
                 },
@@ -528,7 +528,7 @@ export default {
             Type: 'AWS::ECS::Service',
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'Worker']),
-                Cluster: cf.join(['coe-ecs-', cf.ref('Environment')]),
+                Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
                 DeploymentConfiguration: {
                     Alarms: {
                         AlarmNames: [],
@@ -548,8 +548,8 @@ export default {
                         AssignPublicIp: 'DISABLED',
                         SecurityGroups: [cf.ref('ServiceSecurityGroup')],
                         Subnets:  [
-                            cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-a'])),
-                            cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-subnet-private-b']))
+                            cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-a'])),
+                            cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-b']))
                         ]
                     }
                 }
@@ -564,7 +564,7 @@ export default {
                 }],
                 GroupName: cf.join('-', [cf.stackName, 'ecs-service-sg']),
                 GroupDescription: cf.join('-', [cf.stackName, 'ecs-sg']),
-                VpcId: cf.importValue(cf.join(['coe-vpc-', cf.ref('Environment'), '-vpc'])),
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc'])),
                 SecurityGroupIngress: [{
                     Description: 'ALB Traffic',
                     SourceSecurityGroupId: cf.ref('ALBSecurityGroup'),
