@@ -309,6 +309,7 @@ export default {
             DependsOn: [
                 'DBMasterSecret',
                 'AuthentikSecretKey',
+                'DBMasterSecret',
                 'EFSAccessPointMedia'
             ],
             Properties: {
@@ -400,6 +401,7 @@ export default {
             DependsOn: [
                 'DBMasterSecret',
                 'AuthentikSecretKey',
+                'DBMasterSecret',
                 'EFSAccessPointMedia'
             ],
             Properties: {
