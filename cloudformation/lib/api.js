@@ -41,8 +41,8 @@ export default {
             Properties: {
                 Description: cf.join([cf.stackName, ' Authentik Secret Key']),
                 GenerateSecretString: {
-                    ExcludeCharacters: "\"@/\\",
-                    PasswordLength: 64
+                    ExcludePunctuation: true,
+                    PasswordLength: 32
                 },
                 Name: cf.join([cf.stackName, '/authentik-secret-key']),
                 KmsKeyId: cf.ref('KMS')
@@ -67,7 +67,7 @@ export default {
             Properties: {
                 Description: cf.join([cf.stackName, ' Authentik Admin User Token']),
                 GenerateSecretString: {
-                    ExcludeCharacters: "\"@/\\",
+                    ExcludePunctuation: true,
                     PasswordLength: 32
                 },
                 Name: cf.join([cf.stackName, '/authentik-admin-token']),
