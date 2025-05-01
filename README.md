@@ -4,7 +4,7 @@
 
 ## Background
 
-The [Team Awareness Kit (TAK)](https://tak.gov/solutions/emergency) provides ire, Emergency Management, and First Responders an operationally agnostic tool for improved situational awareness and a common operational picture. 
+The [Team Awareness Kit (TAK)](https://tak.gov/solutions/emergency) provides Fire, Emergency Management, and First Responders an operationally agnostic tool for improved situational awareness and a common operational picture. 
 This repo deploys the base infrastructure required to deploy a [TAK server](https://tak.gov/solutions/emergency) along with [Authentik](https://goauthentik.io/) as the authentication layer on AWS.
 
 The following additional layers are required after deploying this `coe-base-<name>` layer:
