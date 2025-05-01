@@ -2,25 +2,28 @@ import cf from '@openaddresses/cloudfriend';
 
 export default {
     Resources: {
-        AuthentikRedis: {
+        Redis: {
             Type: 'AWS::ElastiCache::ReplicationGroup',
             Properties: {
                 AutomaticFailoverEnabled: cf.if('CreateProdResources', true, false),
                 AtRestEncryptionEnabled: true,
+                TransitEncryptionEnabled: true,
+                TransitEncryptionMode: 'preferred',
                 KmsKeyId: cf.ref('KMS'),
                 CacheNodeType: 'cache.t4g.micro',
-                CacheSubnetGroupName: cf.ref('AuthentikRedisSubnetGroup'),
-                Engine: 'redis',
-                EngineVersion: '7.1',
+                CacheSubnetGroupName: cf.ref('RedisSubnetGroup'),
+                Engine: 'valkey',
+                EngineVersion: '7.2',
+                AutoMinorVersionUpgrade: true,
                 NumCacheClusters: cf.if('CreateProdResources', 2, 1),
                 PreferredMaintenanceWindow: 'Sun:22:30-Sun:23:30',
-                ReplicationGroupDescription: "Redis cluster for authentik",
+                ReplicationGroupDescription: "Redis cluster for Authentik",
                 SecurityGroupIds: [
-                    cf.ref('AuthentikRedisSecurityGroup')
+                    cf.ref('RedisSecurityGroup')
                 ]
             }
         },
-        AuthentikRedisSubnetGroup: {
+        RedisSubnetGroup: {
             Type: 'AWS::ElastiCache::SubnetGroup',
             Properties: {
                 Description: cf.join('-', [cf.stackName, 'redis-subnets']),
@@ -30,7 +33,7 @@ export default {
                 ]
             }
         },
-        AuthentikRedisSecurityGroup: {
+        RedisSecurityGroup: {
             Type: 'AWS::EC2::SecurityGroup',
             Properties: {
                 Tags: [{

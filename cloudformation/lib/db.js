@@ -5,7 +5,7 @@ export default {
         DatabaseVersion: {
             Description: 'Aurora PostgreSQL database engine version',
             Type: 'String',
-            Default: '16.6'
+            Default: '17.4'
         }
     },
     Resources: {
@@ -16,7 +16,7 @@ export default {
                 GenerateSecretString: {
                     SecretStringTemplate: '{"username": "authentik"}',
                     GenerateStringKey: 'password',
-                    ExcludeCharacters: "\"@/\\",
+                    ExcludePunctuation: true,
                     PasswordLength: 64
                 },
                 Name: cf.join([cf.stackName, '/rds/secret']),
@@ -60,7 +60,7 @@ export default {
                 Engine: 'aurora-postgresql',
                 Port: '5432',
                 ServerlessV2ScalingConfiguration: {
-                    MinCapacity: '0',
+                    MinCapacity: '0.5',
                     MaxCapacity: '4',
                 },
                 DatabaseName: 'authentik',

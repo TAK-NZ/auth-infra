@@ -19,7 +19,7 @@ export default {
         AuthentikVersion: {
             Description: 'Authentik Docker image tag (version)',
             Type: 'String',
-            Default: '2025.2.4'
+            Default: '2025.4.0'
         },
         AuthentikConfigFile: {
             Description: 'Use authentik-config.env config file in S3 bucket',
@@ -42,7 +42,7 @@ export default {
                 Description: cf.join([cf.stackName, ' Authentik Secret Key']),
                 GenerateSecretString: {
                     ExcludePunctuation: true,
-                    PasswordLength: 32
+                    PasswordLength: 64
                 },
                 Name: cf.join([cf.stackName, '/authentik-secret-key']),
                 KmsKeyId: cf.ref('KMS')
@@ -68,7 +68,7 @@ export default {
                 Description: cf.join([cf.stackName, ' Authentik Admin User Token']),
                 GenerateSecretString: {
                     ExcludePunctuation: true,
-                    PasswordLength: 32
+                    PasswordLength: 64
                 },
                 Name: cf.join([cf.stackName, '/authentik-admin-token']),
                 KmsKeyId: cf.ref('KMS')
@@ -184,7 +184,7 @@ export default {
                 VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
             }
         },
-        TaskRole: {
+        ServerTaskRole: {
             Type: 'AWS::IAM::Role',
             Properties: {
                 AssumeRolePolicyDocument: {
@@ -242,7 +242,7 @@ export default {
                 }]
             }
         },
-        ExecRole: {
+        ServerExecRole: {
             Type: 'AWS::IAM::Role',
             Properties: {
                 AssumeRolePolicyDocument: {
@@ -306,12 +306,6 @@ export default {
         },
         ServerTaskDefinition: {
             Type: 'AWS::ECS::TaskDefinition',
-            DependsOn: [
-                'DBMasterSecret',
-                'AuthentikSecretKey',
-                'DBMasterSecret',
-                'EFSAccessPointMedia'
-            ],
             Properties: {
                 Family: cf.stackName,
                 Cpu: 512,
@@ -322,8 +316,8 @@ export default {
                     Key: 'Name',
                     Value: cf.join('-', [cf.stackName, 'api'])
                 }],
-                ExecutionRoleArn: cf.getAtt('ExecRole', 'Arn'),
-                TaskRoleArn: cf.getAtt('TaskRole', 'Arn'),
+                ExecutionRoleArn: cf.getAtt('ServerExecRole', 'Arn'),
+                TaskRoleArn: cf.getAtt('ServerTaskRole', 'Arn'),
                 Volumes: [{
                     Name: cf.join([cf.stackName, '-media']),
                     EFSVolumeConfiguration: {
@@ -331,8 +325,7 @@ export default {
                         TransitEncryption: 'ENABLED',
                         AuthorizationConfig: {
                             AccessPointId: cf.ref('EFSAccessPointMedia')
-                        },
-                        RootDirectory: '/'
+                        }                   
                     }
                 }],
                 ContainerDefinitions: [{
@@ -355,25 +348,30 @@ export default {
                         SourceVolume: cf.join([cf.stackName, '-media'])
                     }],
                     PortMappings: [{
-                        ContainerPort: 9000
+                        ContainerPort: 9000,
+                        Protocol: 'tcp'
                     }],
                     Environment: [
                         { Name: 'StackName',                                    Value: cf.stackName },
                         { Name: 'AWS_DEFAULT_REGION',                           Value: cf.region },
                         { Name: 'AUTHENTIK_POSTGRESQL__HOST',                   Value: cf.getAtt('DBCluster', 'Endpoint.Address') },
                         { Name: 'AUTHENTIK_POSTGRESQL__USER',                   Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
-                        { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST', Value: cf.getAtt('DBCluster', 'ReadEndpoint.Address') },
-                        { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER', Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
-                        { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('AuthentikRedis', 'PrimaryEndPoint.Address') }
+                        // Support for read replicas at first deployment is currently broken. See https://github.com/goauthentik/authentik/issues/14319#issuecomment-2844233291
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST', Value: cf.getAtt('DBCluster', 'ReadEndpoint.Address') },
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER', Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME', Value: 'authentik' },
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
+                        { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('Redis', 'PrimaryEndPoint.Address') },
+                        { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' }
                     ],
                     Secrets: [
-                        { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
-                        { Name: 'AUTHENTIK_SECRET_KEY',             ValueFrom: cf.ref('AuthentikSecretKey') }
+                        { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
+                        { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') }
                     ],
                     EnvironmentFiles: [
                         cf.if('S3ConfigValueSet', 
                             {
-                                //Value: cf.join(['arn:', cf.partition, ':s3:::coe-auth-config-s3-', cf.ref('Environment'), '-', cf.region, '-env-config/authentik-config.env']),
                                 Value: cf.join([cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/authentik-config.env'])]),
                                 Type: 's3' 
                             },
@@ -396,102 +394,13 @@ export default {
                 }]
             }
         },
-        WorkerTaskDefinition: {
-            Type: 'AWS::ECS::TaskDefinition',
-            DependsOn: [
-                'DBMasterSecret',
-                'AuthentikSecretKey',
-                'DBMasterSecret',
-                'EFSAccessPointMedia'
-            ],
-            Properties: {
-                Family: cf.stackName,
-                Cpu: 512,
-                Memory: 1024,
-                NetworkMode: 'awsvpc',
-                RequiresCompatibilities: ['FARGATE'],
-                Tags: [{
-                    Key: 'Name',
-                    Value: cf.join('-', [cf.stackName, 'api'])
-                }],
-                ExecutionRoleArn: cf.getAtt('ExecRole', 'Arn'),
-                TaskRoleArn: cf.getAtt('TaskRole', 'Arn'),
-                Volumes: [{
-                    Name: cf.join([cf.stackName, '-media']),
-                    EFSVolumeConfiguration: {
-                        FilesystemId: cf.ref('EFS'),
-                        TransitEncryption: 'ENABLED',
-                        AuthorizationConfig: {
-                            AccessPointId: cf.ref('EFSAccessPointMedia')
-                        },
-                        RootDirectory: '/'
-                    }
-                }],
-                ContainerDefinitions: [{
-                    Name: 'AuthentikWorkerContainer',
-                    Command: [ 'worker' ],
-                    HealthCheck: { 
-                        Command: [
-                            'CMD', 
-                            'ak', 
-                            'healthcheck'
-                        ],
-                        Interval: 30,
-                        Retries: 3,
-                        StartPeriod: 60,
-                        Timeout: 30
-                    },
-                    Image: cf.join(['ghcr.io/goauthentik/server:', cf.ref('AuthentikVersion')]), 
-                    MountPoints: [{
-                        ContainerPath: '/media',
-                        SourceVolume: cf.join([cf.stackName, '-media'])
-                    }],
-                    PortMappings: [{
-                        ContainerPort: 9000
-                    }],
-                    Environment: [
-                        { Name: 'StackName',                                    Value: cf.stackName },
-                        { Name: 'AWS_DEFAULT_REGION',                           Value: cf.region },
-                        { Name: 'AUTHENTIK_POSTGRESQL__HOST',                   Value: cf.getAtt('DBCluster', 'Endpoint.Address') },
-                        { Name: 'AUTHENTIK_POSTGRESQL__USER',                   Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
-                        { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST', Value: cf.getAtt('DBCluster', 'ReadEndpoint.Address') },
-                        { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER', Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
-                        { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('AuthentikRedis', 'PrimaryEndPoint.Address') },
-                        { Name: 'AUTHENTIK_BOOTSTRAP_PASSWORD',                 Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/authentik-admin-user-password:SecretString:password:AWSCURRENT}}') },
-                        { Name: 'AUTHENTIK_BOOTSTRAP_TOKEN',                    Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/authentik-admin-token:::AWSCURRENT}}') },
-                        { Name: 'AUTHENTIK_BOOTSTRAP_EMAIL',                    Value: cf.ref('AuthentikAdminUserEmail') }
-                    ],
-                    Secrets: [
-                        { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
-                        { Name: 'AUTHENTIK_SECRET_KEY',             ValueFrom: cf.ref('AuthentikSecretKey') }
-                    ],
-                    EnvironmentFiles: [
-                        cf.if('S3ConfigValueSet', 
-                            {
-                                //Value: cf.join(['arn:', cf.partition, ':s3:::coe-auth-config-s3-', cf.ref('Environment'), '-', cf.region, '-env-config/authentik-config.env']),
-                                Value: cf.join([cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/authentik-config.env'])]),
-                                Type: 's3' 
-                            },
-                            cf.ref('AWS::NoValue')
-                        )                    ],
-                    LogConfiguration: {
-                        LogDriver: 'awslogs',
-                        Options: {
-                            'awslogs-group': cf.stackName,
-                            'awslogs-region': cf.region,
-                            'awslogs-stream-prefix': cf.stackName,
-                            'awslogs-create-group': true
-                        }
-                    },
-                    RestartPolicy: { 
-                        Enabled: true
-                    }, 
-                    Essential: true
-                }]
-            }
-        },
         ServerService: {
             Type: 'AWS::ECS::Service',
+            DependsOn: [
+                'TargetGroup',
+                'HTTPSListener',
+                'ServerTaskRole'
+            ],
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'Server']),
                 Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
@@ -526,8 +435,223 @@ export default {
                 }]
             }
         },
+        WorkerTaskRole: {
+            Type: 'AWS::IAM::Role',
+            Properties: {
+                AssumeRolePolicyDocument: {
+                    Version: '2012-10-17',
+                    Statement: [{
+                        Effect: 'Allow',
+                        Principal: {
+                            Service: 'ecs-tasks.amazonaws.com'
+                        },
+                        Action: 'sts:AssumeRole'
+                    }]
+                },
+                Policies: [{
+                    PolicyName: cf.join('-', [cf.stackName, 'api-policy']),
+                    PolicyDocument: {
+                        Statement: [{
+                            Effect: 'Allow',
+                            Action: [
+                                'ssmmessages:CreateControlChannel',
+                                'ssmmessages:CreateDataChannel',
+                                'ssmmessages:OpenControlChannel',
+                                'ssmmessages:OpenDataChannel'
+                            ],
+                            Resource: '*'
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                'logs:CreateLogGroup',
+                                'logs:CreateLogStream',
+                                'logs:PutLogEvents',
+                                'logs:DescribeLogStreams'
+                            ],
+                            Resource: [cf.join(['arn:', cf.partition, ':logs:*:*:*'])]
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                'kms:Decrypt',
+                                'kms:GenerateDataKey'
+                            ],
+                            Resource: [
+                                cf.getAtt('KMS', 'Arn'),
+                                cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-kms']))
+                            ]
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                'secretsmanager:DescribeSecret',
+                                'secretsmanager:GetSecretValue'
+                            ],
+                            Resource: [
+                                cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/*'])
+                            ]
+                        }]
+                    }
+                }]
+            }
+        },
+        WorkerExecRole: {
+            Type: 'AWS::IAM::Role',
+            Properties: {
+                AssumeRolePolicyDocument: {
+                    Version: '2012-10-17',
+                    Statement: [{
+                        Effect: 'Allow',
+                        Principal: {
+                            Service: 'ecs-tasks.amazonaws.com'
+                        },
+                        Action: 'sts:AssumeRole'
+                    }]
+                },
+                Policies: [{
+                    PolicyName: cf.join([cf.stackName, '-api-logging']),
+                    PolicyDocument: {
+                        Statement: [{
+                            Effect: 'Allow',
+                            Action: [
+                                'logs:CreateLogGroup',
+                                'logs:CreateLogStream',
+                                'logs:PutLogEvents',
+                                'logs:DescribeLogStreams'
+                            ],
+                            Resource: [cf.join(['arn:', cf.partition, ':logs:*:*:*'])]
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                'kms:Decrypt',
+                                'kms:GenerateDataKey'
+                            ],
+                            Resource: [
+                                cf.getAtt('KMS', 'Arn'),
+                                cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-kms']))
+                            ]
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                'secretsmanager:DescribeSecret',
+                                'secretsmanager:GetSecretValue'
+                            ],
+                            Resource: [
+                                cf.join(['arn:', cf.partition, ':secretsmanager:', cf.region, ':', cf.accountId, ':secret:', cf.stackName, '/*'])
+                            ]
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                's3:GetObject',
+                                's3:GetBucketLocation'
+                            ],
+                            Resource: [
+                                cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/*'])
+                            ] 
+                        }]
+                    }
+                }],
+                ManagedPolicyArns: [
+                    cf.join(['arn:', cf.partition, ':iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'])
+                ],
+                Path: '/service-role/'
+            }
+        },
+        WorkerTaskDefinition: {
+            Type: 'AWS::ECS::TaskDefinition',
+            Properties: {
+                Family: cf.stackName,
+                Cpu: 512,
+                Memory: 1024,
+                NetworkMode: 'awsvpc',
+                RequiresCompatibilities: ['FARGATE'],
+                Tags: [{
+                    Key: 'Name',
+                    Value: cf.join('-', [cf.stackName, 'api'])
+                }],
+                ExecutionRoleArn: cf.getAtt('WorkerExecRole', 'Arn'),
+                TaskRoleArn: cf.getAtt('WorkerTaskRole', 'Arn'),
+                Volumes: [{
+                    Name: cf.join([cf.stackName, '-media']),
+                    EFSVolumeConfiguration: {
+                        FilesystemId: cf.ref('EFS'),
+                        TransitEncryption: 'ENABLED',
+                        AuthorizationConfig: {
+                            AccessPointId: cf.ref('EFSAccessPointMedia')                  
+                        }
+                    }
+                }],
+                ContainerDefinitions: [{
+                    Name: 'AuthentikWorkerContainer',
+                    Command: [ 'worker' ],
+                    HealthCheck: { 
+                        Command: [
+                            'CMD', 
+                            'ak', 
+                            'healthcheck'
+                        ],
+                        Interval: 30,
+                        Retries: 3,
+                        StartPeriod: 60,
+                        Timeout: 30
+                    },
+                    Image: cf.join(['ghcr.io/goauthentik/server:', cf.ref('AuthentikVersion')]), 
+                    MountPoints: [{
+                        ContainerPath: '/media',
+                        SourceVolume: cf.join([cf.stackName, '-media'])
+                    }],
+                    PortMappings: [{
+                        ContainerPort: 9000
+                    }],
+                    Environment: [
+                        { Name: 'StackName',                                    Value: cf.stackName },
+                        { Name: 'AWS_DEFAULT_REGION',                           Value: cf.region },
+                        { Name: 'AUTHENTIK_POSTGRESQL__HOST',                   Value: cf.getAtt('DBCluster', 'Endpoint.Address') },
+                        { Name: 'AUTHENTIK_POSTGRESQL__USER',                   Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
+                        // Support for read replicas at first deployment is currently broken. See https://github.com/goauthentik/authentik/issues/14319#issuecomment-2844233291
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST', Value: cf.getAtt('DBCluster', 'ReadEndpoint.Address') },
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER', Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME', Value: 'authentik' },
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
+                        { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('Redis', 'PrimaryEndPoint.Address') },
+                        { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' },
+                        { Name: 'AUTHENTIK_BOOTSTRAP_EMAIL',                    Value: cf.ref('AuthentikAdminUserEmail') }
+                    ],
+                    Secrets: [
+                        { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
+                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
+                        { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') },
+                        { Name: 'AUTHENTIK_BOOTSTRAP_PASSWORD',                     ValueFrom: cf.join([cf.ref('AuthentikAdminUserPassword'), ':password::']) },
+                        { Name: 'AUTHENTIK_BOOTSTRAP_TOKEN',                        ValueFrom: cf.ref('AuthentikAdminUserToken') }
+                    ],
+                    EnvironmentFiles: [
+                        cf.if('S3ConfigValueSet', 
+                            {
+                                Value: cf.join([cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/authentik-config.env'])]),
+                                Type: 's3' 
+                            },
+                            cf.ref('AWS::NoValue')
+                        )                    ],
+                    LogConfiguration: {
+                        LogDriver: 'awslogs',
+                        Options: {
+                            'awslogs-group': cf.stackName,
+                            'awslogs-region': cf.region,
+                            'awslogs-stream-prefix': cf.stackName,
+                            'awslogs-create-group': true
+                        }
+                    },
+                    RestartPolicy: { 
+                        Enabled: true
+                    }, 
+                    Essential: true
+                }]
+            }
+        },
         WorkerService: {
             Type: 'AWS::ECS::Service',
+            DependsOn: [
+                'DBCluster',
+                'WorkerTaskRole'
+            ],
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'Worker']),
                 Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
