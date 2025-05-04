@@ -7,7 +7,7 @@ metadata:
       This blueprint creates an LDAP authentication flow.
 entries:
 - attrs:
-    authentication: require_authenticated
+    authentication: require_outpost
     denied_action: message_continue
     designation: authentication
     layout: stacked
