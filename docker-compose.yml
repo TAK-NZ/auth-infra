@@ -1,13 +1,13 @@
 services:
   auth-infra-server:
     platform: linux/amd64
-    image: ghcr.io/tak-nz/auth-infra-server
+    image: auth-infra-server
     build:
       context: .
       dockerfile: ./docker/amd64/Dockerfile.authentik-server
   auth-infra-ldap:
     platform: linux/amd64
-    image: ghcr.io/tak-nz/auth-infra-ldap
+    image: auth-infra-ldap
     build:
       context: .
       dockerfile: ./docker/amd64/Dockerfile.authentik-ldap
