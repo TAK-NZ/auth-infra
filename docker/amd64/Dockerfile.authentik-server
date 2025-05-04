@@ -1,0 +1,6 @@
+FROM ghcr.io/goauthentik/server:latest
+LABEL org.opencontainers.image.source=https://github.com/tak-nz/auth-infra-server
+LABEL org.opencontainers.image.description="Authentik server for TAK server auth via LDAP"
+LABEL org.opencontainers.image.licenses=MIT
+COPY authentik/blueprints/* /blueprints/ldap/
+ENTRYPOINT [dumb-init -- ak]

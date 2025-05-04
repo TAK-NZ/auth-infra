@@ -5,7 +5,9 @@ await accountSetup();
 
 await ecrLogin(global.region, global.account, global.profile)
 
-await buildPushDockerContainer(global.region, global.account, global.environment, global.gitsha)
+await buildPushDockerContainer(global.region, global.account, global.environment, global.gitsha, 'auth-infra-server')
+
+await buildPushDockerContainer(global.region, global.account, global.environment, global.gitsha, 'auth-infra-ldap')
 
 function accountSetup() {
     console.log('ok - Determining AWS account and deployment environment setup')
@@ -98,11 +100,11 @@ function ecrLogin(region, account, profile) {
 
 }
 
-function buildPushDockerContainer(region, account, environment, gitsha) {
+function buildPushDockerContainer(region, account, environment, gitsha, image) {
     console.log('ok - building Docker image')
 
-    const dockerCompose = 'docker compose build authentik';
-    const dockerTag = 'docker tag authentik:latest "' + account + '.dkr.ecr.' + region + '.amazonaws.com/coe-base-' + environment + ':' + gitsha + '"';
+    const dockerCompose = 'docker compose build ' + image;
+    const dockerTag = 'docker tag ' + image + ':latest "' + account + '.dkr.ecr.' + region + '.amazonaws.com/coe-base-' + environment + ':' + gitsha + '"';
     const dockerPush = 'docker push "' + account + '.dkr.ecr.' + region + '.amazonaws.com/coe-base-' + environment + ':' + gitsha + '"';
     const Command = dockerCompose + ' && ' + dockerTag + ' && ' + dockerPush;
 
