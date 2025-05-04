@@ -1,0 +1,8 @@
+services:
+  authentik:
+    platform: linux/amd64
+    image: ghcr.io/tak-nz/auth-infra
+    build:
+      context: .
+      dockerfile: ./docker/amd64/Dockerfile.authentik
+

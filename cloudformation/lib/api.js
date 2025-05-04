@@ -16,6 +16,11 @@ export default {
             Description: 'E-Mail address for the Authentik akadmin user',
             Type: 'String'
         },
+        AuthentikLdapBaseDN: {
+            Description: 'LDAP Base DN',
+            Type: 'String',
+            Default: 'DC=example,DC=com'
+        },
         AuthentikVersion: {
             Description: 'Authentik Docker image tag (version)',
             Type: 'String',
@@ -83,17 +88,17 @@ export default {
                 KmsKeyId: cf.ref('KMS')
             }
         },
-        LDAPSVCSecret: {
+        LDAPServiceUserPassword: {
             Type: 'AWS::SecretsManager::Secret',
             Properties: {
                 Description: cf.join([cf.stackName, ' LDAP Service Account Password']),
                 GenerateSecretString: {
-                    SecretStringTemplate: '{"username": "ldapsvcaccount"}',
+                    SecretStringTemplate: '{"username": "ldapservice"}',
                     GenerateStringKey: 'password',
                     ExcludePunctuation: true,
                     PasswordLength: 32
                 },
-                Name: cf.join([cf.stackName, '/svc']),
+                Name: cf.join([cf.stackName, '/ldapservice']),
                 KmsKeyId: cf.ref('KMS')
             }
         },
@@ -307,7 +312,7 @@ export default {
         ServerTaskDefinition: {
             Type: 'AWS::ECS::TaskDefinition',
             Properties: {
-                Family: cf.stackName,
+                Family: cf.join('-', [cf.stackName, 'server']),
                 Cpu: 512,
                 Memory: 1024,
                 NetworkMode: 'awsvpc',
@@ -558,7 +563,7 @@ export default {
         WorkerTaskDefinition: {
             Type: 'AWS::ECS::TaskDefinition',
             Properties: {
-                Family: cf.stackName,
+                Family: cf.join('-', [cf.stackName, 'server']),
                 Cpu: 512,
                 Memory: 1024,
                 NetworkMode: 'awsvpc',
@@ -613,14 +618,17 @@ export default {
                         //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
                         { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('Redis', 'PrimaryEndPoint.Address') },
                         { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' },
-                        { Name: 'AUTHENTIK_BOOTSTRAP_EMAIL',                    Value: cf.ref('AuthentikAdminUserEmail') }
+                        { Name: 'AUTHENTIK_BOOTSTRAP_EMAIL',                    Value: cf.ref('AuthentikAdminUserEmail') },
+                        { Name: 'AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME',     Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:username:AWSCURRENT}}') },
+                        { Name: 'AUTHENTIK_BOOTSTRAP_LDAP_BASEDN',              Value: cf.ref('AuthentikLdapBaseDN') }                                                                                       
                     ],
                     Secrets: [
                         { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_PASSWORD',                     ValueFrom: cf.join([cf.ref('AuthentikAdminUserPassword'), ':password::']) },
-                        { Name: 'AUTHENTIK_BOOTSTRAP_TOKEN',                        ValueFrom: cf.ref('AuthentikAdminUserToken') }
+                        { Name: 'AUTHENTIK_BOOTSTRAP_TOKEN',                        ValueFrom: cf.ref('AuthentikAdminUserToken') },
+                        { Name: 'AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD',         ValueFrom: cf.join([cf.ref('LDAPServiceUserPassword'), ':password::']) }
                     ],
                     EnvironmentFiles: [
                         cf.if('S3ConfigValueSet', 
@@ -716,16 +724,16 @@ export default {
         LDAPServiceUsername: {
             Description: 'LDAP Service Username',
             Export: {
-                Name: cf.join([cf.stackName, '-ldap-svc-username'])
+                Name: cf.join([cf.stackName, '-ldapservice-username'])
             },
-            Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/svc:SecretString:username:AWSCURRENT}}')
+            Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:username:AWSCURRENT}}')
         },
         LDAPServicePassword: {
             Description: 'LDAP Service Password',
             Export: {
-                Name: cf.join([cf.stackName, '-ldap-svc-password'])
+                Name: cf.join([cf.stackName, '-ldapservice-password'])
             },
-            Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/svc:SecretString:password:AWSCURRENT}}')
+            Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:password:AWSCURRENT}}')
         }
     }
 };

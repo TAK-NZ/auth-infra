@@ -1,0 +1,74 @@
+version: 1
+metadata:
+  name: LDAP Authentication flow
+  labels:
+    blueprints.goauthentik.io/system-bootstrap: "true"
+    blueprints.goauthentik.io/description: |
+      This blueprint creates an LDAP authentication flow.
+entries:
+- attrs:
+    authentication: require_outpost
+    denied_action: message_continue
+    designation: authentication
+    layout: stacked
+    name: ldap-authentication-flow
+    policy_engine_mode: any
+    title: ldap-authentication-flow
+  identifiers:
+    slug: ldap-authentication-flow
+  model: authentik_flows.flow
+  id: ldap-authentication-flow
+- attrs:
+    backends:
+    - authentik.core.auth.InbuiltBackend
+    - authentik.core.auth.TokenBackend
+    - authentik.sources.ldap.auth.LDAPBackend
+    configure_flow: !Find [authentik_flows.flow, [slug, default-password-change]]
+    failed_attempts_before_cancel: 5
+  identifiers:
+    name: ldap-authentication-password
+  model: authentik_stages_password.passwordstage
+  id: ldap-authentication-password
+- attrs:
+    case_insensitive_matching: true
+    password_stage: !KeyOf ldap-authentication-password
+    pretend_user_exists: true
+    show_matched_user: true
+    user_fields:
+    - username
+    - email
+  identifiers:
+    name: ldap-identification-stage
+  model: authentik_stages_identification.identificationstage
+  id: ldap-identification-stage
+- attrs:
+    geoip_binding: bind_continent
+    network_binding: bind_asn
+    remember_me_offset: seconds=0
+    session_duration: seconds=0
+  identifiers:
+      name: ldap-authentication-login
+  model: authentik_stages_user_login.userloginstage
+  id: ldap-authentication-login
+- attrs:
+    evaluate_on_plan: true
+    invalid_response_action: retry
+    policy_engine_mode: any
+    re_evaluate_policies: true
+  identifiers:
+    order: 10
+    stage: !KeyOf ldap-identification-stage
+    target: !KeyOf ldap-authentication-flow
+  model: authentik_flows.flowstagebinding  
+  id: ldap-identification-stage-flow-binding
+- attrs:
+    evaluate_on_plan: true
+    invalid_response_action: retry
+    policy_engine_mode: any
+    re_evaluate_policies: true
+  identifiers:
+    order: 30
+    stage: !KeyOf ldap-authentication-login
+    target: !KeyOf ldap-authentication-flow
+  model: authentik_flows.flowstagebinding
+  id: ldap-authentication-login-binding

@@ -16,6 +16,11 @@ export default {
             Description: 'URL of the Authentik auth service',
             Type: 'String'
         },
+        AuthentikVersion: {
+            Description: 'Authentik Docker image tag (version)',
+            Type: 'String',
+            Default: '2025.4.0'
+        }
     },
     Resources: {
         NLB: {
@@ -205,7 +210,7 @@ export default {
                 TaskRoleArn: cf.getAtt('TaskRole', 'Arn'),
                 ContainerDefinitions: [{
                     Name: 'AuthentikLdapOutpost',
-                    Image: 'ghcr.io/goauthentik/ldap',
+                    Image: cf.join(['ghcr.io/goauthentik/ldap:', cf.ref('AuthentikVersion')]),
                     PortMappings: [{
                         ContainerPort: 3389
                     },{
@@ -249,7 +254,7 @@ export default {
                 TaskDefinition: cf.ref('OutpostTaskDefinition'),
                 LaunchType: 'FARGATE',
                 HealthCheckGracePeriodSeconds: 300,
-                DesiredCount: cf.if('CreateProdResources', 2, 1)
+                DesiredCount: cf.if('CreateProdResources', 2, 1),
                 NetworkConfiguration: {
                     AwsvpcConfiguration: {
                         AssignPublicIp: 'DISABLED',
