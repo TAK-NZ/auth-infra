@@ -9,7 +9,7 @@ on:
         type: string
     
   workflow_dispatch:
-    inputs
+    inputs:
       image_name:
         required: true
         type: string    
