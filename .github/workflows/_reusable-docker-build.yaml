@@ -14,10 +14,6 @@ on:
         required: true
         type: string    
 
-    outputs:
-      image-digest:
-        value: ${{ jobs.build.outputs.image-digest }}
-
 jobs:
   # This pushes the image to GitHub Packages.
   push:
