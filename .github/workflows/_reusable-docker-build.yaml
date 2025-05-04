@@ -19,8 +19,7 @@ jobs:
   push:
     runs-on: ubuntu-latest
     permissions:
-      packages: write
-      packages: read
+      packages: admin
       contents: read
       #
     steps:
