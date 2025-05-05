@@ -33,8 +33,4 @@ jobs:
         uses: scottbrenner/cfn-lint-action@v2
         
       - name: Testing with Cloud Formation Linter
-        run: |
-            sudo apt-get update
-            sudo apt-get install jq
-            npx deploy json | jq > ./template.yml
-            cfn-lint -t ./template.yml
+        run: npx deploy json | jq cfn-lint
