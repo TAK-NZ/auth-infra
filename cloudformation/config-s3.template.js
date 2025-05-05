@@ -52,8 +52,8 @@ export default cf.merge({
                 BucketEncryption: {
                     ServerSideEncryptionConfiguration: [{
                         ServerSideEncryptionByDefault: {
-                                KMSMasterKeyID: cf.ref('KMSAlias'),
-                                SSEAlgorithm: "aws:kms"
+                            KMSMasterKeyID: cf.ref('KMSAlias'),
+                            SSEAlgorithm: 'aws:kms'
                         },
                         BucketKeyEnabled: true
                     }]
@@ -65,7 +65,7 @@ export default cf.merge({
                     RestrictPublicBuckets: true
                 }
             },
-            DeletionPolicy: "Delete"
+            DeletionPolicy: 'Delete'
         }
     },
     Outputs: {

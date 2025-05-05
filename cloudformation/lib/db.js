@@ -61,7 +61,7 @@ export default {
                 Port: '5432',
                 ServerlessV2ScalingConfiguration: {
                     MinCapacity: '0.5',
-                    MaxCapacity: '4',
+                    MaxCapacity: '4'
                 },
                 DatabaseName: 'authentik',
                 CopyTagsToSnapshot: true,
@@ -76,7 +76,7 @@ export default {
                 StorageType: 'aurora',
                 VpcSecurityGroupIds: [cf.ref('DBVPCSecurityGroup')],
                 DBSubnetGroupName: cf.ref('DBSubnet'),
-                DeletionProtection: cf.if('CreateProdResources', true, false)                
+                DeletionProtection: cf.if('CreateProdResources', true, false)
             }
         },
         DBFirstInstance: {
@@ -113,7 +113,7 @@ export default {
                 PerformanceInsightsRetentionPeriod: 7,
                 DBInstanceClass: 'db.t4g.large'
             }
-        },        
+        },
         DBSubnet: {
             Type: 'AWS::RDS::DBSubnetGroup',
             Properties: {

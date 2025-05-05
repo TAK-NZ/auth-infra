@@ -5,7 +5,7 @@ export default {
         EnableExecute: {
             Description: 'Allow SSH into docker container - should only be enabled for limited debugging',
             Type: 'String',
-            AllowedValues: ['true', 'false'],
+            AllowedValues: [true, false],
             Default: false
         },
         SSLCertificateARN: {
@@ -29,7 +29,7 @@ export default {
         AuthentikConfigFile: {
             Description: 'Use authentik-config.env config file in S3 bucket',
             Type: 'String',
-            AllowedValues: ['true', 'false'],
+            AllowedValues: [true, false],
             Default: false
         }
     },
@@ -83,7 +83,7 @@ export default {
             Type: 'AWS::SecretsManager::Secret',
             Properties: {
                 Description: cf.join([cf.stackName, ' Authentik LDAP Outpost Token']),
-                "SecretString": "replace-me",
+                'SecretString': 'replace-me',
                 Name: cf.join([cf.stackName, '/authentik-ldap-token']),
                 KmsKeyId: cf.ref('KMS')
             }
@@ -145,13 +145,13 @@ export default {
                 DefaultActions: [{
                     Type: 'redirect',
                     RedirectConfig: {
-                        Protocol: "HTTPS",
-                        StatusCode: "HTTP_301"
+                        Protocol: 'HTTPS',
+                        StatusCode: 'HTTP_301'
                     }
                 }],
                 LoadBalancerArn: cf.ref('ALB'),
                 Port: 80,
-                Protocol: "HTTP"
+                Protocol: 'HTTP'
             }
         },
         HTTPSListener: {
@@ -166,26 +166,26 @@ export default {
                 }],
                 LoadBalancerArn: cf.ref('ALB'),
                 Port: 443,
-                Protocol: "HTTPS"
+                Protocol: 'HTTPS'
             }
-        },    
+        },
         TargetGroup: {
             Type: 'AWS::ElasticLoadBalancingV2::TargetGroup',
             DependsOn: 'ALB',
             Properties: {
-                HealthCheckPath: "/-/health/live/",
+                HealthCheckPath: '/-/health/live/',
                 Matcher: {
-                    HttpCode: "200"
+                    HttpCode: '200'
                 },
                 Port: 9000,
-                Protocol: "HTTP",
+                Protocol: 'HTTP',
                 TargetGroupAttributes: [
                     {
-                        Key: "stickiness.enabled",
-                        Value: "false"
+                        Key: 'stickiness.enabled',
+                        Value: 'false'
                     }
                 ],
-                TargetType: "ip",
+                TargetType: 'ip',
                 VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
             }
         },
@@ -299,7 +299,7 @@ export default {
                             ],
                             Resource: [
                                 cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/*'])
-                            ] 
+                            ]
                         }]
                     }
                 }],
@@ -330,16 +330,16 @@ export default {
                         TransitEncryption: 'ENABLED',
                         AuthorizationConfig: {
                             AccessPointId: cf.ref('EFSAccessPointMedia')
-                        }                   
+                        }
                     }
                 }],
                 ContainerDefinitions: [{
                     Name: 'AuthentikServerContainer',
-                    Command: [ 'server' ],
-                    HealthCheck: { 
+                    Command: ['server'],
+                    HealthCheck: {
                         Command: [
-                            'CMD', 
-                            'ak', 
+                            'CMD',
+                            'ak',
                             'healthcheck'
                         ],
                         Interval: 30,
@@ -347,7 +347,7 @@ export default {
                         StartPeriod: 60,
                         Timeout: 30
                     },
-                    Image: cf.join(['ghcr.io/goauthentik/server:', cf.ref('AuthentikVersion')]), 
+                    Image: cf.join(['ghcr.io/goauthentik/server:', cf.ref('AuthentikVersion')]),
                     MountPoints: [{
                         ContainerPath: '/media',
                         SourceVolume: cf.join([cf.stackName, '-media'])
@@ -362,23 +362,23 @@ export default {
                         { Name: 'AUTHENTIK_POSTGRESQL__HOST',                   Value: cf.getAtt('DBCluster', 'Endpoint.Address') },
                         { Name: 'AUTHENTIK_POSTGRESQL__USER',                   Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
                         // Support for read replicas at first deployment is currently broken. See https://github.com/goauthentik/authentik/issues/14319#issuecomment-2844233291
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST', Value: cf.getAtt('DBCluster', 'ReadEndpoint.Address') },
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER', Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME', Value: 'authentik' },
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST', Value: cf.getAtt('DBCluster', 'ReadEndpoint.Address') },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER', Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME', Value: 'authentik' },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
                         { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('Redis', 'PrimaryEndPoint.Address') },
                         { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' }
                     ],
                     Secrets: [
                         { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') }
                     ],
                     EnvironmentFiles: [
-                        cf.if('S3ConfigValueSet', 
+                        cf.if('S3ConfigValueSet',
                             {
                                 Value: cf.join([cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/authentik-config.env'])]),
-                                Type: 's3' 
+                                Type: 's3'
                             },
                             cf.ref('AWS::NoValue')
                         )
@@ -392,9 +392,9 @@ export default {
                             'awslogs-create-group': true
                         }
                     },
-                    RestartPolicy: { 
+                    RestartPolicy: {
                         Enabled: true
-                    }, 
+                    },
                     Essential: true
                 }]
             }
@@ -402,7 +402,6 @@ export default {
         ServerService: {
             Type: 'AWS::ECS::Service',
             DependsOn: [
-                'TargetGroup',
                 'HTTPSListener',
                 'ServerTaskRole'
             ],
@@ -550,7 +549,7 @@ export default {
                             ],
                             Resource: [
                                 cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/*'])
-                            ] 
+                            ]
                         }]
                     }
                 }],
@@ -580,17 +579,17 @@ export default {
                         FilesystemId: cf.ref('EFS'),
                         TransitEncryption: 'ENABLED',
                         AuthorizationConfig: {
-                            AccessPointId: cf.ref('EFSAccessPointMedia')                  
+                            AccessPointId: cf.ref('EFSAccessPointMedia')
                         }
                     }
                 }],
                 ContainerDefinitions: [{
                     Name: 'AuthentikWorkerContainer',
-                    Command: [ 'worker' ],
-                    HealthCheck: { 
+                    Command: ['worker'],
+                    HealthCheck: {
                         Command: [
-                            'CMD', 
-                            'ak', 
+                            'CMD',
+                            'ak',
                             'healthcheck'
                         ],
                         Interval: 30,
@@ -598,7 +597,7 @@ export default {
                         StartPeriod: 60,
                         Timeout: 30
                     },
-                    Image: cf.join(['ghcr.io/goauthentik/server:', cf.ref('AuthentikVersion')]), 
+                    Image: cf.join(['ghcr.io/goauthentik/server:', cf.ref('AuthentikVersion')]),
                     MountPoints: [{
                         ContainerPath: '/media',
                         SourceVolume: cf.join([cf.stackName, '-media'])
@@ -612,32 +611,32 @@ export default {
                         { Name: 'AUTHENTIK_POSTGRESQL__HOST',                   Value: cf.getAtt('DBCluster', 'Endpoint.Address') },
                         { Name: 'AUTHENTIK_POSTGRESQL__USER',                   Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
                         // Support for read replicas at first deployment is currently broken. See https://github.com/goauthentik/authentik/issues/14319#issuecomment-2844233291
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST', Value: cf.getAtt('DBCluster', 'ReadEndpoint.Address') },
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER', Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME', Value: 'authentik' },
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST', Value: cf.getAtt('DBCluster', 'ReadEndpoint.Address') },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER', Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}') },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME', Value: 'authentik' },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
                         { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('Redis', 'PrimaryEndPoint.Address') },
                         { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' },
                         { Name: 'AUTHENTIK_BOOTSTRAP_EMAIL',                    Value: cf.ref('AuthentikAdminUserEmail') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME',     Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:username:AWSCURRENT}}') },
-                        { Name: 'AUTHENTIK_BOOTSTRAP_LDAP_BASEDN',              Value: cf.ref('AuthentikLdapBaseDN') }                                                                                       
+                        { Name: 'AUTHENTIK_BOOTSTRAP_LDAP_BASEDN',              Value: cf.ref('AuthentikLdapBaseDN') }
                     ],
                     Secrets: [
                         { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
-                        //{ Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
+                        // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_PASSWORD',                     ValueFrom: cf.join([cf.ref('AuthentikAdminUserPassword'), ':password::']) },
                         { Name: 'AUTHENTIK_BOOTSTRAP_TOKEN',                        ValueFrom: cf.ref('AuthentikAdminUserToken') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD',         ValueFrom: cf.join([cf.ref('LDAPServiceUserPassword'), ':password::']) }
                     ],
                     EnvironmentFiles: [
-                        cf.if('S3ConfigValueSet', 
+                        cf.if('S3ConfigValueSet',
                             {
                                 Value: cf.join([cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/authentik-config.env'])]),
-                                Type: 's3' 
+                                Type: 's3'
                             },
                             cf.ref('AWS::NoValue')
-                        )                    ],
+                        )],
                     LogConfiguration: {
                         LogDriver: 'awslogs',
                         Options: {
@@ -647,9 +646,9 @@ export default {
                             'awslogs-create-group': true
                         }
                     },
-                    RestartPolicy: { 
+                    RestartPolicy: {
                         Enabled: true
-                    }, 
+                    },
                     Essential: true
                 }]
             }
@@ -686,7 +685,8 @@ export default {
                             cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-b']))
                         ]
                     }
-                }
+                },
+                LoadBalancers: [{}]
             }
         },
         ServiceSecurityGroup: {
@@ -734,6 +734,12 @@ export default {
                 Name: cf.join([cf.stackName, '-ldapservice-password'])
             },
             Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:password:AWSCURRENT}}')
+        },
+        GitSha: {
+            Export: {
+                Name: cf.join([cf.stackName, '-gitsha'])
+            },
+            Value: cf.ref('GitSha')
         }
     }
 };

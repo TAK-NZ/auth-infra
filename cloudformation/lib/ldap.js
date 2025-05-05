@@ -69,7 +69,7 @@ export default {
                 }],
                 LoadBalancerArn: cf.ref('NLB'),
                 Port: 389,
-                Protocol: "TCP"
+                Protocol: 'TCP'
             }
         },
         LDAPSListener: {
@@ -84,7 +84,7 @@ export default {
                 }],
                 LoadBalancerArn: cf.ref('NLB'),
                 Port: 636,
-                Protocol: "TLS"
+                Protocol: 'TLS'
             }
         },
         TargetGroup3389: {
@@ -231,7 +231,7 @@ export default {
                             'awslogs-stream-prefix': cf.stackName,
                             'awslogs-create-group': true
                         }
-                    }, 
+                    },
                     Essential: true
                 }]
             }

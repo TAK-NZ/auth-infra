@@ -15,7 +15,7 @@ export default {
                 ThroughputMode: 'bursting',
                 BackupPolicy: {
                     Status: 'DISABLED'
-                },
+                }
             }
         },
         EFSMountTargetSecurityGroup: {
