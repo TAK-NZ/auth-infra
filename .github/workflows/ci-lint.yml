@@ -27,7 +27,7 @@ jobs:
         run: npm install
   
       - name: Testing with eslint
-        run: npn run lint
+        run: npm run lint
 
       - name: Setup Cloud Formation Linter with Latest Version
         uses: scottbrenner/cfn-lint-action@v2
