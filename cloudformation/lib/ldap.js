@@ -15,11 +15,6 @@ export default {
         AuthentikHost: {
             Description: 'URL of the Authentik auth service',
             Type: 'String'
-        },
-        AuthentikVersion: {
-            Description: 'Authentik Docker image tag (version)',
-            Type: 'String',
-            Default: '2025.4.0'
         }
     },
     Resources: {
@@ -210,7 +205,7 @@ export default {
                 TaskRoleArn: cf.getAtt('TaskRole', 'Arn'),
                 ContainerDefinitions: [{
                     Name: 'AuthentikLdapOutpost',
-                    Image: cf.join(['ghcr.io/goauthentik/ldap:', cf.ref('AuthentikVersion')]),
+                    Image: 'ghcr.io/tak-nz/aut-infra-ldap:latest',
                     PortMappings: [{
                         ContainerPort: 3389
                     },{

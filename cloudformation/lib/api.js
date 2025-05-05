@@ -21,11 +21,6 @@ export default {
             Type: 'String',
             Default: 'DC=example,DC=com'
         },
-        AuthentikVersion: {
-            Description: 'Authentik Docker image tag (version)',
-            Type: 'String',
-            Default: '2025.4.0'
-        },
         AuthentikConfigFile: {
             Description: 'Use authentik-config.env config file in S3 bucket',
             Type: 'String',
@@ -347,7 +342,7 @@ export default {
                         StartPeriod: 60,
                         Timeout: 30
                     },
-                    Image: cf.join(['ghcr.io/goauthentik/server:', cf.ref('AuthentikVersion')]),
+                    Image: 'ghcr.io/tak-nz/aut-infra-server:latest',
                     MountPoints: [{
                         ContainerPath: '/media',
                         SourceVolume: cf.join([cf.stackName, '-media'])
@@ -597,7 +592,7 @@ export default {
                         StartPeriod: 60,
                         Timeout: 30
                     },
-                    Image: cf.join(['ghcr.io/goauthentik/server:', cf.ref('AuthentikVersion')]),
+                    Image: 'ghcr.io/tak-nz/aut-infra-server:latest',
                     MountPoints: [{
                         ContainerPath: '/media',
                         SourceVolume: cf.join([cf.stackName, '-media'])
