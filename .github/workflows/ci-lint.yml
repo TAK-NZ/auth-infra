@@ -33,4 +33,8 @@ jobs:
         uses: scottbrenner/cfn-lint-action@v2
         
       - name: Testing with Cloud Formation Linter
-        run: npx deploy json | jq | cfn-lint
+        run: |
+          export AWS_ACCESS_KEY_ID=dummy
+          export AWS_SECRET_ACCESS_KEY=dummy
+          export AWS_DEFAULT_REGION=ap-southeast-2
+          npx deploy json | jq | cfn-lint
