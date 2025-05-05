@@ -33,4 +33,4 @@ jobs:
         uses: scottbrenner/cfn-lint-action@v2
         
       - name: Testing with Cloud Formation Linter
-        run: npx deploy json | jq cfn-lint
+        run: npx deploy json | jq | cfn-lint
