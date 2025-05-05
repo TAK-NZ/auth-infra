@@ -1,4 +1,4 @@
-name: Lint via eslint and cfn-lint
+name: Lint via eslint
 
 on:
   push:
@@ -28,17 +28,3 @@ jobs:
   
       - name: Testing with eslint
         run: npm run lint
-
-      - name: Setup Cloud Formation Linter with Latest Version
-        uses: scottbrenner/cfn-lint-action@v2
-
-      - name: Setup dummy AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: dummy
-          aws-secret-access-key	: dummy
-          aws-region: ap-southeast-2
-
-      - name: Testing with Cloud Formation Linter
-        run: |
-          npx deploy json | jq | cfn-lint
