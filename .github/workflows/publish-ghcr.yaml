@@ -1,0 +1,41 @@
+#
+name: Build and push containers to GHCR
+
+on:
+  release:
+    types: [published, created]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    
+  # This creates an environment variable called `IMAGE_NAME ` with the value `ghtoken_product_demo`.
+
+jobs:
+  build-server:
+    name: Build auth-infra-server
+    uses: ./.github/workflows/_reusable-docker-build.yaml
+    secrets: inherit
+    permissions:
+      # Needed to upload container images to ghcr.io
+      packages: write
+      # Needed for attestation
+      id-token: write
+      attestations: write
+      contents: read    
+      # This is required for actions/checkout
+    with:
+      image_name: auth-infra-server
+  build-ldap:
+    name: Build auth-infra-ldap
+    uses: ./.github/workflows/_reusable-docker-build.yaml
+    secrets: inherit
+    permissions:
+      # Needed to upload container images to ghcr.io
+      packages: write
+      # Needed for attestation
+      id-token: write
+      attestations: write
+      contents: read    
+      # This is required for actions/checkout
+    with:
+      image_name: auth-infra-ldap
