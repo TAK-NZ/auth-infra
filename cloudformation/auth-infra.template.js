@@ -1,12 +1,12 @@
 import cf from '@openaddresses/cloudfriend';
-import API from './lib/api.js';
+import AUTH from './lib/auth.js';
 import DB from './lib/db.js';
 import KMS from './lib/kms.js';
 import EFS from './lib/efs.js';
 import REDIS from './lib/redis.js';
 
 export default cf.merge(
-    API,
+    AUTH,
     DB,
     KMS,
     EFS,

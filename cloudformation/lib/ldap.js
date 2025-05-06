@@ -130,7 +130,7 @@ export default {
                     }]
                 },
                 Policies: [{
-                    PolicyName: cf.join('-', [cf.stackName, 'api-policy']),
+                    PolicyName: cf.join('-', [cf.stackName, 'auth-policy']),
                     PolicyDocument: {
                         Statement: [{
                             Effect: 'Allow',
@@ -169,7 +169,7 @@ export default {
                     }]
                 },
                 Policies: [{
-                    PolicyName: cf.join([cf.stackName, '-api-logging']),
+                    PolicyName: cf.join([cf.stackName, '-auth-logging']),
                     PolicyDocument: {
                         Statement: [{
                             Effect: 'Allow',
@@ -205,7 +205,11 @@ export default {
                 TaskRoleArn: cf.getAtt('TaskRole', 'Arn'),
                 ContainerDefinitions: [{
                     Name: 'AuthentikLdapOutpost',
-                    Image: 'ghcr.io/tak-nz/aut-infra-ldap:latest',
+                    Image: cf.if('DockerGithubImage',
+                        'ghcr.io/tak-nz/auth-infra-ldap:latest',
+                        cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-base-', cf.ref('Environment'), ':auth-infra-ldap-', cf.ref('GitSha')])
+
+                    ),
                     PortMappings: [{
                         ContainerPort: 3389
                     },{
@@ -298,7 +302,8 @@ export default {
         }
     },
     Conditions: {
-        CreateProdResources: cf.equals(cf.ref('EnvType'), 'prod')
+        CreateProdResources: cf.equals(cf.ref('EnvType'), 'prod'),
+        DockerGithubImage: cf.equals(cf.ref('DockerImageLocation'), 'Github')
     },
     Outputs: {
         LDAP: {

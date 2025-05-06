@@ -1,6 +1,5 @@
 import { exec, spawnSync } from 'child_process';
 
-
 await accountSetup();
 
 await ecrLogin(global.region, global.account, global.profile)
@@ -70,7 +69,6 @@ function getAWSAccount(profile) {
     return String(aws.stdout).replace(/\n/g, '');
 }
 
-
 function getGitSha() {
     const git = spawnSync('git', [
         '--git-dir', new URL('../.git', import.meta.url).pathname,
@@ -104,8 +102,8 @@ function buildPushDockerContainer(region, account, environment, gitsha, image) {
     console.log('ok - building Docker image')
 
     const dockerCompose = 'docker compose build ' + image;
-    const dockerTag = 'docker tag ' + image + ':latest "' + account + '.dkr.ecr.' + region + '.amazonaws.com/coe-base-' + environment + ':' + gitsha + '"';
-    const dockerPush = 'docker push "' + account + '.dkr.ecr.' + region + '.amazonaws.com/coe-base-' + environment + ':' + gitsha + '"';
+    const dockerTag = 'docker tag ' + image + ':latest "' + account + '.dkr.ecr.' + region + '.amazonaws.com/coe-base-' + environment + ':' + image + '-' + gitsha + '"';
+    const dockerPush = 'docker push "' + account + '.dkr.ecr.' + region + '.amazonaws.com/coe-base-' + environment + ':' + image + '-' + gitsha + '"';
     const Command = dockerCompose + ' && ' + dockerTag + ' && ' + dockerPush;
 
     return new Promise((resolve, reject) => {

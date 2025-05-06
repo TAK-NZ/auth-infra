@@ -1,0 +1,2705 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "TAK Authentication Layer using Authentik",
+  "Metadata": {},
+  "Parameters": {
+    "EnableExecute": {
+      "Description": "Allow SSH into docker container - should only be enabled for limited debugging",
+      "Type": "String",
+      "AllowedValues": [
+        true,
+        false
+      ],
+      "Default": false
+    },
+    "SSLCertificateARN": {
+      "Description": "ACM SSL Certificate ARN for HTTPS Protocol",
+      "Type": "String"
+    },
+    "AuthentikAdminUserEmail": {
+      "Description": "E-Mail address for the Authentik akadmin user",
+      "Type": "String"
+    },
+    "AuthentikLdapBaseDN": {
+      "Description": "LDAP Base DN",
+      "Type": "String",
+      "Default": "DC=example,DC=com"
+    },
+    "AuthentikConfigFile": {
+      "Description": "Use authentik-config.env config file in S3 bucket",
+      "Type": "String",
+      "AllowedValues": [
+        true,
+        false
+      ],
+      "Default": false
+    },
+    "DatabaseVersion": {
+      "Description": "Aurora PostgreSQL database engine version",
+      "Type": "String",
+      "Default": "17.4"
+    },
+    "GitSha": {
+      "Description": "GitSha that is currently being deployed",
+      "Type": "String"
+    },
+    "Environment": {
+      "Description": "VPC/ECS Stack to deploy into",
+      "Type": "String",
+      "Default": "prod"
+    },
+    "EnvType": {
+      "Description": "Environment type",
+      "Type": "String",
+      "AllowedValues": [
+        "prod",
+        "dev-test"
+      ],
+      "Default": "prod"
+    }
+  },
+  "Rules": {},
+  "Mappings": {},
+  "Conditions": {
+    "CreateProdResources": {
+      "Fn::Equals": [
+        {
+          "Ref": "EnvType"
+        },
+        "prod"
+      ]
+    },
+    "S3ConfigValueSet": {
+      "Fn::Equals": [
+        {
+          "Ref": "AuthentikConfigFile"
+        },
+        true
+      ]
+    }
+  },
+  "Resources": {
+    "Logs": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Ref": "AWS::StackName"
+        },
+        "RetentionInDays": 7
+      }
+    },
+    "AuthentikSecretKey": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              " Authentik Secret Key"
+            ]
+          ]
+        },
+        "GenerateSecretString": {
+          "ExcludePunctuation": true,
+          "PasswordLength": 64
+        },
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "/authentik-secret-key"
+            ]
+          ]
+        },
+        "KmsKeyId": {
+          "Ref": "KMS"
+        }
+      }
+    },
+    "AuthentikAdminUserPassword": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              " Authentik Admin User Password"
+            ]
+          ]
+        },
+        "GenerateSecretString": {
+          "SecretStringTemplate": "{\"username\": \"akadmin\"}",
+          "GenerateStringKey": "password",
+          "ExcludePunctuation": true,
+          "PasswordLength": 32
+        },
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "/authentik-admin-user-password"
+            ]
+          ]
+        },
+        "KmsKeyId": {
+          "Ref": "KMS"
+        }
+      }
+    },
+    "AuthentikAdminUserToken": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              " Authentik Admin User Token"
+            ]
+          ]
+        },
+        "GenerateSecretString": {
+          "ExcludePunctuation": true,
+          "PasswordLength": 64
+        },
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "/authentik-admin-token"
+            ]
+          ]
+        },
+        "KmsKeyId": {
+          "Ref": "KMS"
+        }
+      }
+    },
+    "AuthentikLDAPToken": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              " Authentik LDAP Outpost Token"
+            ]
+          ]
+        },
+        "SecretString": "replace-me",
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "/authentik-ldap-token"
+            ]
+          ]
+        },
+        "KmsKeyId": {
+          "Ref": "KMS"
+        }
+      }
+    },
+    "LDAPServiceUserPassword": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              " LDAP Service Account Password"
+            ]
+          ]
+        },
+        "GenerateSecretString": {
+          "SecretStringTemplate": "{\"username\": \"ldapservice\"}",
+          "GenerateStringKey": "password",
+          "ExcludePunctuation": true,
+          "PasswordLength": 32
+        },
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "/ldapservice"
+            ]
+          ]
+        },
+        "KmsKeyId": {
+          "Ref": "KMS"
+        }
+      }
+    },
+    "ALB": {
+      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties": {
+        "Name": {
+          "Ref": "AWS::StackName"
+        },
+        "Type": "application",
+        "Scheme": "internet-facing",
+        "SecurityGroups": [
+          {
+            "Ref": "ALBSecurityGroup"
+          }
+        ],
+        "Subnets": [
+          {
+            "Fn::ImportValue": {
+              "Fn::Join": [
+                "",
+                [
+                  "coe-base-",
+                  {
+                    "Ref": "Environment"
+                  },
+                  "-subnet-public-a"
+                ]
+              ]
+            }
+          },
+          {
+            "Fn::ImportValue": {
+              "Fn::Join": [
+                "",
+                [
+                  "coe-base-",
+                  {
+                    "Ref": "Environment"
+                  },
+                  "-subnet-public-b"
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "ALBSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "alb-sg"
+                ]
+              ]
+            }
+          }
+        ],
+        "GroupName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "alb-sg"
+            ]
+          ]
+        },
+        "GroupDescription": "Allow 80 and 443 Access to ALB",
+        "SecurityGroupIngress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443
+          },
+          {
+            "CidrIp": "0.0.0.0/0",
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80
+          }
+        ],
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Join": [
+              "",
+              [
+                "coe-base-",
+                {
+                  "Ref": "Environment"
+                },
+                "-vpc"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "HTTPListener": {
+      "Type": "AWS::ElasticLoadBalancingV2::Listener",
+      "Properties": {
+        "DefaultActions": [
+          {
+            "Type": "redirect",
+            "RedirectConfig": {
+              "Protocol": "HTTPS",
+              "StatusCode": "HTTP_301"
+            }
+          }
+        ],
+        "LoadBalancerArn": {
+          "Ref": "ALB"
+        },
+        "Port": 80,
+        "Protocol": "HTTP"
+      }
+    },
+    "HTTPSListener": {
+      "Type": "AWS::ElasticLoadBalancingV2::Listener",
+      "Properties": {
+        "Certificates": [
+          {
+            "CertificateArn": {
+              "Ref": "SSLCertificateARN"
+            }
+          }
+        ],
+        "DefaultActions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": {
+              "Ref": "TargetGroup"
+            }
+          }
+        ],
+        "LoadBalancerArn": {
+          "Ref": "ALB"
+        },
+        "Port": 443,
+        "Protocol": "HTTPS"
+      }
+    },
+    "TargetGroup": {
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "DependsOn": "ALB",
+      "Properties": {
+        "HealthCheckPath": "/-/health/live/",
+        "Matcher": {
+          "HttpCode": "200"
+        },
+        "Port": 9000,
+        "Protocol": "HTTP",
+        "TargetGroupAttributes": [
+          {
+            "Key": "stickiness.enabled",
+            "Value": "false"
+          }
+        ],
+        "TargetType": "ip",
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Join": [
+              "",
+              [
+                "coe-base-",
+                {
+                  "Ref": "Environment"
+                },
+                "-vpc"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "ServerTaskRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "api-policy"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ssmmessages:CreateControlChannel",
+                    "ssmmessages:CreateDataChannel",
+                    "ssmmessages:OpenControlChannel",
+                    "ssmmessages:OpenDataChannel"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:",
+                          {
+                            "Ref": "AWS::Partition"
+                          },
+                          ":logs:*:*:*"
+                        ]
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:Decrypt",
+                    "kms:GenerateDataKey"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "KMS",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::ImportValue": {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "coe-auth-config-s3-",
+                            {
+                              "Ref": "Environment"
+                            },
+                            "-kms"
+                          ]
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:DescribeSecret",
+                    "secretsmanager:GetSecretValue"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::ImportValue": {
+                              "Fn::Join": [
+                                "",
+                                [
+                                  "coe-auth-config-s3-",
+                                  {
+                                    "Ref": "Environment"
+                                  },
+                                  "-s3"
+                                ]
+                              ]
+                            }
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "ServerExecRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "-api-logging"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:",
+                          {
+                            "Ref": "AWS::Partition"
+                          },
+                          ":logs:*:*:*"
+                        ]
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:Decrypt",
+                    "kms:GenerateDataKey"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "KMS",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::ImportValue": {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "coe-auth-config-s3-",
+                            {
+                              "Ref": "Environment"
+                            },
+                            "-kms"
+                          ]
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:DescribeSecret",
+                    "secretsmanager:GetSecretValue"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:",
+                          {
+                            "Ref": "AWS::Partition"
+                          },
+                          ":secretsmanager:",
+                          {
+                            "Ref": "AWS::Region"
+                          },
+                          ":",
+                          {
+                            "Ref": "AWS::AccountId"
+                          },
+                          ":secret:",
+                          {
+                            "Ref": "AWS::StackName"
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:GetBucketLocation"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::ImportValue": {
+                              "Fn::Join": [
+                                "",
+                                [
+                                  "coe-auth-config-s3-",
+                                  {
+                                    "Ref": "Environment"
+                                  },
+                                  "-s3"
+                                ]
+                              ]
+                            }
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+              ]
+            ]
+          }
+        ],
+        "Path": "/service-role/"
+      }
+    },
+    "ServerTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "Family": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "server"
+            ]
+          ]
+        },
+        "Cpu": 512,
+        "Memory": 1024,
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "api"
+                ]
+              ]
+            }
+          }
+        ],
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "ServerExecRole",
+            "Arn"
+          ]
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "ServerTaskRole",
+            "Arn"
+          ]
+        },
+        "Volumes": [
+          {
+            "Name": {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "-media"
+                ]
+              ]
+            },
+            "EFSVolumeConfiguration": {
+              "FilesystemId": {
+                "Ref": "EFS"
+              },
+              "TransitEncryption": "ENABLED",
+              "AuthorizationConfig": {
+                "AccessPointId": {
+                  "Ref": "EFSAccessPointMedia"
+                }
+              }
+            }
+          }
+        ],
+        "ContainerDefinitions": [
+          {
+            "Name": "AuthentikServerContainer",
+            "Command": [
+              "server"
+            ],
+            "HealthCheck": {
+              "Command": [
+                "CMD",
+                "ak",
+                "healthcheck"
+              ],
+              "Interval": 30,
+              "Retries": 3,
+              "StartPeriod": 60,
+              "Timeout": 30
+            },
+            "Image": "ghcr.io/tak-nz/aut-infra-server:latest",
+            "MountPoints": [
+              {
+                "ContainerPath": "/media",
+                "SourceVolume": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Ref": "AWS::StackName"
+                      },
+                      "-media"
+                    ]
+                  ]
+                }
+              }
+            ],
+            "PortMappings": [
+              {
+                "ContainerPort": 9000,
+                "Protocol": "tcp"
+              }
+            ],
+            "Environment": [
+              {
+                "Name": "StackName",
+                "Value": {
+                  "Ref": "AWS::StackName"
+                }
+              },
+              {
+                "Name": "AWS_DEFAULT_REGION",
+                "Value": {
+                  "Ref": "AWS::Region"
+                }
+              },
+              {
+                "Name": "AUTHENTIK_POSTGRESQL__HOST",
+                "Value": {
+                  "Fn::GetAtt": [
+                    "DBCluster",
+                    "Endpoint.Address"
+                  ]
+                }
+              },
+              {
+                "Name": "AUTHENTIK_POSTGRESQL__USER",
+                "Value": {
+                  "Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}"
+                }
+              },
+              {
+                "Name": "AUTHENTIK_REDIS__HOST",
+                "Value": {
+                  "Fn::GetAtt": [
+                    "Redis",
+                    "PrimaryEndPoint.Address"
+                  ]
+                }
+              },
+              {
+                "Name": "AUTHENTIK_REDIS__TLS",
+                "Value": "True"
+              }
+            ],
+            "Secrets": [
+              {
+                "Name": "AUTHENTIK_POSTGRESQL__PASSWORD",
+                "ValueFrom": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Ref": "DBMasterSecret"
+                      },
+                      ":password::"
+                    ]
+                  ]
+                }
+              },
+              {
+                "Name": "AUTHENTIK_SECRET_KEY",
+                "ValueFrom": {
+                  "Ref": "AuthentikSecretKey"
+                }
+              }
+            ],
+            "EnvironmentFiles": [
+              {
+                "Fn::If": [
+                  "S3ConfigValueSet",
+                  {
+                    "Value": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::Join": [
+                              "",
+                              [
+                                {
+                                  "Fn::ImportValue": {
+                                    "Fn::Join": [
+                                      "",
+                                      [
+                                        "coe-base-",
+                                        {
+                                          "Ref": "Environment"
+                                        },
+                                        "-s3"
+                                      ]
+                                    ]
+                                  }
+                                },
+                                "/authentik-config.env"
+                              ]
+                            ]
+                          }
+                        ]
+                      ]
+                    },
+                    "Type": "s3"
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
+              }
+            ],
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "AWS::StackName"
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": {
+                  "Ref": "AWS::StackName"
+                },
+                "awslogs-create-group": true
+              }
+            },
+            "RestartPolicy": {
+              "Enabled": true
+            },
+            "Essential": true
+          }
+        ]
+      }
+    },
+    "ServerService": {
+      "Type": "AWS::ECS::Service",
+      "DependsOn": [
+        "HTTPSListener",
+        "ServerTaskRole"
+      ],
+      "Properties": {
+        "ServiceName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "Server"
+            ]
+          ]
+        },
+        "Cluster": {
+          "Fn::Join": [
+            "",
+            [
+              "coe-base-",
+              {
+                "Ref": "Environment"
+              }
+            ]
+          ]
+        },
+        "DeploymentConfiguration": {
+          "Alarms": {
+            "AlarmNames": [],
+            "Enable": false,
+            "Rollback": false
+          },
+          "MaximumPercent": 200,
+          "MinimumHealthyPercent": 50
+        },
+        "EnableExecuteCommand": {
+          "Ref": "EnableExecute"
+        },
+        "TaskDefinition": {
+          "Ref": "ServerTaskDefinition"
+        },
+        "LaunchType": "FARGATE",
+        "HealthCheckGracePeriodSeconds": 300,
+        "DesiredCount": {
+          "Fn::If": [
+            "CreateProdResources",
+            2,
+            1
+          ]
+        },
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "DISABLED",
+            "SecurityGroups": [
+              {
+                "Ref": "ServiceSecurityGroup"
+              }
+            ],
+            "Subnets": [
+              {
+                "Fn::ImportValue": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "coe-base-",
+                      {
+                        "Ref": "Environment"
+                      },
+                      "-subnet-private-a"
+                    ]
+                  ]
+                }
+              },
+              {
+                "Fn::ImportValue": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "coe-base-",
+                      {
+                        "Ref": "Environment"
+                      },
+                      "-subnet-private-b"
+                    ]
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "LoadBalancers": [
+          {
+            "ContainerName": "AuthentikServerContainer",
+            "ContainerPort": 9000,
+            "TargetGroupArn": {
+              "Ref": "TargetGroup"
+            }
+          }
+        ]
+      }
+    },
+    "WorkerTaskRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "api-policy"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ssmmessages:CreateControlChannel",
+                    "ssmmessages:CreateDataChannel",
+                    "ssmmessages:OpenControlChannel",
+                    "ssmmessages:OpenDataChannel"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:",
+                          {
+                            "Ref": "AWS::Partition"
+                          },
+                          ":logs:*:*:*"
+                        ]
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:Decrypt",
+                    "kms:GenerateDataKey"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "KMS",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::ImportValue": {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "coe-auth-config-s3-",
+                            {
+                              "Ref": "Environment"
+                            },
+                            "-kms"
+                          ]
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:DescribeSecret",
+                    "secretsmanager:GetSecretValue"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::ImportValue": {
+                              "Fn::Join": [
+                                "",
+                                [
+                                  "coe-auth-config-s3-",
+                                  {
+                                    "Ref": "Environment"
+                                  },
+                                  "-s3"
+                                ]
+                              ]
+                            }
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "WorkerExecRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "-api-logging"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:",
+                          {
+                            "Ref": "AWS::Partition"
+                          },
+                          ":logs:*:*:*"
+                        ]
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:Decrypt",
+                    "kms:GenerateDataKey"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "KMS",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::ImportValue": {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "coe-auth-config-s3-",
+                            {
+                              "Ref": "Environment"
+                            },
+                            "-kms"
+                          ]
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:DescribeSecret",
+                    "secretsmanager:GetSecretValue"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:",
+                          {
+                            "Ref": "AWS::Partition"
+                          },
+                          ":secretsmanager:",
+                          {
+                            "Ref": "AWS::Region"
+                          },
+                          ":",
+                          {
+                            "Ref": "AWS::AccountId"
+                          },
+                          ":secret:",
+                          {
+                            "Ref": "AWS::StackName"
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:GetBucketLocation"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::ImportValue": {
+                              "Fn::Join": [
+                                "",
+                                [
+                                  "coe-auth-config-s3-",
+                                  {
+                                    "Ref": "Environment"
+                                  },
+                                  "-s3"
+                                ]
+                              ]
+                            }
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+              ]
+            ]
+          }
+        ],
+        "Path": "/service-role/"
+      }
+    },
+    "WorkerTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "Family": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "server"
+            ]
+          ]
+        },
+        "Cpu": 512,
+        "Memory": 1024,
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "api"
+                ]
+              ]
+            }
+          }
+        ],
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "WorkerExecRole",
+            "Arn"
+          ]
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "WorkerTaskRole",
+            "Arn"
+          ]
+        },
+        "Volumes": [
+          {
+            "Name": {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "-media"
+                ]
+              ]
+            },
+            "EFSVolumeConfiguration": {
+              "FilesystemId": {
+                "Ref": "EFS"
+              },
+              "TransitEncryption": "ENABLED",
+              "AuthorizationConfig": {
+                "AccessPointId": {
+                  "Ref": "EFSAccessPointMedia"
+                }
+              }
+            }
+          }
+        ],
+        "ContainerDefinitions": [
+          {
+            "Name": "AuthentikWorkerContainer",
+            "Command": [
+              "worker"
+            ],
+            "HealthCheck": {
+              "Command": [
+                "CMD",
+                "ak",
+                "healthcheck"
+              ],
+              "Interval": 30,
+              "Retries": 3,
+              "StartPeriod": 60,
+              "Timeout": 30
+            },
+            "Image": "ghcr.io/tak-nz/aut-infra-server:latest",
+            "MountPoints": [
+              {
+                "ContainerPath": "/media",
+                "SourceVolume": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Ref": "AWS::StackName"
+                      },
+                      "-media"
+                    ]
+                  ]
+                }
+              }
+            ],
+            "PortMappings": [
+              {
+                "ContainerPort": 9000
+              }
+            ],
+            "Environment": [
+              {
+                "Name": "StackName",
+                "Value": {
+                  "Ref": "AWS::StackName"
+                }
+              },
+              {
+                "Name": "AWS_DEFAULT_REGION",
+                "Value": {
+                  "Ref": "AWS::Region"
+                }
+              },
+              {
+                "Name": "AUTHENTIK_POSTGRESQL__HOST",
+                "Value": {
+                  "Fn::GetAtt": [
+                    "DBCluster",
+                    "Endpoint.Address"
+                  ]
+                }
+              },
+              {
+                "Name": "AUTHENTIK_POSTGRESQL__USER",
+                "Value": {
+                  "Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}"
+                }
+              },
+              {
+                "Name": "AUTHENTIK_REDIS__HOST",
+                "Value": {
+                  "Fn::GetAtt": [
+                    "Redis",
+                    "PrimaryEndPoint.Address"
+                  ]
+                }
+              },
+              {
+                "Name": "AUTHENTIK_REDIS__TLS",
+                "Value": "True"
+              },
+              {
+                "Name": "AUTHENTIK_BOOTSTRAP_EMAIL",
+                "Value": {
+                  "Ref": "AuthentikAdminUserEmail"
+                }
+              },
+              {
+                "Name": "AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME",
+                "Value": {
+                  "Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:username:AWSCURRENT}}"
+                }
+              },
+              {
+                "Name": "AUTHENTIK_BOOTSTRAP_LDAP_BASEDN",
+                "Value": {
+                  "Ref": "AuthentikLdapBaseDN"
+                }
+              }
+            ],
+            "Secrets": [
+              {
+                "Name": "AUTHENTIK_POSTGRESQL__PASSWORD",
+                "ValueFrom": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Ref": "DBMasterSecret"
+                      },
+                      ":password::"
+                    ]
+                  ]
+                }
+              },
+              {
+                "Name": "AUTHENTIK_SECRET_KEY",
+                "ValueFrom": {
+                  "Ref": "AuthentikSecretKey"
+                }
+              },
+              {
+                "Name": "AUTHENTIK_BOOTSTRAP_PASSWORD",
+                "ValueFrom": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Ref": "AuthentikAdminUserPassword"
+                      },
+                      ":password::"
+                    ]
+                  ]
+                }
+              },
+              {
+                "Name": "AUTHENTIK_BOOTSTRAP_TOKEN",
+                "ValueFrom": {
+                  "Ref": "AuthentikAdminUserToken"
+                }
+              },
+              {
+                "Name": "AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD",
+                "ValueFrom": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Ref": "LDAPServiceUserPassword"
+                      },
+                      ":password::"
+                    ]
+                  ]
+                }
+              }
+            ],
+            "EnvironmentFiles": [
+              {
+                "Fn::If": [
+                  "S3ConfigValueSet",
+                  {
+                    "Value": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::Join": [
+                              "",
+                              [
+                                {
+                                  "Fn::ImportValue": {
+                                    "Fn::Join": [
+                                      "",
+                                      [
+                                        "coe-auth-config-s3-",
+                                        {
+                                          "Ref": "Environment"
+                                        },
+                                        "-s3"
+                                      ]
+                                    ]
+                                  }
+                                },
+                                "/authentik-config.env"
+                              ]
+                            ]
+                          }
+                        ]
+                      ]
+                    },
+                    "Type": "s3"
+                  },
+                  {
+                    "Ref": "AWS::NoValue"
+                  }
+                ]
+              }
+            ],
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "AWS::StackName"
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": {
+                  "Ref": "AWS::StackName"
+                },
+                "awslogs-create-group": true
+              }
+            },
+            "RestartPolicy": {
+              "Enabled": true
+            },
+            "Essential": true
+          }
+        ]
+      }
+    },
+    "WorkerService": {
+      "Type": "AWS::ECS::Service",
+      "DependsOn": [
+        "DBCluster",
+        "WorkerTaskRole"
+      ],
+      "Properties": {
+        "ServiceName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "Worker"
+            ]
+          ]
+        },
+        "Cluster": {
+          "Fn::Join": [
+            "",
+            [
+              "coe-base-",
+              {
+                "Ref": "Environment"
+              }
+            ]
+          ]
+        },
+        "DeploymentConfiguration": {
+          "Alarms": {
+            "AlarmNames": [],
+            "Enable": false,
+            "Rollback": false
+          },
+          "MaximumPercent": 200,
+          "MinimumHealthyPercent": 50
+        },
+        "EnableExecuteCommand": {
+          "Ref": "EnableExecute"
+        },
+        "TaskDefinition": {
+          "Ref": "WorkerTaskDefinition"
+        },
+        "LaunchType": "FARGATE",
+        "HealthCheckGracePeriodSeconds": 300,
+        "DesiredCount": {
+          "Fn::If": [
+            "CreateProdResources",
+            2,
+            1
+          ]
+        },
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "DISABLED",
+            "SecurityGroups": [
+              {
+                "Ref": "ServiceSecurityGroup"
+              }
+            ],
+            "Subnets": [
+              {
+                "Fn::ImportValue": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "coe-base-",
+                      {
+                        "Ref": "Environment"
+                      },
+                      "-subnet-private-a"
+                    ]
+                  ]
+                }
+              },
+              {
+                "Fn::ImportValue": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "coe-base-",
+                      {
+                        "Ref": "Environment"
+                      },
+                      "-subnet-private-b"
+                    ]
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "LoadBalancers": [
+          {}
+        ]
+      }
+    },
+    "ServiceSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "ecs-service-sg"
+                ]
+              ]
+            }
+          }
+        ],
+        "GroupName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "ecs-service-sg"
+            ]
+          ]
+        },
+        "GroupDescription": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "ecs-sg"
+            ]
+          ]
+        },
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Join": [
+              "",
+              [
+                "coe-base-",
+                {
+                  "Ref": "Environment"
+                },
+                "-vpc"
+              ]
+            ]
+          }
+        },
+        "SecurityGroupIngress": [
+          {
+            "Description": "ALB Traffic",
+            "SourceSecurityGroupId": {
+              "Ref": "ALBSecurityGroup"
+            },
+            "IpProtocol": "tcp",
+            "FromPort": 9000,
+            "ToPort": 9000
+          }
+        ]
+      }
+    },
+    "DBMasterSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              " Aurora PostgreSQL Master Password"
+            ]
+          ]
+        },
+        "GenerateSecretString": {
+          "SecretStringTemplate": "{\"username\": \"authentik\"}",
+          "GenerateStringKey": "password",
+          "ExcludePunctuation": true,
+          "PasswordLength": 64
+        },
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "/rds/secret"
+            ]
+          ]
+        },
+        "KmsKeyId": {
+          "Ref": "KMS"
+        }
+      }
+    },
+    "DBMasterSecretAttachment": {
+      "Type": "AWS::SecretsManager::SecretTargetAttachment",
+      "Properties": {
+        "SecretId": {
+          "Ref": "DBMasterSecret"
+        },
+        "TargetId": {
+          "Ref": "DBCluster"
+        },
+        "TargetType": "AWS::RDS::DBCluster"
+      }
+    },
+    "DBMonitoringRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "monitoring.rds.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+              ]
+            ]
+          }
+        ],
+        "Path": "/"
+      }
+    },
+    "DBCluster": {
+      "Type": "AWS::RDS::DBCluster",
+      "DependsOn": [
+        "DBMasterSecret"
+      ],
+      "DeletionPolicy": "Snapshot",
+      "UpdateReplacePolicy": "Snapshot",
+      "Properties": {
+        "Engine": "aurora-postgresql",
+        "Port": "5432",
+        "ServerlessV2ScalingConfiguration": {
+          "MinCapacity": "0.5",
+          "MaxCapacity": "4"
+        },
+        "DatabaseName": "authentik",
+        "CopyTagsToSnapshot": true,
+        "KmsKeyId": {
+          "Ref": "KMS"
+        },
+        "EngineVersion": {
+          "Ref": "DatabaseVersion"
+        },
+        "StorageEncrypted": "true",
+        "MasterUsername": {
+          "Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}"
+        },
+        "MasterUserPassword": {
+          "Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:password:AWSCURRENT}}"
+        },
+        "PreferredMaintenanceWindow": "Sun:23:00-Sun:23:30",
+        "PreferredBackupWindow": "22:00-23:00",
+        "BackupRetentionPeriod": 10,
+        "StorageType": "aurora",
+        "VpcSecurityGroupIds": [
+          {
+            "Ref": "DBVPCSecurityGroup"
+          }
+        ],
+        "DBSubnetGroupName": {
+          "Ref": "DBSubnet"
+        },
+        "DeletionProtection": {
+          "Fn::If": [
+            "CreateProdResources",
+            true,
+            false
+          ]
+        }
+      }
+    },
+    "DBFirstInstance": {
+      "Type": "AWS::RDS::DBInstance",
+      "DependsOn": [
+        "DBMasterSecret"
+      ],
+      "Properties": {
+        "DBClusterIdentifier": {
+          "Ref": "DBCluster"
+        },
+        "Engine": "aurora-postgresql",
+        "EngineVersion": {
+          "Ref": "DatabaseVersion"
+        },
+        "AllowMajorVersionUpgrade": false,
+        "DBInstanceIdentifier": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-primary"
+            ]
+          ]
+        },
+        "MonitoringInterval": 60,
+        "MonitoringRoleArn": {
+          "Fn::GetAtt": [
+            "DBMonitoringRole",
+            "Arn"
+          ]
+        },
+        "EnablePerformanceInsights": "true",
+        "PerformanceInsightsKMSKeyId": {
+          "Ref": "KMS"
+        },
+        "PerformanceInsightsRetentionPeriod": 7,
+        "DBInstanceClass": {
+          "Fn::If": [
+            "CreateProdResources",
+            "db.t4g.large",
+            "db.serverless"
+          ]
+        }
+      }
+    },
+    "DBSecondInstance": {
+      "Type": "AWS::RDS::DBInstance",
+      "Condition": "CreateProdResources",
+      "DependsOn": [
+        "DBMasterSecret"
+      ],
+      "Properties": {
+        "DBClusterIdentifier": {
+          "Ref": "DBCluster"
+        },
+        "Engine": "aurora-postgresql",
+        "EngineVersion": {
+          "Ref": "DatabaseVersion"
+        },
+        "AllowMajorVersionUpgrade": false,
+        "DBInstanceIdentifier": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-secondary"
+            ]
+          ]
+        },
+        "MonitoringInterval": 60,
+        "MonitoringRoleArn": {
+          "Fn::GetAtt": [
+            "DBMonitoringRole",
+            "Arn"
+          ]
+        },
+        "EnablePerformanceInsights": "true",
+        "PerformanceInsightsKMSKeyId": {
+          "Ref": "KMS"
+        },
+        "PerformanceInsightsRetentionPeriod": 7,
+        "DBInstanceClass": "db.t4g.large"
+      }
+    },
+    "DBSubnet": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "rds-subnets"
+            ]
+          ]
+        },
+        "SubnetIds": [
+          {
+            "Fn::ImportValue": {
+              "Fn::Join": [
+                "",
+                [
+                  "coe-base-",
+                  {
+                    "Ref": "Environment"
+                  },
+                  "-subnet-private-a"
+                ]
+              ]
+            }
+          },
+          {
+            "Fn::ImportValue": {
+              "Fn::Join": [
+                "",
+                [
+                  "coe-base-",
+                  {
+                    "Ref": "Environment"
+                  },
+                  "-subnet-private-b"
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "DBVPCSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "rds-sg"
+                ]
+              ]
+            }
+          }
+        ],
+        "GroupName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "rds-sg"
+            ]
+          ]
+        },
+        "GroupDescription": "Allow RDS Database Ingress",
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Join": [
+              "",
+              [
+                "coe-base-",
+                {
+                  "Ref": "Environment"
+                },
+                "-vpc"
+              ]
+            ]
+          }
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 5432,
+            "ToPort": 5432,
+            "SourceSecurityGroupId": {
+              "Fn::GetAtt": [
+                "ServiceSecurityGroup",
+                "GroupId"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "KMSAlias": {
+      "Type": "AWS::KMS::Alias",
+      "Properties": {
+        "AliasName": {
+          "Fn::Join": [
+            "",
+            [
+              "alias/",
+              {
+                "Ref": "AWS::StackName"
+              }
+            ]
+          ]
+        },
+        "TargetKeyId": {
+          "Ref": "KMS"
+        }
+      }
+    },
+    "KMS": {
+      "Type": "AWS::KMS::Key",
+      "Properties": {
+        "Description": {
+          "Ref": "AWS::StackName"
+        },
+        "Enabled": true,
+        "EnableKeyRotation": false,
+        "KeyPolicy": {
+          "Id": {
+            "Ref": "AWS::StackName"
+          },
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":root"
+                    ]
+                  ]
+                }
+              },
+              "Action": [
+                "kms:*"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+    "EFS": {
+      "Type": "AWS::EFS::FileSystem",
+      "Properties": {
+        "FileSystemTags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          }
+        ],
+        "Encrypted": true,
+        "KmsKeyId": {
+          "Ref": "KMS"
+        },
+        "PerformanceMode": "generalPurpose",
+        "ThroughputMode": "bursting",
+        "BackupPolicy": {
+          "Status": "DISABLED"
+        }
+      }
+    },
+    "EFSMountTargetSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "efs-sg"
+                ]
+              ]
+            }
+          }
+        ],
+        "GroupName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "efs-sg"
+            ]
+          ]
+        },
+        "GroupDescription": "EFS to Auth ECS Service",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 2049,
+            "ToPort": 2049,
+            "CidrIp": {
+              "Fn::ImportValue": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "coe-base-",
+                    {
+                      "Ref": "Environment"
+                    },
+                    "-vpc-cidr"
+                  ]
+                ]
+              }
+            }
+          }
+        ],
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Join": [
+              "",
+              [
+                "coe-base-",
+                {
+                  "Ref": "Environment"
+                },
+                "-vpc"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "EFSAccessPointMedia": {
+      "Type": "AWS::EFS::AccessPoint",
+      "Properties": {
+        "AccessPointTags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "authentik-media-accesspoint"
+                ]
+              ]
+            }
+          }
+        ],
+        "FileSystemId": {
+          "Ref": "EFS"
+        },
+        "PosixUser": {
+          "Uid": 1000,
+          "Gid": 1000
+        },
+        "RootDirectory": {
+          "CreationInfo": {
+            "OwnerGid": 1000,
+            "OwnerUid": 1000,
+            "Permissions": "755"
+          },
+          "Path": "/media"
+        }
+      }
+    },
+    "EFSMountTargetSubnetPrivateA": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {
+        "FileSystemId": {
+          "Ref": "EFS"
+        },
+        "SubnetId": {
+          "Fn::ImportValue": {
+            "Fn::Join": [
+              "",
+              [
+                "coe-base-",
+                {
+                  "Ref": "Environment"
+                },
+                "-subnet-private-a"
+              ]
+            ]
+          }
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "EFSMountTargetSecurityGroup"
+          }
+        ]
+      }
+    },
+    "EFSMountTargetSubnetPrivateB": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {
+        "FileSystemId": {
+          "Ref": "EFS"
+        },
+        "SubnetId": {
+          "Fn::ImportValue": {
+            "Fn::Join": [
+              "",
+              [
+                "coe-base-",
+                {
+                  "Ref": "Environment"
+                },
+                "-subnet-private-b"
+              ]
+            ]
+          }
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "EFSMountTargetSecurityGroup"
+          }
+        ]
+      }
+    },
+    "Redis": {
+      "Type": "AWS::ElastiCache::ReplicationGroup",
+      "Properties": {
+        "AutomaticFailoverEnabled": {
+          "Fn::If": [
+            "CreateProdResources",
+            true,
+            false
+          ]
+        },
+        "AtRestEncryptionEnabled": true,
+        "TransitEncryptionEnabled": true,
+        "TransitEncryptionMode": "preferred",
+        "KmsKeyId": {
+          "Ref": "KMS"
+        },
+        "CacheNodeType": "cache.t4g.micro",
+        "CacheSubnetGroupName": {
+          "Ref": "RedisSubnetGroup"
+        },
+        "Engine": "valkey",
+        "EngineVersion": "7.2",
+        "AutoMinorVersionUpgrade": true,
+        "NumCacheClusters": {
+          "Fn::If": [
+            "CreateProdResources",
+            2,
+            1
+          ]
+        },
+        "PreferredMaintenanceWindow": "Sun:22:30-Sun:23:30",
+        "ReplicationGroupDescription": "Redis cluster for Authentik",
+        "SecurityGroupIds": [
+          {
+            "Ref": "RedisSecurityGroup"
+          }
+        ]
+      }
+    },
+    "RedisSubnetGroup": {
+      "Type": "AWS::ElastiCache::SubnetGroup",
+      "Properties": {
+        "Description": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "redis-subnets"
+            ]
+          ]
+        },
+        "SubnetIds": [
+          {
+            "Fn::ImportValue": {
+              "Fn::Join": [
+                "",
+                [
+                  "coe-base-",
+                  {
+                    "Ref": "Environment"
+                  },
+                  "-subnet-private-a"
+                ]
+              ]
+            }
+          },
+          {
+            "Fn::ImportValue": {
+              "Fn::Join": [
+                "",
+                [
+                  "coe-base-",
+                  {
+                    "Ref": "Environment"
+                  },
+                  "-subnet-private-b"
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "RedisSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "redis-sg"
+                ]
+              ]
+            }
+          }
+        ],
+        "GroupName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "redis-sg"
+            ]
+          ]
+        },
+        "GroupDescription": "Authentik to ElastiCache Redis",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 6379,
+            "ToPort": 6379,
+            "SourceSecurityGroupId": {
+              "Fn::GetAtt": [
+                "ServiceSecurityGroup",
+                "GroupId"
+              ]
+            }
+          }
+        ],
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Join": [
+              "",
+              [
+                "coe-base-",
+                {
+                  "Ref": "Environment"
+                },
+                "-vpc"
+              ]
+            ]
+          }
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "API": {
+      "Description": "HTTP(S) ALB endpoint for CNAME",
+      "Export": {
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-api-endpoint"
+            ]
+          ]
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "ALB",
+          "DNSName"
+        ]
+      }
+    },
+    "LDAPServiceUsername": {
+      "Description": "LDAP Service Username",
+      "Export": {
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-ldapservice-username"
+            ]
+          ]
+        }
+      },
+      "Value": {
+        "Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:username:AWSCURRENT}}"
+      }
+    },
+    "LDAPServicePassword": {
+      "Description": "LDAP Service Password",
+      "Export": {
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-ldapservice-password"
+            ]
+          ]
+        }
+      },
+      "Value": {
+        "Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:password:AWSCURRENT}}"
+      }
+    },
+    "GitSha": {
+      "Export": {
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-gitsha"
+            ]
+          ]
+        }
+      },
+      "Value": {
+        "Ref": "GitSha"
+      }
+    },
+    "DBEndpoint": {
+      "Description": "Aurora PostgreSQL Database Endpoint",
+      "Export": {
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-db-endpoint"
+            ]
+          ]
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "DBCluster",
+          "Endpoint.Address"
+        ]
+      }
+    },
+    "DB": {
+      "Description": "Postgres Connection String",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "postgresql://",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}"
+            },
+            ":",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:password:AWSCURRENT}}"
+            },
+            "@",
+            {
+              "Fn::GetAtt": [
+                "DBCluster",
+                "Endpoint.Address"
+              ]
+            },
+            ":5432/authentik"
+          ]
+        ]
+      }
+    },
+    "KMS": {
+      "Description": "KMS",
+      "Export": {
+        "Name": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "-kms"
+            ]
+          ]
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "KMS",
+          "Arn"
+        ]
+      }
+    }
+  }
+}

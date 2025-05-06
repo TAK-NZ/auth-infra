@@ -20,6 +20,12 @@ export default cf.merge(
                 Type: 'String',
                 AllowedValues: ['prod', 'dev-test'],
                 Default: 'prod'
+            },
+            DockerImageLocation: {
+                Description: 'Use the docker image from Github or the local AWS ECR?',
+                Type: 'String',
+                AllowedValues: ['Github', 'Local ECR'],
+                Default: 'Github'
             }
         }
     }

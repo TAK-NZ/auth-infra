@@ -25,7 +25,8 @@
         "@openaddresses/batch-alarms": "^3.0.0",
         "@openaddresses/cfn-config": "^7.5.0",
         "@openaddresses/cloudfriend": "^7.0.0",
-        "@openaddresses/deploy": "^9.0.0"
+        "@openaddresses/deploy": "^9.0.0",
+        "node-fetch": "^3.3.2"
     },
     "devDependencies": {
         "@types/xml2js": "^0.4.11",

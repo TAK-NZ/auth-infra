@@ -1,4 +1,4 @@
-name: Lint via eslint
+name: Lint code via eslint
 
 on:
   push:

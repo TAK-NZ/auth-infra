@@ -26,6 +26,12 @@ export default {
             Type: 'String',
             AllowedValues: [true, false],
             Default: false
+        },
+        DockerImageLocation: {
+            Description: 'Use the docker image from Github or the local AWS ECR?',
+            Type: 'String',
+            AllowedValues: ['Github', 'Local ECR'],
+            Default: 'Github'
         }
     },
     Resources: {
@@ -198,7 +204,7 @@ export default {
                     }]
                 },
                 Policies: [{
-                    PolicyName: cf.join('-', [cf.stackName, 'api-policy']),
+                    PolicyName: cf.join('-', [cf.stackName, 'auth-policy']),
                     PolicyDocument: {
                         Statement: [{
                             Effect: 'Allow',
@@ -226,7 +232,7 @@ export default {
                             ],
                             Resource: [
                                 cf.getAtt('KMS', 'Arn'),
-                                cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-kms']))
+                                cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
                             ]
                         },{
                             Effect: 'Allow',
@@ -235,7 +241,7 @@ export default {
                                 'secretsmanager:GetSecretValue'
                             ],
                             Resource: [
-                                cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/*'])
+                                cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
                             ]
                         }]
                     }
@@ -256,7 +262,7 @@ export default {
                     }]
                 },
                 Policies: [{
-                    PolicyName: cf.join([cf.stackName, '-api-logging']),
+                    PolicyName: cf.join([cf.stackName, '-auth-logging']),
                     PolicyDocument: {
                         Statement: [{
                             Effect: 'Allow',
@@ -275,7 +281,7 @@ export default {
                             ],
                             Resource: [
                                 cf.getAtt('KMS', 'Arn'),
-                                cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-kms']))
+                                cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
                             ]
                         },{
                             Effect: 'Allow',
@@ -293,7 +299,7 @@ export default {
                                 's3:GetBucketLocation'
                             ],
                             Resource: [
-                                cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/*'])
+                                cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
                             ]
                         }]
                     }
@@ -314,7 +320,7 @@ export default {
                 RequiresCompatibilities: ['FARGATE'],
                 Tags: [{
                     Key: 'Name',
-                    Value: cf.join('-', [cf.stackName, 'api'])
+                    Value: cf.join('-', [cf.stackName, 'auth'])
                 }],
                 ExecutionRoleArn: cf.getAtt('ServerExecRole', 'Arn'),
                 TaskRoleArn: cf.getAtt('ServerTaskRole', 'Arn'),
@@ -329,7 +335,7 @@ export default {
                     }
                 }],
                 ContainerDefinitions: [{
-                    Name: 'AuthentikServerContainer',
+                    Name: 'Server',
                     Command: ['server'],
                     HealthCheck: {
                         Command: [
@@ -342,7 +348,10 @@ export default {
                         StartPeriod: 60,
                         Timeout: 30
                     },
-                    Image: 'ghcr.io/tak-nz/aut-infra-server:latest',
+                    Image: cf.if('DockerGithubImage',
+                        'ghcr.io/tak-nz/auth-infra-server:latest',
+                        cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-base-', cf.ref('Environment'), ':auth-infra-server-', cf.ref('GitSha')])
+                    ),
                     MountPoints: [{
                         ContainerPath: '/media',
                         SourceVolume: cf.join([cf.stackName, '-media'])
@@ -372,7 +381,7 @@ export default {
                     EnvironmentFiles: [
                         cf.if('S3ConfigValueSet',
                             {
-                                Value: cf.join([cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/authentik-config.env'])]),
+                                Value: cf.join([cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/authentik-config.env'])]),
                                 Type: 's3'
                             },
                             cf.ref('AWS::NoValue')
@@ -403,15 +412,6 @@ export default {
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'Server']),
                 Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
-                DeploymentConfiguration: {
-                    Alarms: {
-                        AlarmNames: [],
-                        Enable: false,
-                        Rollback: false
-                    },
-                    MaximumPercent: 200,
-                    MinimumHealthyPercent: 50
-                },
                 EnableExecuteCommand: cf.ref('EnableExecute'),
                 TaskDefinition: cf.ref('ServerTaskDefinition'),
                 LaunchType: 'FARGATE',
@@ -428,7 +428,7 @@ export default {
                     }
                 },
                 LoadBalancers: [{
-                    ContainerName: 'AuthentikServerContainer',
+                    ContainerName: 'Server',
                     ContainerPort: 9000,
                     TargetGroupArn: cf.ref('TargetGroup')
                 }]
@@ -448,7 +448,7 @@ export default {
                     }]
                 },
                 Policies: [{
-                    PolicyName: cf.join('-', [cf.stackName, 'api-policy']),
+                    PolicyName: cf.join('-', [cf.stackName, 'auth-policy']),
                     PolicyDocument: {
                         Statement: [{
                             Effect: 'Allow',
@@ -476,7 +476,7 @@ export default {
                             ],
                             Resource: [
                                 cf.getAtt('KMS', 'Arn'),
-                                cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-kms']))
+                                cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
                             ]
                         },{
                             Effect: 'Allow',
@@ -485,7 +485,7 @@ export default {
                                 'secretsmanager:GetSecretValue'
                             ],
                             Resource: [
-                                cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/*'])
+                                cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
                             ]
                         }]
                     }
@@ -506,7 +506,7 @@ export default {
                     }]
                 },
                 Policies: [{
-                    PolicyName: cf.join([cf.stackName, '-api-logging']),
+                    PolicyName: cf.join([cf.stackName, '-auth-logging']),
                     PolicyDocument: {
                         Statement: [{
                             Effect: 'Allow',
@@ -525,7 +525,7 @@ export default {
                             ],
                             Resource: [
                                 cf.getAtt('KMS', 'Arn'),
-                                cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-kms']))
+                                cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
                             ]
                         },{
                             Effect: 'Allow',
@@ -543,7 +543,7 @@ export default {
                                 's3:GetBucketLocation'
                             ],
                             Resource: [
-                                cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/*'])
+                                cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
                             ]
                         }]
                     }
@@ -564,7 +564,7 @@ export default {
                 RequiresCompatibilities: ['FARGATE'],
                 Tags: [{
                     Key: 'Name',
-                    Value: cf.join('-', [cf.stackName, 'api'])
+                    Value: cf.join('-', [cf.stackName, 'auth'])
                 }],
                 ExecutionRoleArn: cf.getAtt('WorkerExecRole', 'Arn'),
                 TaskRoleArn: cf.getAtt('WorkerTaskRole', 'Arn'),
@@ -579,7 +579,7 @@ export default {
                     }
                 }],
                 ContainerDefinitions: [{
-                    Name: 'AuthentikWorkerContainer',
+                    Name: 'worker',
                     Command: ['worker'],
                     HealthCheck: {
                         Command: [
@@ -592,7 +592,10 @@ export default {
                         StartPeriod: 60,
                         Timeout: 30
                     },
-                    Image: 'ghcr.io/tak-nz/aut-infra-server:latest',
+                    Image: cf.if('DockerGithubImage',
+                        'ghcr.io/tak-nz/auth-infra-server:latest',
+                        cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-base-', cf.ref('Environment'), ':auth-infra-server-', cf.ref('GitSha')])
+                    ),
                     MountPoints: [{
                         ContainerPath: '/media',
                         SourceVolume: cf.join([cf.stackName, '-media'])
@@ -627,7 +630,7 @@ export default {
                     EnvironmentFiles: [
                         cf.if('S3ConfigValueSet',
                             {
-                                Value: cf.join([cf.join([cf.importValue(cf.join(['coe-auth-config-s3-', cf.ref('Environment'), '-s3'])), '/authentik-config.env'])]),
+                                Value: cf.join([cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/authentik-config.env'])]),
                                 Type: 's3'
                             },
                             cf.ref('AWS::NoValue')
@@ -657,15 +660,6 @@ export default {
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'Worker']),
                 Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
-                DeploymentConfiguration: {
-                    Alarms: {
-                        AlarmNames: [],
-                        Enable: false,
-                        Rollback: false
-                    },
-                    MaximumPercent: 200,
-                    MinimumHealthyPercent: 50
-                },
                 EnableExecuteCommand: cf.ref('EnableExecute'),
                 TaskDefinition: cf.ref('WorkerTaskDefinition'),
                 LaunchType: 'FARGATE',
@@ -680,8 +674,7 @@ export default {
                             cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-subnet-private-b']))
                         ]
                     }
-                },
-                LoadBalancers: [{}]
+                }
             }
         },
         ServiceSecurityGroup: {
@@ -706,13 +699,14 @@ export default {
     },
     Conditions: {
         CreateProdResources: cf.equals(cf.ref('EnvType'), 'prod'),
-        S3ConfigValueSet: cf.equals(cf.ref('AuthentikConfigFile'), true)
+        S3ConfigValueSet: cf.equals(cf.ref('AuthentikConfigFile'), true),
+        DockerGithubImage: cf.equals(cf.ref('DockerImageLocation'), 'Github')
     },
     Outputs: {
-        API: {
+        AUTH: {
             Description: 'HTTP(S) ALB endpoint for CNAME',
             Export: {
-                Name: cf.join([cf.stackName, '-api-endpoint'])
+                Name: cf.join([cf.stackName, '-auth-endpoint'])
             },
             Value: cf.getAtt('ALB', 'DNSName')
         },
