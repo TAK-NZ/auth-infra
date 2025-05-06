@@ -5,8 +5,8 @@ export default {
         EnableExecute: {
             Description: 'Allow SSH into docker container - should only be enabled for limited debugging',
             Type: 'String',
-            AllowedValues: [true, false],
-            Default: false
+            AllowedValues: ['true', 'false'],
+            Default: 'false'
         },
         SSLCertificateARN: {
             Description: 'ACM SSL Certificate ARN for HTTPS Protocol',
@@ -24,8 +24,8 @@ export default {
         AuthentikConfigFile: {
             Description: 'Use authentik-config.env config file in S3 bucket',
             Type: 'String',
-            AllowedValues: [true, false],
-            Default: false
+            AllowedValues: ['true', 'false'],
+            Default: 'false'
         },
         DockerImageLocation: {
             Description: 'Use the docker image from Github or the local AWS ECR?',
