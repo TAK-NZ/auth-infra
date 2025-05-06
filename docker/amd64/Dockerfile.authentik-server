@@ -11,4 +11,3 @@ COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/brand.svg
 COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/icon.svg
 COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/icon_left_brand.svg
 COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/icon_top_brand.svg
-COPY authentik/branding/css/custom.css /web/dist/custom.css
