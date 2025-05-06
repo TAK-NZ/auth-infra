@@ -7,7 +7,7 @@ services:
       dockerfile: ./docker/amd64/Dockerfile.authentik-server
   auth-infra-server-tak-nz:
     platform: linux/amd64
-    image: auth-infra-server-tak-nz
+    image: auth-infra-server
     build:
       context: .
       dockerfile: ./docker/amd64/Dockerfile.authentik-server-tak-nz

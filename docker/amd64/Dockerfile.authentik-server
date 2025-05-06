@@ -1,14 +1,14 @@
-FROM ghcr.io/goauthentik/server:latest
+FROM ghcr.io/goauthentik/server:2025.4.0
 LABEL org.opencontainers.image.source=https://github.com/tak-nz/auth-infra-server
 LABEL org.opencontainers.image.description="Authentik server for TAK server auth via LDAP"
 LABEL org.opencontainers.image.licenses=MIT
-COPY authentik/blueprints/* /blueprints/tak/
-COPY authentik/branding/tak-logo.png /web/dist/assets/icons/brand.png
-COPY authentik/branding/tak-logo.png /web/dist/assets/icons/icon.png
-COPY authentik/branding/tak-logo.png /web/dist/assets/icons/icon_left_brand.png
-COPY authentik/branding/tak-logo.png /web/dist/assets/icons/icon_top_brand.png
-COPY authentik/branding/tak-logo.svg /web/dist/assets/icons/brand.svg
-COPY authentik/branding/tak-logo.svg /web/dist/assets/icons/icon.svg
-COPY authentik/branding/tak-logo.svg /web/dist/assets/icons/icon_left_brand.svg
-COPY authentik/branding/tak-logo.svg /web/dist/assets/icons/icon_top_brand.svg
-ENTRYPOINT [dumb-init -- ak]
+COPY authentik/blueprints/*.yaml /blueprints/tak/
+COPY authentik/branding/icons/tak-logo.png /web/dist/assets/icons/brand.png
+COPY authentik/branding/icons/tak-logo.png /web/dist/assets/icons/icon.png
+COPY authentik/branding/icons/tak-logo.png /web/dist/assets/icons/icon_left_brand.png
+COPY authentik/branding/icons/tak-logo.png /web/dist/assets/icons/icon_top_brand.png
+COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/brand.svg
+COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/icon.svg
+COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/icon_left_brand.svg
+COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/icon_top_brand.svg
+COPY authentik/branding/css/custom.css /web/dist/custom.css

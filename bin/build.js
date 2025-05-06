@@ -4,9 +4,9 @@ await accountSetup();
 
 await ecrLogin(global.region, global.account, global.profile)
 
-await buildPushDockerContainer(global.region, global.account, global.environment, global.gitsha, 'auth-infra-server')
+await buildPushDockerContainer(global.region, global.account, global.environment, global.gitsha, 'auth-infra-server', global.brand)
 
-await buildPushDockerContainer(global.region, global.account, global.environment, global.gitsha, 'auth-infra-ldap')
+await buildPushDockerContainer(global.region, global.account, global.environment, global.gitsha, 'auth-infra-ldap', '')
 
 function accountSetup() {
     console.log('ok - Determining AWS account and deployment environment setup')
@@ -14,13 +14,28 @@ function accountSetup() {
     global.region = getAWSRegion(profile);
     global.account = getAWSAccount(profile);
     global.gitsha = getGitSha();
-    global.environment = getStackEnv()
+    global.environment = getStackEnv();
+    global.brand = getBrand();
 
     console.log('AWS Profile:', global.profile);
     console.log('AWS Region:', global.region);
     console.log('AWS Account:', global.account);
     console.log('GitSHA:', global.gitsha);
     console.log('Environment:', global.environment);
+    console.log('Brand:', global.brand);
+}
+
+function getBrand() {
+    // Checks for --brand and if it has a value
+    const brandIndex = process.argv.indexOf('--brand');
+    let brandValue;
+  
+    if (brandIndex > -1) {
+        // Retrieve the value after --brand
+        brandValue = process.argv[brandIndex + 1];
+    }
+    const brand = (brandValue || 'default');
+    return brand;
 }
 
 function getAWSProfile() {
@@ -98,10 +113,16 @@ function ecrLogin(region, account, profile) {
 
 }
 
-function buildPushDockerContainer(region, account, environment, gitsha, image) {
+function buildPushDockerContainer(region, account, environment, gitsha, image, brand) {
     console.log('ok - building Docker image')
 
-    const dockerCompose = 'docker compose build ' + image;
+    if (brand !== 'default' && brand !== '') {
+        var dockerComposeName = image + '-' + brand;
+    } else {
+        var dockerComposeName = image;
+    }
+    
+    const dockerCompose = 'docker compose build ' + dockerComposeName;
     const dockerTag = 'docker tag ' + image + ':latest "' + account + '.dkr.ecr.' + region + '.amazonaws.com/coe-base-' + environment + ':' + image + '-' + gitsha + '"';
     const dockerPush = 'docker push "' + account + '.dkr.ecr.' + region + '.amazonaws.com/coe-base-' + environment + ':' + image + '-' + gitsha + '"';
     const Command = dockerCompose + ' && ' + dockerTag + ' && ' + dockerPush;

@@ -1,0 +1,132 @@
+version: 1
+metadata:
+  name: LDAP Setup for TAK
+  labels:
+    blueprints.goauthentik.io/description: |
+      This blueprint configures the default LDAP service account.
+context:
+  username: !Env [AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME, "ldapservice"]
+  password: !Env [AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD, null]
+  basedn: !Env [AUTHENTIK_BOOTSTRAP_LDAP_BASEDN, "DC=example,DC=com"]
+entries:
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - Invalidation flow
+      required: false 
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - Password change flow
+      required: false
+  - model: authentik_core.user
+    state: created
+    id: ldap-service-account
+    identifiers:
+      username: !Context username
+    attrs:
+      name: LDAP Service account
+      type: service_account
+      password: !Context password
+  - attrs:
+      authentication: require_outpost
+      denied_action: message_continue
+      designation: authentication
+      layout: stacked
+      name: ldap-authentication-flow
+      policy_engine_mode: any
+      title: ldap-authentication-flow
+    identifiers:
+      slug: ldap-authentication-flow
+    model: authentik_flows.flow
+    id: ldap-authentication-flow
+  - attrs:
+      backends:
+      - authentik.core.auth.InbuiltBackend
+      - authentik.core.auth.TokenBackend
+      - authentik.sources.ldap.auth.LDAPBackend
+      configure_flow: !Find [authentik_flows.flow, [slug, default-password-change]]
+      failed_attempts_before_cancel: 5
+    identifiers:
+      name: ldap-authentication-password
+    model: authentik_stages_password.passwordstage
+    id: ldap-authentication-password
+  - attrs:
+      case_insensitive_matching: true
+      password_stage: !KeyOf ldap-authentication-password
+      pretend_user_exists: true
+      show_matched_user: true
+      user_fields:
+      - username
+      - email
+    identifiers:
+      name: ldap-identification-stage
+    model: authentik_stages_identification.identificationstage
+    id: ldap-identification-stage
+  - attrs:
+      geoip_binding: bind_continent
+      network_binding: bind_asn
+      remember_me_offset: seconds=0
+      session_duration: seconds=0
+    identifiers:
+        name: ldap-authentication-login
+    model: authentik_stages_user_login.userloginstage
+    id: ldap-authentication-login
+  - attrs:
+      evaluate_on_plan: true
+      invalid_response_action: retry
+      policy_engine_mode: any
+      re_evaluate_policies: true
+    identifiers:
+      order: 10
+      stage: !KeyOf ldap-identification-stage
+      target: !KeyOf ldap-authentication-flow
+    model: authentik_flows.flowstagebinding  
+    id: ldap-identification-stage-flow-binding
+  - attrs:
+      evaluate_on_plan: true
+      invalid_response_action: retry
+      policy_engine_mode: any
+      re_evaluate_policies: true
+    identifiers:
+      order: 30
+      stage: !KeyOf ldap-authentication-login
+      target: !KeyOf ldap-authentication-flow
+    model: authentik_flows.flowstagebinding
+    id: ldap-authentication-login-binding
+  - model: authentik_providers_ldap.ldapprovider
+    id: provider
+    identifiers:
+      name: LDAP
+    attrs:
+      authorization_flow: !KeyOf ldap-authentication-flow
+      base_dn: !Context basedn
+      bind_mode: cached
+      gid_start_number: 4000
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
+      mfa_support: true
+      name: Provider for LDAP
+      search_mode: cached
+      uid_start_number: 2000
+    permissions:
+      - permission: search_full_directory
+        user: !KeyOf ldap-service-account
+  - model: authentik_core.application
+    id: app
+    identifiers:
+      slug: ldap
+    attrs:
+      name: LDAP
+      policy_engine_mode: any
+      provider: !KeyOf provider
+  - model: authentik_outposts.outpost  
+    id: outpost
+    identifiers:
+      name: LDAP
+    attrs:
+      config:
+        authentik_host: 'http://localhost:9000/'
+      providers:
+      - !KeyOf provider
+      type: ldap
+ 

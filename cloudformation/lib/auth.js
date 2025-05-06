@@ -349,7 +349,8 @@ export default {
                         Timeout: 30
                     },
                     Image: cf.if('DockerGithubImage',
-                        'ghcr.io/tak-nz/auth-infra-server:latest',
+                        // 'ghcr.io/tak-nz/auth-infra-server:latest',
+                        'ghcr.io/goauthentik/server:latest',
                         cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-base-', cf.ref('Environment'), ':auth-infra-server-', cf.ref('GitSha')])
                     ),
                     MountPoints: [{
@@ -412,6 +413,15 @@ export default {
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'Server']),
                 Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
+                DeploymentConfiguration: {
+                    Alarms: {
+                        AlarmNames: [],
+                        Enable: false,
+                        Rollback: false
+                    },
+                    MaximumPercent: 200,
+                    MinimumHealthyPercent: 50
+                },
                 EnableExecuteCommand: cf.ref('EnableExecute'),
                 TaskDefinition: cf.ref('ServerTaskDefinition'),
                 LaunchType: 'FARGATE',
@@ -557,7 +567,7 @@ export default {
         WorkerTaskDefinition: {
             Type: 'AWS::ECS::TaskDefinition',
             Properties: {
-                Family: cf.join('-', [cf.stackName, 'server']),
+                Family: cf.join('-', [cf.stackName, 'worker']),
                 Cpu: 512,
                 Memory: 1024,
                 NetworkMode: 'awsvpc',
@@ -593,7 +603,8 @@ export default {
                         Timeout: 30
                     },
                     Image: cf.if('DockerGithubImage',
-                        'ghcr.io/tak-nz/auth-infra-server:latest',
+                        // 'ghcr.io/tak-nz/auth-infra-server:latest',
+                        'ghcr.io/goauthentik/server:latest',
                         cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-base-', cf.ref('Environment'), ':auth-infra-server-', cf.ref('GitSha')])
                     ),
                     MountPoints: [{
@@ -660,6 +671,15 @@ export default {
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'Worker']),
                 Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
+                DeploymentConfiguration: {
+                    Alarms: {
+                        AlarmNames: [],
+                        Enable: false,
+                        Rollback: false
+                    },
+                    MaximumPercent: 200,
+                    MinimumHealthyPercent: 50
+                },
                 EnableExecuteCommand: cf.ref('EnableExecute'),
                 TaskDefinition: cf.ref('WorkerTaskDefinition'),
                 LaunchType: 'FARGATE',
