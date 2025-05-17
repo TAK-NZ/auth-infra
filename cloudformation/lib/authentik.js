@@ -228,7 +228,7 @@ export default {
                         },{
                             Effect: 'Allow',
                             Action: [
-                                's3:GetObject',
+                                's3:GetObject'
                             ],
                             Resource: [
                                 cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
@@ -308,7 +308,8 @@ export default {
                     Secrets: [
                         { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
-                        { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') }
+                        { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') },
+                        { Name: 'AUTHENTIK_REDIS__PASSWORD',                        ValueFrom: cf.ref('RedisAuthToken') }
                     ],
                     EnvironmentFiles: [
                         cf.if('S3ConfigValueSet',
@@ -467,7 +468,7 @@ export default {
                         },{
                             Effect: 'Allow',
                             Action: [
-                                's3:GetObject',
+                                's3:GetObject'
                             ],
                             Resource: [
                                 cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
@@ -550,6 +551,7 @@ export default {
                         { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') },
+                        { Name: 'AUTHENTIK_REDIS__PASSWORD',                        ValueFrom: cf.ref('RedisAuthToken') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_PASSWORD',                     ValueFrom: cf.join([cf.ref('AuthentikAdminUserPassword'), ':password::']) },
                         { Name: 'AUTHENTIK_BOOTSTRAP_TOKEN',                        ValueFrom: cf.ref('AuthentikAdminUserToken') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD',         ValueFrom: cf.join([cf.ref('LDAPServiceUserPassword'), ':password::']) }

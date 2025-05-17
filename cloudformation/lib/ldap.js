@@ -182,7 +182,7 @@ export default {
                         },{
                             Effect: 'Allow',
                             Action: [
-                                'kms:Decrypt',
+                                'kms:Decrypt'
                                 // 'kms:GenerateDataKey'
                             ],
                             Resource: [
@@ -237,7 +237,6 @@ export default {
                         { Name: 'AWS_DEFAULT_REGION',           Value: cf.region },
                         { Name: 'AUTHENTIK_HOST',               Value: cf.ref('AuthentikHost') },
                         { Name: 'AUTHENTIK_INSECURE',           Value: 'false' }
-                        // { Name: 'AUTHENTIK_TOKEN',              Value: cf.sub('{{resolve:secretsmanager:coe-auth-${Environment}/authentik-ldap-token:::AWSCURRENT}}') }
                     ],
                     Secrets: [
                         { Name: 'AUTHENTIK_TOKEN',              ValueFrom: cf.join([cf.importValue(cf.join(['coe-auth-', cf.ref('Environment'), '-authentik-ldap-token-arn'])), ':::']) }

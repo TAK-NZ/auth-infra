@@ -70,8 +70,6 @@ export default {
                 StorageEncrypted: 'true',
                 MasterUsername: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}'),
                 MasterUserPassword: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:password:AWSCURRENT}}'),
-                // PreferredMaintenanceWindow: 'Sun:23:00-Sun:23:30',
-                // PreferredBackupWindow: '22:00-23:00',
                 BackupRetentionPeriod: 10,
                 StorageType: 'aurora',
                 VpcSecurityGroupIds: [cf.ref('DBVPCSecurityGroup')],
