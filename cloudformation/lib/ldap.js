@@ -49,10 +49,10 @@ export default {
                 },{
                     CidrIp: '10.0.0.0/8',
                     IpProtocol: 'tcp',
-                    FromPort: 80,
-                    ToPort: 80
+                    FromPort: 636,
+                    ToPort: 636
                 }],
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id']))
             }
         },
         LDAPListener: {
@@ -89,7 +89,7 @@ export default {
                 Port: 3389,
                 Protocol: 'TCP',
                 TargetType: 'ip',
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc'])),
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id'])),
 
                 HealthCheckEnabled: true,
                 HealthCheckIntervalSeconds: 30,
@@ -104,9 +104,9 @@ export default {
             DependsOn: 'NLB',
             Properties: {
                 Port: 6636,
-                Protocol: 'TCP',
+                Protocol: 'TLS',
                 TargetType: 'ip',
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc'])),
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id'])),
 
                 HealthCheckEnabled: true,
                 HealthCheckIntervalSeconds: 30,
@@ -133,6 +133,7 @@ export default {
                     PolicyName: cf.join('-', [cf.stackName, 'auth-policy']),
                     PolicyDocument: {
                         Statement: [{
+                            // ECS Exec permissions
                             Effect: 'Allow',
                             Action: [
                                 'ssmmessages:CreateControlChannel',
@@ -144,10 +145,10 @@ export default {
                         },{
                             Effect: 'Allow',
                             Action: [
-                                'logs:CreateLogGroup',
                                 'logs:CreateLogStream',
+                                'logs:DescribeLogStreams',
                                 'logs:PutLogEvents',
-                                'logs:DescribeLogStreams'
+                                'logs:DescribeLogGroups'
                             ],
                             Resource: [cf.join(['arn:', cf.partition, ':logs:*:*:*'])]
                         }]
@@ -174,12 +175,28 @@ export default {
                         Statement: [{
                             Effect: 'Allow',
                             Action: [
-                                'logs:CreateLogGroup',
                                 'logs:CreateLogStream',
-                                'logs:PutLogEvents',
-                                'logs:DescribeLogStreams'
+                                'logs:PutLogEvents'
                             ],
                             Resource: [cf.join(['arn:', cf.partition, ':logs:*:*:*'])]
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                'kms:Decrypt',
+                                // 'kms:GenerateDataKey'
+                            ],
+                            Resource: [
+                                cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
+                            ]
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                'secretsmanager:DescribeSecret',
+                                'secretsmanager:GetSecretValue'
+                            ],
+                            Resource: [
+                                cf.join(['arn:', cf.partition, ':secretsmanager:', cf.region, ':', cf.accountId, ':secret:coe-auth-', cf.ref('Environment'), '/authentik-ldap-token*'])
+                            ]
                         }]
                     }
                 }],
@@ -219,8 +236,11 @@ export default {
                         { Name: 'StackName',                    Value: cf.stackName },
                         { Name: 'AWS_DEFAULT_REGION',           Value: cf.region },
                         { Name: 'AUTHENTIK_HOST',               Value: cf.ref('AuthentikHost') },
-                        { Name: 'AUTHENTIK_INSECURE',           Value: 'false' },
-                        { Name: 'AUTHENTIK_TOKEN',              Value: cf.sub('{{resolve:secretsmanager:coe-auth-${Environment}/authentik-ldap-token:::AWSCURRENT}}') }
+                        { Name: 'AUTHENTIK_INSECURE',           Value: 'false' }
+                        // { Name: 'AUTHENTIK_TOKEN',              Value: cf.sub('{{resolve:secretsmanager:coe-auth-${Environment}/authentik-ldap-token:::AWSCURRENT}}') }
+                    ],
+                    Secrets: [
+                        { Name: 'AUTHENTIK_TOKEN',              ValueFrom: cf.join([cf.importValue(cf.join(['coe-auth-', cf.ref('Environment'), '-authentik-ldap-token-arn'])), ':::']) }
                     ],
                     LogConfiguration: {
                         LogDriver: 'awslogs',
@@ -284,7 +304,7 @@ export default {
                 }],
                 GroupName: cf.join('-', [cf.stackName, 'ecs-ldap-sg']),
                 GroupDescription: cf.join('-', [cf.stackName, 'ecs-sg']),
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc'])),
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id'])),
                 SecurityGroupIngress: [{
                     Description: 'LDAP Traffic',
                     SourceSecurityGroupId: cf.ref('NLBSecurityGroup'),

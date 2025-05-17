@@ -20,7 +20,7 @@ export default {
                     PasswordLength: 64
                 },
                 Name: cf.join([cf.stackName, '/rds/secret']),
-                KmsKeyId: cf.ref('KMS')
+                KmsKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
             }
         },
         DBMasterSecretAttachment: {
@@ -65,13 +65,13 @@ export default {
                 },
                 DatabaseName: 'authentik',
                 CopyTagsToSnapshot: true,
-                KmsKeyId: cf.ref('KMS'),
+                KmsKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms'])),
                 EngineVersion: cf.ref('DatabaseVersion'),
                 StorageEncrypted: 'true',
                 MasterUsername: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}'),
                 MasterUserPassword: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:password:AWSCURRENT}}'),
-                PreferredMaintenanceWindow: 'Sun:23:00-Sun:23:30',
-                PreferredBackupWindow: '22:00-23:00',
+                // PreferredMaintenanceWindow: 'Sun:23:00-Sun:23:30',
+                // PreferredBackupWindow: '22:00-23:00',
                 BackupRetentionPeriod: 10,
                 StorageType: 'aurora',
                 VpcSecurityGroupIds: [cf.ref('DBVPCSecurityGroup')],
@@ -91,7 +91,7 @@ export default {
                 MonitoringInterval: 60,
                 MonitoringRoleArn: cf.getAtt('DBMonitoringRole', 'Arn'),
                 EnablePerformanceInsights: 'true',
-                PerformanceInsightsKMSKeyId: cf.ref('KMS'),
+                PerformanceInsightsKMSKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms'])),
                 PerformanceInsightsRetentionPeriod: 7,
                 DBInstanceClass: cf.if('CreateProdResources', 'db.t4g.large', 'db.serverless')
             }
@@ -109,7 +109,7 @@ export default {
                 MonitoringInterval: 60,
                 MonitoringRoleArn: cf.getAtt('DBMonitoringRole', 'Arn'),
                 EnablePerformanceInsights: 'true',
-                PerformanceInsightsKMSKeyId: cf.ref('KMS'),
+                PerformanceInsightsKMSKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms'])),
                 PerformanceInsightsRetentionPeriod: 7,
                 DBInstanceClass: 'db.t4g.large'
             }
@@ -133,7 +133,7 @@ export default {
                 }],
                 GroupName: cf.join('-', [cf.stackName, 'rds-sg']),
                 GroupDescription: 'Allow RDS Database Ingress',
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc'])),
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id'])),
                 SecurityGroupIngress: [{
                     IpProtocol: 'tcp',
                     FromPort: 5432,
@@ -153,18 +153,6 @@ export default {
                 Name: cf.join([cf.stackName, '-db-endpoint'])
             },
             Value: cf.getAtt('DBCluster', 'Endpoint.Address')
-        },
-        DB: {
-            Description: 'Postgres Connection String',
-            Value: cf.join([
-                'postgresql://',
-                cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}'),
-                ':',
-                cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:password:AWSCURRENT}}'),
-                '@',
-                cf.getAtt('DBCluster', 'Endpoint.Address'),
-                ':5432/authentik'
-            ])
         }
     }
 };

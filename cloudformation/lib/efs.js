@@ -10,7 +10,7 @@ export default {
                     Value: cf.stackName
                 }],
                 Encrypted: true,
-                KmsKeyId: cf.ref('KMS'),
+                KmsKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms'])),
                 PerformanceMode: 'generalPurpose',
                 ThroughputMode: 'bursting',
                 BackupPolicy: {
@@ -31,9 +31,9 @@ export default {
                     IpProtocol: 'tcp',
                     FromPort: 2049,
                     ToPort: 2049,
-                    CidrIp: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-cidr']))
+                    CidrIp: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-cidr-ipv4']))
                 }],
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id']))
             }
         },
         EFSAccessPointMedia: {

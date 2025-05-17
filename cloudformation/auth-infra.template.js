@@ -1,18 +1,18 @@
 import cf from '@openaddresses/cloudfriend';
-import AUTH from './lib/auth.js';
+import Authentik from './lib/authentik.js';
 import DB from './lib/db.js';
-import KMS from './lib/kms.js';
+import SecretsManager from './lib/secretsmanager.js';
 import EFS from './lib/efs.js';
 import REDIS from './lib/redis.js';
 
 export default cf.merge(
-    AUTH,
+    Authentik,
     DB,
-    KMS,
+    SecretsManager,
     EFS,
     REDIS,
     {
-        Description: 'TAK Authentication Layer using Authentik',
+        Description: 'TAK Authentication Layer - Authentik',
         Parameters: {
             GitSha: {
                 Description: 'GitSha that is currently being deployed',

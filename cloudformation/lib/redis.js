@@ -16,15 +16,15 @@ export default {
                 AtRestEncryptionEnabled: true,
                 TransitEncryptionEnabled: true,
                 TransitEncryptionMode: 'preferred',
-                KmsKeyId: cf.ref('KMS'),
+                KmsKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms'])),
                 CacheNodeType: cf.ref('CacheNodeType'),
                 CacheSubnetGroupName: cf.ref('RedisSubnetGroup'),
                 Engine: 'valkey',
                 EngineVersion: '7.2',
                 AutoMinorVersionUpgrade: true,
                 NumCacheClusters: cf.if('CreateProdResources', 2, 1),
-                PreferredMaintenanceWindow: 'Sun:22:30-Sun:23:30',
-                ReplicationGroupDescription: 'Redis cluster for Authentik',
+                // PreferredMaintenanceWindow: 'Sun:22:30-Sun:23:30',
+                ReplicationGroupDescription: 'Valkey (Redis) cluster for Authentik',
                 SecurityGroupIds: [
                     cf.ref('RedisSecurityGroup')
                 ]
@@ -55,7 +55,7 @@ export default {
                     ToPort: 6379,
                     SourceSecurityGroupId: cf.getAtt('ServiceSecurityGroup', 'GroupId')
                 }],
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id']))
             }
         }
     },
