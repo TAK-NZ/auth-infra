@@ -6,7 +6,9 @@
     "description": "TAK Authentication Layer using Authentik",
     "scripts": {
         "lint": "eslint *.js cloudformation/",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "node ./bin/build.js",
+        "retrieve": "node ./bin/retrieveLDAPToken.js"
     },
     "engines": {
         "node": ">= 18"

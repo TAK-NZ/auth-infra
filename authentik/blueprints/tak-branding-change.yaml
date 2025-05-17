@@ -5,6 +5,11 @@ metadata:
     blueprints.goauthentik.io/description: |
       This blueprint removes the large background image for the default brand.
 entries:
+- model: authentik_blueprints.metaapplyblueprint
+  attrs:
+    identifiers:
+      name: Default - Brand
+    required: false 
 - attrs:
     branding_custom_css: ".pf-c-background-image {\n    --ak-flow-background: radial-gradient(at\
       \ left top, #4f5255, #3c3f42) !important;\n}"

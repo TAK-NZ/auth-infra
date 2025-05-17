@@ -16,7 +16,7 @@ export default {
             Description: 'E-Mail address for the Authentik akadmin user',
             Type: 'String'
         },
-        AuthentikLdapBaseDN: {
+        AuthentikLDAPBaseDN: {
             Description: 'LDAP Base DN',
             Type: 'String',
             Default: 'DC=example,DC=com'
@@ -26,6 +26,12 @@ export default {
             Type: 'String',
             AllowedValues: ['true', 'false'],
             Default: 'false'
+        },
+        IpAddressType: {
+            Description: 'ELB IP Address Type - IPv4-only or IPv4/IPv6-Dualstack',
+            Type: 'String',
+            AllowedValues: ['ipv4', 'dualstack'],
+            Default: 'dualstack'
         },
         DockerImageLocation: {
             Description: 'Use the docker image from Github or the local AWS ECR?',
@@ -42,72 +48,12 @@ export default {
                 RetentionInDays: 7
             }
         },
-        AuthentikSecretKey: {
-            Type: 'AWS::SecretsManager::Secret',
-            Properties: {
-                Description: cf.join([cf.stackName, ' Authentik Secret Key']),
-                GenerateSecretString: {
-                    ExcludePunctuation: true,
-                    PasswordLength: 64
-                },
-                Name: cf.join([cf.stackName, '/authentik-secret-key']),
-                KmsKeyId: cf.ref('KMS')
-            }
-        },
-        AuthentikAdminUserPassword: {
-            Type: 'AWS::SecretsManager::Secret',
-            Properties: {
-                Description: cf.join([cf.stackName, ' Authentik Admin User Password']),
-                GenerateSecretString: {
-                    SecretStringTemplate: '{"username": "akadmin"}',
-                    GenerateStringKey: 'password',
-                    ExcludePunctuation: true,
-                    PasswordLength: 32
-                },
-                Name: cf.join([cf.stackName, '/authentik-admin-user-password']),
-                KmsKeyId: cf.ref('KMS')
-            }
-        },
-        AuthentikAdminUserToken: {
-            Type: 'AWS::SecretsManager::Secret',
-            Properties: {
-                Description: cf.join([cf.stackName, ' Authentik Admin User Token']),
-                GenerateSecretString: {
-                    ExcludePunctuation: true,
-                    PasswordLength: 64
-                },
-                Name: cf.join([cf.stackName, '/authentik-admin-token']),
-                KmsKeyId: cf.ref('KMS')
-            }
-        },
-        AuthentikLDAPToken: {
-            Type: 'AWS::SecretsManager::Secret',
-            Properties: {
-                Description: cf.join([cf.stackName, ' Authentik LDAP Outpost Token']),
-                'SecretString': 'replace-me',
-                Name: cf.join([cf.stackName, '/authentik-ldap-token']),
-                KmsKeyId: cf.ref('KMS')
-            }
-        },
-        LDAPServiceUserPassword: {
-            Type: 'AWS::SecretsManager::Secret',
-            Properties: {
-                Description: cf.join([cf.stackName, ' LDAP Service Account Password']),
-                GenerateSecretString: {
-                    SecretStringTemplate: '{"username": "ldapservice"}',
-                    GenerateStringKey: 'password',
-                    ExcludePunctuation: true,
-                    PasswordLength: 32
-                },
-                Name: cf.join([cf.stackName, '/ldapservice']),
-                KmsKeyId: cf.ref('KMS')
-            }
-        },
         ALB: {
             Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer',
             Properties: {
                 Name: cf.stackName,
                 Type: 'application',
+                IpAddressType: cf.ref('IpAddressType'),
                 Scheme: 'internet-facing',
                 SecurityGroups: [cf.ref('ALBSecurityGroup')],
                 Subnets:  [
@@ -137,7 +83,7 @@ export default {
                     FromPort: 80,
                     ToPort: 80
                 }],
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id']))
             }
         },
         HTTPListener: {
@@ -187,7 +133,7 @@ export default {
                     }
                 ],
                 TargetType: 'ip',
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id']))
             }
         },
         ServerTaskRole: {
@@ -207,6 +153,7 @@ export default {
                     PolicyName: cf.join('-', [cf.stackName, 'auth-policy']),
                     PolicyDocument: {
                         Statement: [{
+                            // ECS Exec permissions
                             Effect: 'Allow',
                             Action: [
                                 'ssmmessages:CreateControlChannel',
@@ -218,31 +165,12 @@ export default {
                         },{
                             Effect: 'Allow',
                             Action: [
-                                'logs:CreateLogGroup',
                                 'logs:CreateLogStream',
+                                'logs:DescribeLogStreams',
                                 'logs:PutLogEvents',
-                                'logs:DescribeLogStreams'
+                                'logs:DescribeLogGroups'
                             ],
                             Resource: [cf.join(['arn:', cf.partition, ':logs:*:*:*'])]
-                        },{
-                            Effect: 'Allow',
-                            Action: [
-                                'kms:Decrypt',
-                                'kms:GenerateDataKey'
-                            ],
-                            Resource: [
-                                cf.getAtt('KMS', 'Arn'),
-                                cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
-                            ]
-                        },{
-                            Effect: 'Allow',
-                            Action: [
-                                'secretsmanager:DescribeSecret',
-                                'secretsmanager:GetSecretValue'
-                            ],
-                            Resource: [
-                                cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
-                            ]
                         }]
                     }
                 }]
@@ -267,10 +195,8 @@ export default {
                         Statement: [{
                             Effect: 'Allow',
                             Action: [
-                                'logs:CreateLogGroup',
                                 'logs:CreateLogStream',
-                                'logs:PutLogEvents',
-                                'logs:DescribeLogStreams'
+                                'logs:PutLogEvents'
                             ],
                             Resource: [cf.join(['arn:', cf.partition, ':logs:*:*:*'])]
                         },{
@@ -280,7 +206,6 @@ export default {
                                 'kms:GenerateDataKey'
                             ],
                             Resource: [
-                                cf.getAtt('KMS', 'Arn'),
                                 cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
                             ]
                         },{
@@ -295,8 +220,15 @@ export default {
                         },{
                             Effect: 'Allow',
                             Action: [
-                                's3:GetObject',
                                 's3:GetBucketLocation'
+                            ],
+                            Resource: [
+                                cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3']))
+                            ]
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                's3:GetObject'
                             ],
                             Resource: [
                                 cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
@@ -349,8 +281,7 @@ export default {
                         Timeout: 30
                     },
                     Image: cf.if('DockerGithubImage',
-                        // 'ghcr.io/tak-nz/auth-infra-server:latest',
-                        'ghcr.io/goauthentik/server:latest',
+                        'ghcr.io/tak-nz/auth-infra-server:latest',
                         cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-base-', cf.ref('Environment'), ':auth-infra-server-', cf.ref('GitSha')])
                     ),
                     MountPoints: [{
@@ -377,7 +308,8 @@ export default {
                     Secrets: [
                         { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
-                        { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') }
+                        { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') },
+                        { Name: 'AUTHENTIK_REDIS__PASSWORD',                        ValueFrom: cf.ref('RedisAuthToken') }
                     ],
                     EnvironmentFiles: [
                         cf.if('S3ConfigValueSet',
@@ -461,6 +393,7 @@ export default {
                     PolicyName: cf.join('-', [cf.stackName, 'auth-policy']),
                     PolicyDocument: {
                         Statement: [{
+                            // ECS Exec permissions
                             Effect: 'Allow',
                             Action: [
                                 'ssmmessages:CreateControlChannel',
@@ -472,31 +405,12 @@ export default {
                         },{
                             Effect: 'Allow',
                             Action: [
-                                'logs:CreateLogGroup',
                                 'logs:CreateLogStream',
+                                'logs:DescribeLogStreams',
                                 'logs:PutLogEvents',
-                                'logs:DescribeLogStreams'
+                                'logs:DescribeLogGroups'
                             ],
                             Resource: [cf.join(['arn:', cf.partition, ':logs:*:*:*'])]
-                        },{
-                            Effect: 'Allow',
-                            Action: [
-                                'kms:Decrypt',
-                                'kms:GenerateDataKey'
-                            ],
-                            Resource: [
-                                cf.getAtt('KMS', 'Arn'),
-                                cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
-                            ]
-                        },{
-                            Effect: 'Allow',
-                            Action: [
-                                'secretsmanager:DescribeSecret',
-                                'secretsmanager:GetSecretValue'
-                            ],
-                            Resource: [
-                                cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
-                            ]
                         }]
                     }
                 }]
@@ -521,10 +435,8 @@ export default {
                         Statement: [{
                             Effect: 'Allow',
                             Action: [
-                                'logs:CreateLogGroup',
                                 'logs:CreateLogStream',
-                                'logs:PutLogEvents',
-                                'logs:DescribeLogStreams'
+                                'logs:PutLogEvents'
                             ],
                             Resource: [cf.join(['arn:', cf.partition, ':logs:*:*:*'])]
                         },{
@@ -534,7 +446,6 @@ export default {
                                 'kms:GenerateDataKey'
                             ],
                             Resource: [
-                                cf.getAtt('KMS', 'Arn'),
                                 cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
                             ]
                         },{
@@ -549,8 +460,15 @@ export default {
                         },{
                             Effect: 'Allow',
                             Action: [
-                                's3:GetObject',
                                 's3:GetBucketLocation'
+                            ],
+                            Resource: [
+                                cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3']))
+                            ]
+                        },{
+                            Effect: 'Allow',
+                            Action: [
+                                's3:GetObject'
                             ],
                             Resource: [
                                 cf.join([cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-s3'])), '/*'])
@@ -603,8 +521,7 @@ export default {
                         Timeout: 30
                     },
                     Image: cf.if('DockerGithubImage',
-                        // 'ghcr.io/tak-nz/auth-infra-server:latest',
-                        'ghcr.io/goauthentik/server:latest',
+                        'ghcr.io/tak-nz/auth-infra-server:latest',
                         cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-base-', cf.ref('Environment'), ':auth-infra-server-', cf.ref('GitSha')])
                     ),
                     MountPoints: [{
@@ -628,12 +545,13 @@ export default {
                         { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' },
                         { Name: 'AUTHENTIK_BOOTSTRAP_EMAIL',                    Value: cf.ref('AuthentikAdminUserEmail') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME',     Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:username:AWSCURRENT}}') },
-                        { Name: 'AUTHENTIK_BOOTSTRAP_LDAP_BASEDN',              Value: cf.ref('AuthentikLdapBaseDN') }
+                        { Name: 'AUTHENTIK_BOOTSTRAP_LDAP_BASEDN',              Value: cf.ref('AuthentikLDAPBaseDN') }
                     ],
                     Secrets: [
                         { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD', ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
                         { Name: 'AUTHENTIK_SECRET_KEY',                             ValueFrom: cf.ref('AuthentikSecretKey') },
+                        { Name: 'AUTHENTIK_REDIS__PASSWORD',                        ValueFrom: cf.ref('RedisAuthToken') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_PASSWORD',                     ValueFrom: cf.join([cf.ref('AuthentikAdminUserPassword'), ':password::']) },
                         { Name: 'AUTHENTIK_BOOTSTRAP_TOKEN',                        ValueFrom: cf.ref('AuthentikAdminUserToken') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD',         ValueFrom: cf.join([cf.ref('LDAPServiceUserPassword'), ':password::']) }
@@ -706,7 +624,7 @@ export default {
                 }],
                 GroupName: cf.join('-', [cf.stackName, 'ecs-service-sg']),
                 GroupDescription: cf.join('-', [cf.stackName, 'ecs-sg']),
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc'])),
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id'])),
                 SecurityGroupIngress: [{
                     Description: 'ALB Traffic',
                     SourceSecurityGroupId: cf.ref('ALBSecurityGroup'),
@@ -723,32 +641,12 @@ export default {
         DockerGithubImage: cf.equals(cf.ref('DockerImageLocation'), 'Github')
     },
     Outputs: {
-        AUTH: {
+        Authentik: {
             Description: 'HTTP(S) ALB endpoint for CNAME',
             Export: {
                 Name: cf.join([cf.stackName, '-auth-endpoint'])
             },
             Value: cf.getAtt('ALB', 'DNSName')
-        },
-        LDAPServiceUsername: {
-            Description: 'LDAP Service Username',
-            Export: {
-                Name: cf.join([cf.stackName, '-ldapservice-username'])
-            },
-            Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:username:AWSCURRENT}}')
-        },
-        LDAPServicePassword: {
-            Description: 'LDAP Service Password',
-            Export: {
-                Name: cf.join([cf.stackName, '-ldapservice-password'])
-            },
-            Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:password:AWSCURRENT}}')
-        },
-        GitSha: {
-            Export: {
-                Name: cf.join([cf.stackName, '-gitsha'])
-            },
-            Value: cf.ref('GitSha')
         }
     }
 };

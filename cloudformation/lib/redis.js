@@ -9,22 +9,34 @@ export default {
         }
     },
     Resources: {
+        RedisAuthToken: {
+            Type: 'AWS::SecretsManager::Secret',
+            Properties: {
+                Description: cf.join([cf.stackName, ' Redis Auth Token']),
+                GenerateSecretString: {
+                    ExcludePunctuation: true,
+                    PasswordLength: 64
+                },
+                Name: cf.join([cf.stackName, '/redis/auth-token']),
+                KmsKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
+            }
+        },
         Redis: {
             Type: 'AWS::ElastiCache::ReplicationGroup',
             Properties: {
                 AutomaticFailoverEnabled: cf.if('CreateProdResources', true, false),
                 AtRestEncryptionEnabled: true,
                 TransitEncryptionEnabled: true,
-                TransitEncryptionMode: 'preferred',
-                KmsKeyId: cf.ref('KMS'),
+                TransitEncryptionMode: 'required',
+                AuthToken: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/redis/auth-token:SecretString::AWSCURRENT}}'),
+                KmsKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms'])),
                 CacheNodeType: cf.ref('CacheNodeType'),
                 CacheSubnetGroupName: cf.ref('RedisSubnetGroup'),
                 Engine: 'valkey',
                 EngineVersion: '7.2',
                 AutoMinorVersionUpgrade: true,
                 NumCacheClusters: cf.if('CreateProdResources', 2, 1),
-                PreferredMaintenanceWindow: 'Sun:22:30-Sun:23:30',
-                ReplicationGroupDescription: 'Redis cluster for Authentik',
+                ReplicationGroupDescription: 'Valkey (Redis) cluster for Authentik',
                 SecurityGroupIds: [
                     cf.ref('RedisSecurityGroup')
                 ]
@@ -55,7 +67,7 @@ export default {
                     ToPort: 6379,
                     SourceSecurityGroupId: cf.getAtt('ServiceSecurityGroup', 'GroupId')
                 }],
-                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc']))
+                VpcId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-vpc-id']))
             }
         }
     },
