@@ -210,6 +210,7 @@ export default {
             Type: 'AWS::ECS::TaskDefinition',
             Properties: {
                 Family: cf.stackName,
+                // Task Size options: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size
                 Cpu: cf.if('CreateProdResources', 512, 256),
                 Memory: cf.if('CreateProdResources', 1024, 512),
                 NetworkMode: 'awsvpc',

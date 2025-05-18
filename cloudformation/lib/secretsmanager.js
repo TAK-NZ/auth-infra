@@ -85,13 +85,6 @@ export default {
                 Name: cf.join([cf.stackName, '-ldapservice-user'])
             },
             Value: cf.ref('LDAPServiceUserPassword')
-        },
-        OldKMS: {
-            Description: 'KMS ARN',
-            Export: {
-                Name: cf.join([cf.stackName, '-kms'])
-            },
-            Value: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms']))
         }
     }
 };

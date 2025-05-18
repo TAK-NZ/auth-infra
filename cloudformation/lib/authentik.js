@@ -246,6 +246,7 @@ export default {
             Type: 'AWS::ECS::TaskDefinition',
             Properties: {
                 Family: cf.join('-', [cf.stackName, 'server']),
+                // Task Size options: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size
                 Cpu: 512,
                 Memory: 1024,
                 NetworkMode: 'awsvpc',
@@ -486,6 +487,7 @@ export default {
             Type: 'AWS::ECS::TaskDefinition',
             Properties: {
                 Family: cf.join('-', [cf.stackName, 'worker']),
+                // Task Size options: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size
                 Cpu: 512,
                 Memory: 1024,
                 NetworkMode: 'awsvpc',
@@ -647,6 +649,13 @@ export default {
                 Name: cf.join([cf.stackName, '-auth-endpoint'])
             },
             Value: cf.getAtt('ALB', 'DNSName')
+        },
+        AuthentikLDAPBaseDN: {
+            Description: 'LDAP Base DN',
+            Export: {
+                Name: cf.join([cf.stackName, '-auth-ldap-basedn'])
+            },
+            Value: cf.ref('AuthentikLDAPBaseDN')
         }
     }
 };
