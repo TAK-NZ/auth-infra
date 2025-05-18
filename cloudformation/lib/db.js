@@ -1,13 +1,6 @@
 import cf from '@openaddresses/cloudfriend';
 
 export default {
-    Parameters: {
-        DatabaseVersion: {
-            Description: 'Aurora PostgreSQL database engine version',
-            Type: 'String',
-            Default: '17.4'
-        }
-    },
     Resources: {
         DBMasterSecret: {
             Type: 'AWS::SecretsManager::Secret',
@@ -66,7 +59,7 @@ export default {
                 DatabaseName: 'authentik',
                 CopyTagsToSnapshot: true,
                 KmsKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms'])),
-                EngineVersion: cf.ref('DatabaseVersion'),
+                EngineVersion: '17.4',
                 StorageEncrypted: 'true',
                 MasterUsername: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:username:AWSCURRENT}}'),
                 MasterUserPassword: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/rds/secret:SecretString:password:AWSCURRENT}}'),
@@ -83,7 +76,7 @@ export default {
             Properties: {
                 DBClusterIdentifier: cf.ref('DBCluster'),
                 Engine: 'aurora-postgresql',
-                EngineVersion: cf.ref('DatabaseVersion'),
+                EngineVersion: '17.4',
                 AllowMajorVersionUpgrade: false,
                 DBInstanceIdentifier: cf.join([cf.stackName, '-primary']),
                 MonitoringInterval: 60,
@@ -101,7 +94,7 @@ export default {
             Properties: {
                 DBClusterIdentifier: cf.ref('DBCluster'),
                 Engine: 'aurora-postgresql',
-                EngineVersion: cf.ref('DatabaseVersion'),
+                EngineVersion: '17.4',
                 AllowMajorVersionUpgrade: false,
                 DBInstanceIdentifier: cf.join([cf.stackName, '-secondary']),
                 MonitoringInterval: 60,

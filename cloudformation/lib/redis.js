@@ -1,13 +1,6 @@
 import cf from '@openaddresses/cloudfriend';
 
 export default {
-    Parameters: {
-        CacheNodeType: {
-            Description: 'ElastiCache Valkey node type',
-            Type: 'String',
-            Default: 'cache.t3.micro'
-        }
-    },
     Resources: {
         RedisAuthToken: {
             Type: 'AWS::SecretsManager::Secret',
@@ -30,7 +23,7 @@ export default {
                 TransitEncryptionMode: 'required',
                 AuthToken: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/redis/auth-token:SecretString::AWSCURRENT}}'),
                 KmsKeyId: cf.importValue(cf.join(['coe-base-', cf.ref('Environment'), '-kms'])),
-                CacheNodeType: cf.ref('CacheNodeType'),
+                CacheNodeType: 'cache.t3.micro',
                 CacheSubnetGroupName: cf.ref('RedisSubnetGroup'),
                 Engine: 'valkey',
                 EngineVersion: '7.2',
