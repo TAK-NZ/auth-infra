@@ -24,7 +24,6 @@
     },
     "homepage": "https://github.com/TAK-NZ/auth-infra#readme",
     "dependencies": {
-        "@openaddresses/batch-alarms": "^3.0.0",
         "@openaddresses/cfn-config": "^7.5.0",
         "@openaddresses/cloudfriend": "^7.0.0",
         "@openaddresses/deploy": "^9.0.0",
