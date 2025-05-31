@@ -5,9 +5,10 @@ metadata:
     blueprints.goauthentik.io/description: |
       This blueprint configures the default LDAP service account.
 context:
-  username: !Env [AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME, "ldapservice"]
+  username: !Env [AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME, 'ldapservice']
   password: !Env [AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD, null]
-  basedn: !Env [AUTHENTIK_BOOTSTRAP_LDAP_BASEDN, "DC=example,DC=com"]
+  basedn: !Env [AUTHENTIK_BOOTSTRAP_LDAP_BASEDN, 'DC=example,DC=com']
+  authentik_host: !Env [AUTHENTIK_BOOTSTRAP_LDAP_AUTHENTIK_HOST, 'http://localhost:9000/']
 entries:
   - model: authentik_blueprints.metaapplyblueprint
     attrs:
@@ -125,7 +126,7 @@ entries:
       name: LDAP
     attrs:
       config:
-        authentik_host: 'http://localhost:9000/'
+        authentik_host: !Context authentik_host
       providers:
       - !KeyOf provider
       type: ldap
