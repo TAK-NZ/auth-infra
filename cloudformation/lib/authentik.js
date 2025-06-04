@@ -247,8 +247,8 @@ export default {
             Properties: {
                 Family: cf.join('-', [cf.stackName, 'server']),
                 // Task Size options: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size
-                Cpu: 512,
-                Memory: 1024,
+                Cpu: 1024,
+                Memory: 2048,
                 NetworkMode: 'awsvpc',
                 RequiresCompatibilities: ['FARGATE'],
                 Tags: [{
@@ -304,7 +304,8 @@ export default {
                         // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME', Value: 'authentik' },
                         // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
                         { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('Redis', 'PrimaryEndPoint.Address') },
-                        { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' }
+                        { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' },
+                        { Name: 'AUTHENTIK_REDIS__TLS_REQS',                    Value: 'required' }
                     ],
                     Secrets: [
                         { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
@@ -545,6 +546,7 @@ export default {
                         // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
                         { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('Redis', 'PrimaryEndPoint.Address') },
                         { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' },
+                        { Name: 'AUTHENTIK_REDIS__TLS_REQS',                    Value: 'required' },
                         { Name: 'AUTHENTIK_BOOTSTRAP_EMAIL',                    Value: cf.ref('AuthentikAdminUserEmail') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME',     Value: cf.sub('{{resolve:secretsmanager:${AWS::StackName}/ldapservice:SecretString:username:AWSCURRENT}}') },
                         { Name: 'AUTHENTIK_BOOTSTRAP_LDAP_BASEDN',              Value: cf.ref('AuthentikLDAPBaseDN') }
