@@ -247,8 +247,8 @@ export default {
             Properties: {
                 Family: cf.join('-', [cf.stackName, 'server']),
                 // Task Size options: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size
-                Cpu: 512,
-                Memory: 1024,
+                Cpu: 1024,
+                Memory: 2048,
                 NetworkMode: 'awsvpc',
                 RequiresCompatibilities: ['FARGATE'],
                 Tags: [{

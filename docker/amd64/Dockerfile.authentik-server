@@ -1,4 +1,4 @@
-FROM ghcr.io/goauthentik/server:2025.4.1
+FROM ghcr.io/goauthentik/server:2025.6
 LABEL org.opencontainers.image.source=https://github.com/tak-nz/auth-infra-server
 LABEL org.opencontainers.image.description="Authentik server for TAK server auth via LDAP"
 LABEL org.opencontainers.image.licenses=MIT
@@ -11,3 +11,4 @@ COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/brand.svg
 COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/icon.svg
 COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/icon_left_brand.svg
 COPY authentik/branding/icons/tak-logo.svg /web/dist/assets/icons/icon_top_brand.svg
+COPY authentik/temp_fixes/authentik/ /authentik/
