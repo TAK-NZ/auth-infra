@@ -305,7 +305,7 @@ export default {
                         // { Name: 'AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT', Value: '5432' },
                         { Name: 'AUTHENTIK_REDIS__HOST',                        Value: cf.getAtt('Redis', 'PrimaryEndPoint.Address') },
                         { Name: 'AUTHENTIK_REDIS__TLS',                         Value: 'True' },
-                        { Name: 'AUTHENTIK_REDIS__TLS_REQS',                    Value: 'required' },
+                        { Name: 'AUTHENTIK_REDIS__TLS_REQS',                    Value: 'required' }
                     ],
                     Secrets: [
                         { Name: 'AUTHENTIK_POSTGRESQL__PASSWORD',                   ValueFrom: cf.join([cf.ref('DBMasterSecret'), ':password::']) },
