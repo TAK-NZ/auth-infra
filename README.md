@@ -5,7 +5,8 @@
 ## Background
 
 The [Team Awareness Kit (TAK)](https://tak.gov/solutions/emergency) provides Fire, Emergency Management, and First Responders an operationally agnostic tool for improved situational awareness and a common operational picture. 
-This repo deploys the base infrastructure required to deploy a [TAK server](https://tak.gov/solutions/emergency) along with [Authentik](https://goauthentik.io/) as the authentication layer on AWS.
+This repo deploys [Authentik](https://goauthentik.io/) as the LDAP based authentication layer for a [TAK server](https://tak.gov/solutions/emergency) on AWS.
+While a TAK sever supports build-in file based authentication mechanism, this approach is very limited. Also almost any other LDAP based authentication provider could be used, but Authentic here is a good choice to provide all the necessary functionality of an LDAP provider as well as advanced capabilities such as single-sign on via OIDC. 
 
 The following additional layers are required after deploying this `coe-base-<name>` layer:
 
@@ -24,7 +25,7 @@ The following dependencies must be fulfilled:
 - An [AWS Account](https://signin.aws.amazon.com/signup?request_type=register).
 - A Domain Name under which the TAK server is made available, e.g. `tak.nz` in the example here.
 - An [AWS ACM certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs.html) certificate.
-  - This certificate should cover the main domain - e.g. `tak.nz`, as well as two levels of wildcard subdomains, e.g. `*.tak.nz` and `*.*.tak.nz`.
+  - This certificate should cover the main domain - e.g. `tak.nz`, as well as the wildcard subdomain, e.g. `*.tak.nz`.
 
 The following stack layers need to be created before deploying this layer:
 
