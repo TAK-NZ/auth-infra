@@ -78,7 +78,17 @@ export default {
                     FromPort: 443,
                     ToPort: 443
                 },{
+                    CidrIp: '::/0',
+                    IpProtocol: 'tcp',
+                    FromPort: 443,
+                    ToPort: 443
+                },{
                     CidrIp: '0.0.0.0/0',
+                    IpProtocol: 'tcp',
+                    FromPort: 80,
+                    ToPort: 80
+                },{
+                    CidrIp: '::/0',
                     IpProtocol: 'tcp',
                     FromPort: 80,
                     ToPort: 80
