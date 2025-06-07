@@ -1,4 +1,4 @@
-FROM ghcr.io/goauthentik/ldap:2025.6
+FROM ghcr.io/goauthentik/ldap:2025.6.1
 LABEL org.opencontainers.image.source=https://github.com/tak-nz/auth-infra-ldap
 LABEL org.opencontainers.image.description="Authentik LDAP outpost for TAK server auth via LDAP"
 LABEL org.opencontainers.image.licenses=MIT
