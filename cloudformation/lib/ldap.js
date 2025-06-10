@@ -257,6 +257,7 @@ export default {
         },
         OutpostService: {
             Type: 'AWS::ECS::Service',
+            DependsOn: 'UpdateLDAPTokenSecret',
             Properties: {
                 ServiceName: cf.join('-', [cf.stackName, 'LDAP-Outpost']),
                 Cluster: cf.join(['coe-base-', cf.ref('Environment')]),
