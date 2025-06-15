@@ -1,13 +1,14 @@
 /**
- * Authentik Server Construct - Server container and ECS service configuration
+ * Authentik Construct - CDK implementation of the Authentik service
+ * Orchestrates the server, worker, and load balancer components
  */
 import { Construct } from 'constructs';
 import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager, aws_s3 as s3 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
- * Properties for the Authentik Server construct
+ * Properties for the Authentik construct
  */
-export interface AuthentikServerProps {
+export interface AuthentikProps {
     /**
      * Environment name (e.g. 'prod', 'dev', etc.)
      */
@@ -41,6 +42,10 @@ export interface AuthentikServerProps {
      */
     envFileS3Key?: string;
     /**
+     * SSL certificate ARN for HTTPS
+     */
+    sslCertificateArn: string;
+    /**
      * Authentik admin user email
      */
     adminUserEmail: string;
@@ -49,7 +54,7 @@ export interface AuthentikServerProps {
      */
     ldapBaseDn: string;
     /**
-     * Use config file flag
+     * Whether to use authentik-config.env file
      */
     useConfigFile: boolean;
     /**
@@ -61,17 +66,17 @@ export interface AuthentikServerProps {
      */
     enableExecute: boolean;
     /**
-     * Database secret
+     * Database credentials secret
      */
-    dbSecret: secretsmanager.ISecret;
+    dbSecret: secretsmanager.Secret;
     /**
      * Database hostname
      */
     dbHostname: string;
     /**
-     * Redis auth token
+     * Redis auth token secret
      */
-    redisAuthToken: secretsmanager.ISecret;
+    redisAuthToken: secretsmanager.Secret;
     /**
      * Redis hostname
      */
@@ -79,36 +84,40 @@ export interface AuthentikServerProps {
     /**
      * Authentik secret key
      */
-    secretKey: secretsmanager.ISecret;
+    secretKey: secretsmanager.Secret;
     /**
-     * Admin user password
+     * Admin user password secret
      */
-    adminUserPassword: secretsmanager.ISecret;
+    adminUserPassword: secretsmanager.Secret;
     /**
-     * Admin user token
+     * Admin user token secret
      */
-    adminUserToken: secretsmanager.ISecret;
+    adminUserToken: secretsmanager.Secret;
     /**
-     * LDAP token
+     * LDAP token secret
      */
-    ldapToken: secretsmanager.ISecret;
+    ldapToken: secretsmanager.Secret;
     /**
-     * EFS file system ID
+     * EFS filesystem ID
      */
     efsId: string;
     /**
-     * EFS media access point ID
+     * EFS access point ID for media
      */
     efsMediaAccessPointId: string;
     /**
-     * EFS custom templates access point ID
+     * EFS access point ID for custom templates
      */
     efsCustomTemplatesAccessPointId: string;
 }
 /**
- * CDK construct for the Authentik server container and ECS service
+ * CDK construct for the Authentik service - orchestrates server, worker, and load balancer
  */
-export declare class AuthentikServer extends Construct {
+export declare class Authentik extends Construct {
+    /**
+     * The load balancer for the Authentik service
+     */
+    readonly loadBalancer: elbv2.ApplicationLoadBalancer;
     /**
      * The ECS task definition for the Authentik server
      */
@@ -117,9 +126,13 @@ export declare class AuthentikServer extends Construct {
      * The ECS service for Authentik server
      */
     readonly ecsService: ecs.FargateService;
-    constructor(scope: Construct, id: string, props: AuthentikServerProps);
     /**
-     * Create and register a target group for this service
+     * The ECS service for Authentik workers
      */
-    createTargetGroup(vpc: ec2.IVpc, listener: elbv2.ApplicationListener): elbv2.ApplicationTargetGroup;
+    readonly workerService: ecs.FargateService;
+    /**
+     * DNS name of the load balancer
+     */
+    readonly dnsName: string;
+    constructor(scope: Construct, id: string, props: AuthentikProps);
 }

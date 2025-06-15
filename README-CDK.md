@@ -69,8 +69,7 @@ cdk deploy --context environment=dev --context envType=dev-test \\
   --parameters EnableExecute=false \\
   --parameters AuthentikAdminUserEmail=admin@example.com \\
   --parameters AuthentikLDAPBaseDN=DC=example,DC=com \\
-  --parameters AuthentikConfigFile=false \\
-  --parameters IpAddressType=dualstack
+  --parameters AuthentikConfigFile=false
 ```
 
 ### Deploy to Production Environment
@@ -81,8 +80,7 @@ cdk deploy --context environment=prod --context envType=prod \\
   --parameters EnableExecute=false \\
   --parameters AuthentikAdminUserEmail=admin@example.com \\
   --parameters AuthentikLDAPBaseDN=DC=example,DC=com \\
-  --parameters AuthentikConfigFile=false \\
-  --parameters IpAddressType=dualstack
+  --parameters AuthentikConfigFile=false
 ```
 
 ## Migration Notes
@@ -138,9 +136,8 @@ The stack accepts the following parameters:
 - `AuthentikAdminUserEmail` - Admin user email
 - `AuthentikLDAPBaseDN` - LDAP base DN
 - `AuthentikConfigFile` - Use S3 config file
-- `IpAddressType` - Load balancer IP type (ipv4/dualstack)
 
-**Note:** SSL Certificate ARN is automatically imported from the BaseInfra stack export and does not need to be provided as a parameter. Docker images are automatically sourced from ECR.
+**Note:** SSL Certificate ARN is automatically imported from the BaseInfra stack export and does not need to be provided as a parameter. Docker images are automatically sourced from ECR. Load balancers are configured with dualstack IP addressing.
 
 ## Parameter Management
 

@@ -37,11 +37,7 @@ export interface AuthentikWorkerProps {
      */
     envFileS3Key?: string;
     /**
-     * Docker image location (Github or Local ECR)
-     */
-    dockerImageLocation: 'Github' | 'Local ECR';
-    /**
-     * ECR repository ARN for local ECR images
+     * ECR repository ARN for ECR images
      */
     ecrRepositoryArn?: string;
     /**

@@ -54,12 +54,7 @@ export interface AuthentikWorkerProps {
   envFileS3Key?: string;
 
   /**
-   * Docker image location (Github or Local ECR)
-   */
-  dockerImageLocation: 'Github' | 'Local ECR';
-
-  /**
-   * ECR repository ARN for local ECR images
+   * ECR repository ARN for ECR images
    */
   ecrRepositoryArn?: string;
 
@@ -189,12 +184,10 @@ export class AuthentikWorker extends Construct {
       }
     });
 
-    // Determine Docker image - workers use the same image as server
-    const dockerImage = props.dockerImageLocation === 'Github' 
-      ? 'ghcr.io/tak-nz/authentik-server:latest'
-      : props.ecrRepositoryArn 
-        ? `${props.ecrRepositoryArn}:latest`
-        : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
+    // Determine Docker image - Always use ECR (workers use the same image as server)
+    const dockerImage = props.ecrRepositoryArn 
+      ? `${props.ecrRepositoryArn}:latest`
+      : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
 
     // Prepare container definition options for worker
     let containerDefinitionOptions: ecs.ContainerDefinitionOptions = {

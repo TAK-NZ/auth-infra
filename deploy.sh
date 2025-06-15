@@ -233,7 +233,6 @@ CDK_PARAMS=(
     "--parameters" "EnableExecute=$ENABLE_EXECUTE"
     "--parameters" "AuthentikAdminUserEmail=$ADMIN_EMAIL"
     "--parameters" "AuthentikLDAPBaseDN=$LDAP_BASE_DN"
-    "--parameters" "IpAddressType=$IP_ADDRESS_TYPE"
 )
 
 # Synthesize template

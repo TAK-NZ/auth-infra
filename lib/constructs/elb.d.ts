@@ -24,10 +24,6 @@ export interface ElbProps {
      * SSL certificate ARN for HTTPS
      */
     sslCertificateArn: string;
-    /**
-     * IP address type (ipv4 or dualstack)
-     */
-    ipAddressType?: 'ipv4' | 'dualstack';
 }
 /**
  * CDK construct for the Application Load Balancer

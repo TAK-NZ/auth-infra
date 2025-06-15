@@ -8,6 +8,7 @@ const app = new cdk.App();
 // Read configuration from CDK context only (command line --context parameters)
 const envType = app.node.tryGetContext('envType') || 'dev-test';
 const stackName = app.node.tryGetContext('stackName');
+const authentikAdminUserEmail = app.node.tryGetContext('authentikAdminUserEmail');
 
 // Validate envType
 if (envType !== 'prod' && envType !== 'dev-test') {
@@ -17,6 +18,10 @@ if (envType !== 'prod' && envType !== 'dev-test') {
 // Validate required parameters
 if (!stackName) {
   throw new Error('stackName is required. Use --context stackName=YourStackName');
+}
+
+if (!authentikAdminUserEmail || authentikAdminUserEmail.trim() === '') {
+  throw new Error('authentikAdminUserEmail is required. Use --context authentikAdminUserEmail=user@example.com');
 }
 
 // Read optional context overrides

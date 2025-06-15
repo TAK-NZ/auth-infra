@@ -60,7 +60,8 @@ export CDK_DEFAULT_REGION=$(aws configure get region)
 
 # Deploy with required parameters via CDK context
 npx cdk deploy --context envType=dev-test \
-               --context stackName=MyFirstStack
+               --context stackName=MyFirstStack \
+               --context authentikAdminUserEmail=admin@company.com
 ```
 
 ### Production Deployment
@@ -70,7 +71,8 @@ For production deployments, use `envType=prod` which automatically applies produ
 ```bash
 # Production deployment with enhanced security and availability
 npx cdk deploy --context envType=prod \
-               --context stackName=ProdStack
+               --context stackName=ProdStack \
+               --context authentikAdminUserEmail=admin@company.com
 ```
 
 ### Custom Configuration
@@ -81,6 +83,7 @@ Override specific settings using additional context parameters:
 # Example: Custom database and Redis settings
 npx cdk deploy --context envType=dev-test \
                --context stackName=TestStack \
+               --context authentikAdminUserEmail=admin@company.com \
                --context dbInstanceClass=db.t4g.small \
                --context redisNodeType=cache.t4g.small \
                --context enableDetailedLogging=true
@@ -102,8 +105,6 @@ npx cdk deploy --context envType=dev-test \
 | `enableExecute` | No | `false` | Enable ECS exec for debugging |
 | `authentikAdminUserEmail` | **Yes** | None | Admin user email for Authentik setup |
 | `authentikLdapBaseDn` | No | `DC=example,DC=com` | LDAP base DN for directory structure |
-| `ipAddressType` | No | `dualstack` | Load balancer IP type: `ipv4` or `dualstack` |
-| `dockerImageLocation` | No | `Github` | Docker image source location |
 
 *Environment-based defaults: `prod` = high-availability, `dev-test` = cost-optimized
 
@@ -190,7 +191,8 @@ export CDK_DEFAULT_REGION=$(aws configure get region --profile tak || echo "ap-s
 # Deploy with minimal required parameters
 npx cdk deploy --profile tak \
                --context envType=dev-test \
-               --context stackName=MyFirstStack
+               --context stackName=MyFirstStack \
+               --context authentikAdminUserEmail=admin@example.com
 ```
 
 #### Production Deployment

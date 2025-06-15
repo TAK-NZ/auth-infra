@@ -62,12 +62,7 @@ export interface LdapProps {
   authentikHost: string;
 
   /**
-   * Docker image location (Github or Local ECR)
-   */
-  dockerImageLocation: 'Github' | 'Local ECR';
-
-  /**
-   * ECR repository ARN for local ECR images
+   * ECR repository ARN for ECR images
    */
   ecrRepositoryArn?: string;
 
@@ -181,12 +176,10 @@ export class Ldap extends Construct {
       taskRole
     });
 
-    // Determine Docker image
-    const dockerImage = props.dockerImageLocation === 'Github' 
-      ? 'ghcr.io/tak-nz/authentik-ldap:latest'
-      : props.ecrRepositoryArn 
-        ? `${props.ecrRepositoryArn}:latest`
-        : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
+    // Determine Docker image - Always use ECR
+    const dockerImage = props.ecrRepositoryArn 
+      ? `${props.ecrRepositoryArn}:latest`
+      : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
 
     // Create container definition
     const container = this.taskDefinition.addContainer('AuthentikLdap', {

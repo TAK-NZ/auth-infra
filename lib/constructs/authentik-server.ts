@@ -75,12 +75,7 @@ export interface AuthentikServerProps {
   useConfigFile: boolean;
 
   /**
-   * Docker image location (Github or Local ECR)
-   */
-  dockerImageLocation: 'Github' | 'Local ECR';
-
-  /**
-   * ECR repository ARN for local ECR images
+   * ECR repository ARN for ECR images
    */
   ecrRepositoryArn?: string;
 
@@ -243,12 +238,10 @@ export class AuthentikServer extends Construct {
       }
     });
 
-    // Determine Docker image
-    const dockerImage = props.dockerImageLocation === 'Github' 
-      ? 'ghcr.io/tak-nz/authentik-server:latest'
-      : props.ecrRepositoryArn 
-        ? `${props.ecrRepositoryArn}:latest`
-        : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
+    // Determine Docker image - Always use ECR
+    const dockerImage = props.ecrRepositoryArn 
+      ? `${props.ecrRepositoryArn}:latest`
+      : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
 
     // Prepare container definition options
     let containerDefinitionOptions: ecs.ContainerDefinitionOptions = {

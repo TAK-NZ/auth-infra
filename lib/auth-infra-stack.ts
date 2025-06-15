@@ -79,10 +79,13 @@ export class AuthInfraStack extends cdk.Stack {
     const enableExecute = Boolean(this.node.tryGetContext('enableExecute') || false);
     const authentikAdminUserEmail = this.node.tryGetContext('authentikAdminUserEmail') || '';
     const authentikLdapBaseDn = this.node.tryGetContext('authentikLdapBaseDn') || 'DC=example,DC=com';
-    const ipAddressType = this.node.tryGetContext('ipAddressType') || 'dualstack';
     const sslCertificateArn = this.node.tryGetContext('sslCertificateArn') || '';
     const useAuthentikConfigFile = Boolean(this.node.tryGetContext('useAuthentikConfigFile') || false);
-    const dockerImageLocation = this.node.tryGetContext('dockerImageLocation') || 'Github';
+
+    // Validate required parameters
+    if (!authentikAdminUserEmail || authentikAdminUserEmail.trim() === '') {
+      throw new Error('authentikAdminUserEmail is required. Set it via --context authentikAdminUserEmail=user@example.com');
+    }
 
     const stackName = Fn.ref('AWS::StackName');
     const region = cdk.Stack.of(this).region;
@@ -169,8 +172,7 @@ export class AuthInfraStack extends cdk.Stack {
       environment: stackNameComponent,
       config: mergedConfig,
       vpc,
-      sslCertificateArn: sslCertificateArn,
-      ipAddressType: ipAddressType
+      sslCertificateArn: sslCertificateArn
     });
 
     // Authentik Server
@@ -186,7 +188,6 @@ export class AuthInfraStack extends cdk.Stack {
       adminUserEmail: authentikAdminUserEmail,
       ldapBaseDn: authentikLdapBaseDn,
       useConfigFile: useAuthentikConfigFile,
-      dockerImageLocation: dockerImageLocation,
       ecrRepositoryArn: ecrRepository,
       enableExecute: enableExecute,
       dbSecret: database.masterSecret,
@@ -211,7 +212,6 @@ export class AuthInfraStack extends cdk.Stack {
       ecsCluster,
       s3ConfBucket,
       envFileS3Key: s3EnvFileManager.envFileS3Key,
-      dockerImageLocation: dockerImageLocation,
       ecrRepositoryArn: ecrRepository,
       enableExecute: enableExecute,
       dbSecret: database.masterSecret,
@@ -249,7 +249,6 @@ export class AuthInfraStack extends cdk.Stack {
       s3ConfBucket,
       sslCertificateArn: sslCertificateArn,
       authentikHost: authentikELB.dnsName,
-      dockerImageLocation: dockerImageLocation,
       ecrRepositoryArn: ecrRepository,
       enableExecute: enableExecute,
       ldapToken: secretsManager.ldapToken

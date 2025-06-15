@@ -33,11 +33,6 @@ export interface ElbProps {
    * SSL certificate ARN for HTTPS
    */
   sslCertificateArn: string;
-
-  /**
-   * IP address type (ipv4 or dualstack)
-   */
-  ipAddressType?: 'ipv4' | 'dualstack';
 }
 
 /**
@@ -62,13 +57,11 @@ export class Elb extends Construct {
   constructor(scope: Construct, id: string, props: ElbProps) {
     super(scope, id);
 
-    // Create load balancer
+    // Create load balancer with dualstack IP addressing
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'ALB', {
       vpc: props.vpc,
       internetFacing: true,
-      ipAddressType: props.ipAddressType === 'ipv4' ? 
-        elbv2.IpAddressType.IPV4 : 
-        elbv2.IpAddressType.DUAL_STACK
+      ipAddressType: elbv2.IpAddressType.DUAL_STACK
     });
 
     // Create HTTP listener and redirect to HTTPS

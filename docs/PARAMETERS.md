@@ -41,12 +41,10 @@ The stack automatically applies optimal defaults based on `envType`:
 | Parameter | Type | Default (dev-test) | Default (prod) | Description |
 |-----------|------|-------------------|----------------|-------------|
 | `envType` | string | `dev-test` | - | Environment type: `prod` or `dev-test` |
-| `authentikAdminUserEmail` | string | `""` | `""` | Admin user email for Authentik |
+| `authentikAdminUserEmail` | string | **Required** | **Required** | Admin user email for Authentik |
 | `authentikLdapBaseDn` | string | `DC=example,DC=com` | `DC=example,DC=com` | LDAP base DN |
 | `gitSha` | string | auto-detected | auto-detected | Git SHA for resource tagging |
 | `enableExecute` | boolean | `false` | `false` | Enable ECS exec for debugging |
-| `ipAddressType` | string | `dualstack` | `dualstack` | Load balancer IP type |
-| `dockerImageLocation` | string | `Github` | `Github` | Docker image source |
 
 ### Infrastructure Overrides
 
