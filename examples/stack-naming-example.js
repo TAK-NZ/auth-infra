@@ -6,51 +6,36 @@
  */
 
 import { 
-  generateAuthInfraStackName,
-  generateLdapStackName,
   createBaseImportValue,
   createAuthImportValue,
-  generateExportName,
   BASE_EXPORT_NAMES,
+} from '../lib/cloudformation-imports.js';
+
+import {
   AUTH_EXPORT_NAMES,
-  FIXED_STACK_CONFIG
-} from '../lib/stack-naming.js';
+  createDynamicExportName
+} from '../lib/cloudformation-exports.js';
 
-console.log('=== Stack Naming Utility Examples ===\n');
+console.log('=== CloudFormation Import/Export Utility Examples ===\n');
 
-// Example 1: Generate stack names
-console.log('1. Generating Stack Names:');
+// Example 1: Create import values for base infrastructure  
+console.log('1. Base Infrastructure Import Values:');
 const environment = 'dev';
-const authStackName = generateAuthInfraStackName(environment);
-const ldapStackName = generateLdapStackName(environment);
-
-console.log(`   Auth Stack: ${authStackName}`);
-console.log(`   LDAP Stack: ${ldapStackName}`);
-console.log();
-
-// Example 2: Create import values for base infrastructure
-console.log('2. Base Infrastructure Import Values:');
 console.log(`   VPC ID: ${createBaseImportValue(environment, BASE_EXPORT_NAMES.VPC_ID)}`);
 console.log(`   Private Subnet A: ${createBaseImportValue(environment, BASE_EXPORT_NAMES.SUBNET_PRIVATE_A)}`);
 console.log(`   KMS Key: ${createBaseImportValue(environment, BASE_EXPORT_NAMES.KMS_KEY)}`);
 console.log();
 
-// Example 3: Create import values for auth infrastructure
-console.log('3. Auth Infrastructure Import Values:');
+// Example 2: Create import values for auth infrastructure
+console.log('2. Auth Infrastructure Import Values:');
 console.log(`   Authentik URL: ${createAuthImportValue(environment, AUTH_EXPORT_NAMES.AUTHENTIK_URL)}`);
 console.log(`   LDAP Token ARN: ${createAuthImportValue(environment, AUTH_EXPORT_NAMES.AUTHENTIK_LDAP_TOKEN_ARN)}`);
 console.log();
 
-// Example 4: Generate export names
-console.log('4. Export Name Generation:');
-console.log(`   Custom Export: ${generateExportName(authStackName, 'custom-resource')}`);
-console.log(`   DB Secret: ${generateExportName(authStackName, AUTH_EXPORT_NAMES.DB_SECRET_ARN)}`);
-console.log();
-
-// Example 5: Configuration
-console.log('5. Stack Configuration:');
-console.log(`   Project: ${FIXED_STACK_CONFIG.PROJECT}`);
-console.log(`   Component: ${FIXED_STACK_CONFIG.COMPONENT}`);
+// Example 3: Generate export name templates
+console.log('3. Export Name Template Generation:');
+console.log(`   Database Endpoint: ${createDynamicExportName(AUTH_EXPORT_NAMES.DATABASE_ENDPOINT)}`);
+console.log(`   Authentik URL: ${createDynamicExportName(AUTH_EXPORT_NAMES.AUTHENTIK_URL)}`);
 console.log();
 
 console.log('=== Usage in CDK Code ===\n');
@@ -58,24 +43,30 @@ console.log(`
 // In your CDK stack constructor:
 import { 
   createBaseImportValue, 
+  BASE_EXPORT_NAMES
+} from './lib/cloudformation-imports.js';
+
+import { 
   createAuthImportValue,
-  BASE_EXPORT_NAMES,
-  AUTH_EXPORT_NAMES 
-} from './lib/stack-naming.js';
+  AUTH_EXPORT_NAMES,
+  createDynamicExportName 
+} from './lib/cloudformation-exports.js';
 
 // Import VPC from base infrastructure
 const vpcId = cdk.Fn.importValue(
   createBaseImportValue(props.environment, BASE_EXPORT_NAMES.VPC_ID)
 );
 
-// Import LDAP token from auth stack
+// Import LDAP token from auth stack (cross-stack reference)
 const ldapToken = cdk.Fn.importValue(
   createAuthImportValue(props.environment, AUTH_EXPORT_NAMES.AUTHENTIK_LDAP_TOKEN_ARN)
 );
 
-// Create an export
-new cdk.CfnOutput(this, 'MyResource', {
-  exportName: generateExportName(this.stackName, 'my-resource'),
-  value: myResource.arn
+// Create a dynamic export using Fn::Sub
+new cdk.CfnOutput(this, 'DatabaseEndpoint', {
+  exportName: cdk.Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.DATABASE_ENDPOINT), {
+    StackName: this.stackName
+  }),
+  value: database.instanceEndpoint.hostname
 });
 `);

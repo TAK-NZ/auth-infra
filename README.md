@@ -88,40 +88,58 @@ npx cdk deploy --context envType=dev-test \
 
 ### Available Context Parameters
 
-| Parameter | Type | Default (dev-test) | Default (prod) | Description |
-|-----------|------|-------------------|----------------|-------------|
-| `envType` | string | `dev-test` | - | Environment type: `prod` or `dev-test` |
-| `stackName` | string | **Required** | **Required** | Stack identifier (e.g., `MyFirstStack`) |
-| `dbInstanceClass` | string | `db.t4g.micro` | `db.t4g.small` | RDS instance class |
-| `dbInstanceCount` | number | `1` | `2` | Number of RDS instances |
-| `redisNodeType` | string | `cache.t4g.micro` | `cache.t4g.small` | Redis node type |
-| `ecsTaskCpu` | number | `512` | `1024` | ECS task CPU units |
-| `ecsTaskMemory` | number | `1024` | `2048` | ECS task memory (MB) |
-| `enableDetailedLogging` | boolean | `true` | `true` | Enable detailed CloudWatch logging |
-| `gitSha` | string | auto-detected | auto-detected | Git SHA for resource tagging |
-| `enableExecute` | boolean | `false` | `false` | Enable ECS exec for debugging |
-| `authentikAdminUserEmail` | string | `""` | `""` | Admin user email for Authentik |
-| `authentikLdapBaseDn` | string | `DC=example,DC=com` | `DC=example,DC=com` | LDAP base DN |
-| `ipAddressType` | string | `dualstack` | `dualstack` | Load balancer IP type |
-| `dockerImageLocation` | string | `Github` | `Github` | Docker image source |
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `envType` | No | `dev-test` | Environment type: `prod` or `dev-test` |
+| `stackName` | **Yes** | None | Stack identifier (forms `TAK-{stackName}-AuthInfra`) |
+| `dbInstanceClass` | No | env-based* | RDS PostgreSQL instance class |
+| `dbInstanceCount` | No | env-based* | Number of RDS instances (1 or 2) |
+| `redisNodeType` | No | env-based* | ElastiCache Redis node type |
+| `ecsTaskCpu` | No | env-based* | ECS task CPU units (512, 1024, 2048, 4096) |
+| `ecsTaskMemory` | No | env-based* | ECS task memory in MB |
+| `enableDetailedLogging` | No | `true` | Enable detailed CloudWatch logging |
+| `gitSha` | No | auto-detected | Git SHA for resource tagging |
+| `enableExecute` | No | `false` | Enable ECS exec for debugging |
+| `authentikAdminUserEmail` | **Yes** | None | Admin user email for Authentik setup |
+| `authentikLdapBaseDn` | No | `DC=example,DC=com` | LDAP base DN for directory structure |
+| `ipAddressType` | No | `dualstack` | Load balancer IP type: `ipv4` or `dualstack` |
+| `dockerImageLocation` | No | `Github` | Docker image source location |
+
+*Environment-based defaults: `prod` = high-availability, `dev-test` = cost-optimized
 
 ### Environment-Specific Defaults
 
-The stack automatically applies optimal defaults based on `envType`:
+The stack uses environment-based defaults for optimal configuration:
 
 **Development/Test (`envType=dev-test`)**:
-- Cost-optimized instance sizes
-- Single database instance
-- Reduced backup retention
-- Simplified monitoring
-- Resources can be destroyed
+- `dbInstanceClass`: `db.t4g.micro`
+- `dbInstanceCount`: `1` 
+- `redisNodeType`: `cache.t4g.micro`
+- `ecsTaskCpu`: `512`
+- `ecsTaskMemory`: `1024`
+- Cost-optimized for development/testing
+- Resources can be destroyed (`RemovalPolicy.DESTROY`)
 
 **Production (`envType=prod`)**:
-- High-availability configuration  
-- Multi-AZ database deployment
-- Extended backup retention
-- Comprehensive monitoring
-- Resources protected from deletion
+- `dbInstanceClass`: `db.t4g.small`
+- `dbInstanceCount`: `2` (high availability)
+- `redisNodeType`: `cache.t4g.small` 
+- `ecsTaskCpu`: `1024`
+- `ecsTaskMemory`: `2048`
+- High-availability configuration with redundancy
+- Resources protected from deletion (`RemovalPolicy.RETAIN`)
+
+**Hierarchical Parameter System:**
+The stack uses a cascading configuration system:
+1. **Environment Type** (`envType`) provides defaults for resource sizing and availability:
+   - `prod`: Multi-AZ deployment, larger instances, high availability enabled
+   - `dev-test`: Single-AZ deployment, smaller instances, cost-optimized
+2. **Individual context parameters** override environment defaults when specified
+3. **Example**: `--context envType=prod --context dbInstanceCount=1` creates production environment with single database instance
+
+**Required AWS Environment Variables (for AWS SDK only):**
+- `CDK_DEFAULT_ACCOUNT` - Your AWS account ID (auto-set with: `aws sts get-caller-identity --query Account --output text --profile tak`)
+- `CDK_DEFAULT_REGION` - Your AWS region (auto-set with: `aws configure get region --profile tak`)
 
 ### AWS Credentials
 

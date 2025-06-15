@@ -11,12 +11,12 @@ import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 import { S3EnvFileManager } from './constructs/s3-env-file-manager';
 import { StackProps, Fn } from 'aws-cdk-lib';
-import { registerAuthInfraOutputs } from './outputs';
+import { registerOutputs } from './outputs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import { createBaseImportValue, BASE_EXPORT_NAMES } from './stack-naming';
+import { createBaseImportValue, BASE_EXPORT_NAMES } from './cloudformation-imports';
 import { getEnvironmentConfig, mergeEnvironmentConfig } from './environment-config';
 import { AuthInfraConfig } from './stack-config';
 
@@ -259,7 +259,7 @@ export class AuthInfraStack extends cdk.Stack {
     ldap.node.addDependency(ldapTokenRetriever);
 
     // Outputs
-    registerAuthInfraOutputs({
+    registerOutputs({
       stack: this,
       stackName: stackNameComponent,
       databaseEndpoint: database.hostname,
@@ -274,9 +274,7 @@ export class AuthInfraStack extends cdk.Stack {
       authentikLdapTokenArn: secretsManager.ldapToken.secretArn,
       authentikAlbDns: authentikELB.loadBalancer.loadBalancerDnsName,
       authentikUrl: `https://${authentikELB.dnsName}`,
-      ldapAlbDns: ldap.loadBalancer.loadBalancerDnsName,
-      ldapEndpoint: `${ldap.loadBalancer.loadBalancerDnsName}:389`,
-      ldapsEndpoint: `${ldap.loadBalancer.loadBalancerDnsName}:636`,
+      ldapNlbDns: ldap.loadBalancer.loadBalancerDnsName,
       ldapTokenRetrieverLambdaArn: ldapTokenRetriever.lambdaFunction.functionArn
     });
   }

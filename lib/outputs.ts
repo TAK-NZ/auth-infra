@@ -3,9 +3,9 @@
  */
 import * as cdk from 'aws-cdk-lib';
 import { Fn } from 'aws-cdk-lib';
-import { createDynamicExportName, AUTH_EXPORT_NAMES } from './stack-naming';
+import { createDynamicExportName, AUTH_EXPORT_NAMES } from './cloudformation-exports';
 
-export interface AuthInfraOutputParams {
+export interface OutputParams {
   stack: cdk.Stack;
   stackName: string;
   databaseEndpoint: string;
@@ -20,24 +20,14 @@ export interface AuthInfraOutputParams {
   authentikLdapTokenArn: string;
   authentikAlbDns: string;
   authentikUrl: string;
-  ldapAlbDns: string;
-  ldapEndpoint: string;
-  ldapsEndpoint: string;
+  ldapNlbDns: string;
   ldapTokenRetrieverLambdaArn: string;
-}
-
-export interface LdapOutputParams {
-  stack: cdk.Stack;
-  stackName: string;
-  loadBalancerDns: string;
-  ldapEndpoint: string;
-  ldapsEndpoint: string;
 }
 
 /**
  * Register all outputs for the Auth Infrastructure stack
  */
-export function registerAuthInfraOutputs({
+export function registerOutputs({
   stack,
   stackName,
   databaseEndpoint,
@@ -52,11 +42,9 @@ export function registerAuthInfraOutputs({
   authentikLdapTokenArn,
   authentikAlbDns,
   authentikUrl,
-  ldapAlbDns,
-  ldapEndpoint,
-  ldapsEndpoint,
+  ldapNlbDns,
   ldapTokenRetrieverLambdaArn
-}: AuthInfraOutputParams) {
+}: OutputParams) {
   
   new cdk.CfnOutput(stack, 'DatabaseEndpointOutput', {
     description: 'RDS Aurora PostgreSQL cluster endpoint',
@@ -155,26 +143,10 @@ export function registerAuthInfraOutputs({
   });
 
   // LDAP outputs
-  new cdk.CfnOutput(stack, 'LdapAlbDnsOutput', {
-    description: 'LDAP Application Load Balancer DNS name',
-    value: ldapAlbDns,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAP_ALB_DNS), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'LdapEndpointOutput', {
-    description: 'LDAP endpoint URL',
-    value: ldapEndpoint,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAP_ENDPOINT), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'LdapsEndpointOutput', {
-    description: 'LDAPS endpoint URL',
-    value: ldapsEndpoint,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAPS_ENDPOINT), {
+  new cdk.CfnOutput(stack, 'LdapNlbDnsOutput', {
+    description: 'LDAP Network Load Balancer DNS name',
+    value: ldapNlbDns,
+    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAP_NLB_DNS), {
       StackName: stackName,
     }),
   });
@@ -185,32 +157,5 @@ export function registerAuthInfraOutputs({
     exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAP_TOKEN_RETRIEVER_LAMBDA_ARN), {
       StackName: stackName,
     }),
-  });
-}
-
-/**
- * Register all outputs for the LDAP stack
- */
-export function registerLdapOutputs({
-  stack,
-  stackName,
-  loadBalancerDns,
-  ldapEndpoint,
-  ldapsEndpoint
-}: LdapOutputParams) {
-  
-  new cdk.CfnOutput(stack, 'LoadBalancerDnsNameOutput', {
-    description: 'LDAP Network Load Balancer DNS name',
-    value: loadBalancerDns,
-  });
-
-  new cdk.CfnOutput(stack, 'LdapEndpointOutput', {
-    description: 'LDAP endpoint URL',
-    value: ldapEndpoint,
-  });
-
-  new cdk.CfnOutput(stack, 'LdapsEndpointOutput', {
-    description: 'LDAPS endpoint URL',
-    value: ldapsEndpoint,
   });
 }
