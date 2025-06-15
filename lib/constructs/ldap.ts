@@ -14,7 +14,7 @@ import {
   CfnOutput
 } from 'aws-cdk-lib';
 
-import type { BaseConfig } from '../environment-config';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 
 /**
  * Properties for the LDAP construct
@@ -28,7 +28,7 @@ export interface LdapProps {
   /**
    * Environment configuration
    */
-  config: BaseConfig;
+  config: AuthInfraEnvironmentConfig;
 
   /**
    * VPC for deployment
@@ -164,8 +164,8 @@ export class Ldap extends Construct {
 
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
-      cpu: props.config.ecsTaskCpu,
-      memoryLimitMiB: props.config.ecsTaskMemory,
+      cpu: props.config.ecs.taskCpu,
+      memoryLimitMiB: props.config.ecs.taskMemory,
       executionRole,
       taskRole
     });
@@ -217,7 +217,7 @@ export class Ldap extends Construct {
     this.ecsService = new ecs.FargateService(this, 'Service', {
       cluster: props.ecsCluster,
       taskDefinition: this.taskDefinition,
-      desiredCount: props.config.ecsTaskDesiredCount,
+      desiredCount: props.config.ecs.desiredCount,
       securityGroups: [props.ecsSecurityGroup],
       enableExecuteCommand: props.enableExecute,
       assignPublicIp: false,

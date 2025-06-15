@@ -7,7 +7,6 @@ import { getEnvironmentConfig } from './environment-config';
 
 // Direct parameter exports following the reference pattern
 export const ENV_TYPE = process.env.ENV_TYPE as 'prod' | 'dev-test' || 'dev-test';
-export const STACK_NAME = process.env.STACK_NAME;
 export const GIT_SHA = process.env.GIT_SHA;
 export const ENABLE_EXECUTE = process.env.ENABLE_EXECUTE;
 export const AUTHENTIK_ADMIN_USER_EMAIL = process.env.AUTHENTIK_ADMIN_USER_EMAIL;
@@ -34,7 +33,6 @@ export function getGitSha(): string {
 export function getParameters() {
   return {
     envType: ENV_TYPE,
-    stackName: STACK_NAME || 'MyFirstStack',
     gitSha: GIT_SHA || getGitSha(),
     enableExecute: ENABLE_EXECUTE === 'true' || false,
   };

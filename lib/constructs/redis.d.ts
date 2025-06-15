@@ -3,7 +3,7 @@
  */
 import { Construct } from 'constructs';
 import { aws_elasticache as elasticache, aws_ec2 as ec2, aws_secretsmanager as secretsmanager, aws_kms as kms } from 'aws-cdk-lib';
-import type { BaseConfig } from '../environment-config';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
  * Properties for the Redis construct
  */
@@ -15,7 +15,7 @@ export interface RedisProps {
     /**
      * Environment configuration
      */
-    config: BaseConfig;
+    config: AuthInfraEnvironmentConfig;
     /**
      * VPC for deployment
      */

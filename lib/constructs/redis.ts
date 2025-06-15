@@ -10,7 +10,7 @@ import {
   CfnOutput
 } from 'aws-cdk-lib';
 
-import type { BaseConfig } from '../environment-config';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 
 /**
  * Properties for the Redis construct
@@ -24,7 +24,7 @@ export interface RedisProps {
   /**
    * Environment configuration
    */
-  config: BaseConfig;
+  config: AuthInfraEnvironmentConfig;
 
   /**
    * VPC for deployment
@@ -100,18 +100,18 @@ export class Redis extends Construct {
     // Create the Redis replication group
     this.replicationGroup = new elasticache.CfnReplicationGroup(this, 'Redis', {
       replicationGroupDescription: 'Valkey (Redis) cluster for Authentik',
-      automaticFailoverEnabled: props.config.isProd,
+      automaticFailoverEnabled: props.config.redis.automaticFailoverEnabled,
       atRestEncryptionEnabled: true,
       transitEncryptionEnabled: true,
       transitEncryptionMode: 'required',
       authToken: this.authToken.secretValue.unsafeUnwrap(),
       kmsKeyId: props.kmsKey.keyArn,
-      cacheNodeType: props.config.redisCacheNodeType,
+      cacheNodeType: props.config.redis.nodeType,
       cacheSubnetGroupName: subnetGroup.ref,
       engine: 'valkey',
       engineVersion: '7.2',
       autoMinorVersionUpgrade: true,
-      numCacheClusters: props.config.redisNumCacheClusters,
+      numCacheClusters: props.config.redis.numCacheClusters,
       securityGroupIds: [securityGroup.securityGroupId]
     });
 

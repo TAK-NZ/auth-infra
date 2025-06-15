@@ -12,7 +12,7 @@ import {
   RemovalPolicy,
   CfnOutput
 } from 'aws-cdk-lib';
-import type { BaseConfig } from '../environment-config';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 
 /**
  * Properties for the Database construct
@@ -26,7 +26,7 @@ export interface DatabaseProps {
   /**
    * Environment configuration
    */
-  config: BaseConfig;
+  config: AuthInfraEnvironmentConfig;
 
   /**
    * VPC for deployment
@@ -122,8 +122,8 @@ export class Database extends Construct {
       instanceProps: {
         instanceType: ec2.InstanceType.of(
           ec2.InstanceClass.T4G,
-          props.config.dbInstanceClass.includes('micro') ? ec2.InstanceSize.MICRO :
-          props.config.dbInstanceClass.includes('small') ? ec2.InstanceSize.SMALL :
+          props.config.database.instanceClass.includes('micro') ? ec2.InstanceSize.MICRO :
+          props.config.database.instanceClass.includes('small') ? ec2.InstanceSize.SMALL :
           ec2.InstanceSize.MEDIUM
         ),
         vpcSubnets: {
@@ -131,32 +131,23 @@ export class Database extends Construct {
         },
         vpc: props.vpc,
         securityGroups: props.securityGroups,
-        enablePerformanceInsights: props.config.isProd,
-        performanceInsightRetention: props.config.isProd ? 
+        enablePerformanceInsights: props.config.database.enablePerformanceInsights,
+        performanceInsightRetention: props.config.database.enablePerformanceInsights ? 
           rds.PerformanceInsightRetention.MONTHS_6 : 
           rds.PerformanceInsightRetention.DEFAULT
       },
-      instances: props.config.dbInstanceCount,
+      instances: props.config.database.instanceCount,
       parameterGroup,
       subnetGroup,
       storageEncrypted: true,
       storageEncryptionKey: props.kmsKey,
       backup: {
-        retention: props.config.isProd ? 
-          Duration.days(props.config.dbBackupRetentionDays) :
-          Duration.days(1),
+        retention: Duration.days(props.config.database.backupRetentionDays),
         preferredWindow: '03:00-04:00' // UTC time
       },
       preferredMaintenanceWindow: 'sun:04:00-sun:05:00', // UTC time
-      deletionProtection: props.config.isProd,
-      removalPolicy: props.config.isProd ? RemovalPolicy.SNAPSHOT : RemovalPolicy.DESTROY
-    });
-
-    // Create secret attachment
-    new secretsmanager.CfnSecretTargetAttachment(this, 'DBMasterSecretAttachment', {
-      secretId: this.masterSecret.secretArn,
-      targetId: this.cluster.clusterIdentifier,
-      targetType: 'AWS::RDS::DBCluster'
+      deletionProtection: props.config.database.deletionProtection,
+      removalPolicy: props.config.general.removalPolicy
     });
 
     // Store the hostname

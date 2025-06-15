@@ -3,7 +3,7 @@
  */
 import { Construct } from 'constructs';
 import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager } from 'aws-cdk-lib';
-import type { BaseConfig } from '../environment-config';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
  * Properties for the LDAP construct
  */
@@ -15,7 +15,7 @@ export interface LdapProps {
     /**
      * Environment configuration
      */
-    config: BaseConfig;
+    config: AuthInfraEnvironmentConfig;
     /**
      * VPC for deployment
      */

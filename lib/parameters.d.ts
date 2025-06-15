@@ -3,7 +3,6 @@
  */
 import * as cdk from 'aws-cdk-lib';
 export declare const ENV_TYPE: "prod" | "dev-test";
-export declare const STACK_NAME: string | undefined;
 export declare const GIT_SHA: string | undefined;
 export declare const ENABLE_EXECUTE: string | undefined;
 export declare const AUTHENTIK_ADMIN_USER_EMAIL: string | undefined;
@@ -19,7 +18,6 @@ export declare const DOCKER_IMAGE_LOCATION: string | undefined;
 export declare function getGitSha(): string;
 export declare function getParameters(): {
     envType: "prod" | "dev-test";
-    stackName: string;
     gitSha: string;
     enableExecute: boolean;
 };

@@ -19,7 +19,7 @@ import {
   Stack,
   Fn
 } from 'aws-cdk-lib';
-import type { BaseConfig } from '../environment-config';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 
 /**
  * Properties for the LDAP Token Retriever construct
@@ -33,7 +33,7 @@ export interface LdapTokenRetrieverProps {
   /**
    * Environment configuration
    */
-  config: BaseConfig;
+  config: AuthInfraEnvironmentConfig;
 
   /**
    * KMS key for encryption
