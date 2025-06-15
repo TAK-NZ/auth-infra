@@ -41,6 +41,10 @@ export interface AuthentikWorkerProps {
      */
     ecrRepositoryArn?: string;
     /**
+     * Git SHA for Docker image tagging
+     */
+    gitSha: string;
+    /**
      * Allow SSH exec into container
      */
     enableExecute: boolean;

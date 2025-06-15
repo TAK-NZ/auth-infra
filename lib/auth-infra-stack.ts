@@ -11,6 +11,7 @@ import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 import { S3EnvFileManager } from './constructs/s3-env-file-manager';
 import { Route53 } from './constructs/route53';
+import { EcrImageValidator } from './constructs/ecr-image-validator';
 import { StackProps, Fn } from 'aws-cdk-lib';
 import { registerOutputs } from './outputs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
@@ -126,6 +127,18 @@ export class AuthInfraStack extends cdk.Stack {
     // Import ECR repository from base infrastructure (for local ECR option)
     const ecrRepository = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECR_REPO));
 
+    // Validate required ECR images exist before deployment
+    const requiredImageTags = [
+      `auth-infra-server-${gitSha}`,
+      `auth-infra-ldap-${gitSha}`
+    ];
+    
+    const ecrValidator = new EcrImageValidator(this, 'EcrImageValidator', {
+      ecrRepositoryArn: ecrRepository,
+      requiredImageTags: requiredImageTags,
+      environment: stackNameComponent
+    });
+
     // Import Route53 hosted zone from base infrastructure
     const hostedZoneId = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_ID));
     const hostedZoneName = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_NAME));
@@ -196,6 +209,7 @@ export class AuthInfraStack extends cdk.Stack {
       ldapBaseDn: authentikLdapBaseDn,
       useConfigFile: useAuthentikConfigFile,
       ecrRepositoryArn: ecrRepository,
+      gitSha: gitSha,
       enableExecute: enableExecute,
       dbSecret: database.masterSecret,
       dbHostname: database.hostname,
@@ -210,6 +224,9 @@ export class AuthInfraStack extends cdk.Stack {
       efsCustomTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId
     });
 
+    // Ensure Authentik Server waits for ECR image validation
+    authentikServer.node.addDependency(ecrValidator);
+
     // Authentik Worker
     const authentikWorker = new AuthentikWorker(this, 'AuthentikWorker', {
       environment: stackNameComponent,
@@ -220,6 +237,7 @@ export class AuthInfraStack extends cdk.Stack {
       s3ConfBucket,
       envFileS3Key: s3EnvFileManager.envFileS3Key,
       ecrRepositoryArn: ecrRepository,
+      gitSha: gitSha,
       enableExecute: enableExecute,
       dbSecret: database.masterSecret,
       dbHostname: database.hostname,
@@ -230,6 +248,9 @@ export class AuthInfraStack extends cdk.Stack {
       efsMediaAccessPointId: efs.mediaAccessPoint.accessPointId,
       efsCustomTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId
     });
+
+    // Ensure Authentik Worker waits for ECR image validation
+    authentikWorker.node.addDependency(ecrValidator);
 
     // Connect Authentik Server to Load Balancer
     authentikServer.createTargetGroup(vpc, authentikELB.httpsListener);
@@ -257,10 +278,13 @@ export class AuthInfraStack extends cdk.Stack {
       sslCertificateArn: sslCertificateArn,
       authentikHost: authentikELB.dnsName,
       ecrRepositoryArn: ecrRepository,
+      gitSha: gitSha,
       enableExecute: enableExecute,
       ldapToken: secretsManager.ldapToken
     });
 
+    // Ensure LDAP waits for ECR image validation
+    ldap.node.addDependency(ecrValidator);
     // Ensure LDAP waits for the token to be retrieved
     ldap.node.addDependency(ldapTokenRetriever);
 

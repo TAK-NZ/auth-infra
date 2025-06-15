@@ -80,6 +80,11 @@ export interface AuthentikServerProps {
   ecrRepositoryArn?: string;
 
   /**
+   * Git SHA for Docker image tagging
+   */
+  gitSha: string;
+
+  /**
    * Allow SSH exec into container
    */
   enableExecute: boolean;
@@ -240,7 +245,7 @@ export class AuthentikServer extends Construct {
 
     // Determine Docker image - Always use ECR
     const dockerImage = props.ecrRepositoryArn 
-      ? `${props.ecrRepositoryArn}:latest`
+      ? `${props.ecrRepositoryArn}:auth-infra-server-${props.gitSha}`
       : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
 
     // Prepare container definition options

@@ -59,6 +59,11 @@ export interface AuthentikWorkerProps {
   ecrRepositoryArn?: string;
 
   /**
+   * Git SHA for Docker image tagging
+   */
+  gitSha: string;
+
+  /**
    * Allow SSH exec into container
    */
   enableExecute: boolean;
@@ -186,7 +191,7 @@ export class AuthentikWorker extends Construct {
 
     // Determine Docker image - Always use ECR (workers use the same image as server)
     const dockerImage = props.ecrRepositoryArn 
-      ? `${props.ecrRepositoryArn}:latest`
+      ? `${props.ecrRepositoryArn}:auth-infra-server-${props.gitSha}`
       : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
 
     // Prepare container definition options for worker

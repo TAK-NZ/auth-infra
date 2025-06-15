@@ -67,6 +67,11 @@ export interface LdapProps {
   ecrRepositoryArn?: string;
 
   /**
+   * Git SHA for Docker image tagging
+   */
+  gitSha: string;
+
+  /**
    * Allow SSH exec into container
    */
   enableExecute: boolean;
@@ -178,7 +183,7 @@ export class Ldap extends Construct {
 
     // Determine Docker image - Always use ECR
     const dockerImage = props.ecrRepositoryArn 
-      ? `${props.ecrRepositoryArn}:latest`
+      ? `${props.ecrRepositoryArn}:auth-infra-ldap-${props.gitSha}`
       : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
 
     // Create container definition

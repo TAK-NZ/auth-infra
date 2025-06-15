@@ -47,6 +47,51 @@ This AWS CDK project provisions the following resources:
 - **Security Groups**: Fine-grained network access controls
 - **DNS Records**: Route 53 records for service endpoints
 
+## ECR Image Validation
+
+This stack includes **automatic ECR image validation** to ensure required Docker images are available before deployment. The validation occurs during the CDK deployment process and will **fail the deployment** if required images are missing.
+
+### Required Images
+
+The stack requires the following Docker images to be present in your ECR repository:
+
+1. **`auth-infra-server-<git-sha>`** - Used by both Authentik Server and Worker containers
+2. **`auth-infra-ldap-<git-sha>`** - Used by the LDAP Outpost container
+
+Where `<git-sha>` is the short Git SHA of your current commit (automatically detected).
+
+### How It Works
+
+- **Pre-deployment Check**: Before any ECS services are created, the stack validates image availability
+- **Automatic Git SHA Detection**: Uses `git rev-parse --short HEAD` to determine the current commit
+- **CloudFormation Integration**: Implemented as a CloudFormation custom resource
+- **Deployment Dependencies**: All ECS services depend on successful image validation
+
+### Example Error Messages
+
+If images are missing, you'll see clear error messages:
+
+```
+Missing required ECR images in repository 'my-repo': 
+['auth-infra-server-abc1234', 'auth-infra-ldap-abc1234']
+Available tags: ['latest', 'auth-infra-server-xyz5678']
+```
+
+### Building and Pushing Images
+
+Ensure your Docker images are built and pushed to ECR before deployment:
+
+```bash
+# Example build and push commands
+docker build -t auth-infra-server .
+docker tag auth-infra-server:latest $ECR_URI:auth-infra-server-$(git rev-parse --short HEAD)
+docker push $ECR_URI:auth-infra-server-$(git rev-parse --short HEAD)
+
+docker build -f Dockerfile.ldap -t auth-infra-ldap .
+docker tag auth-infra-ldap:latest $ECR_URI:auth-infra-ldap-$(git rev-parse --short HEAD)
+docker push $ECR_URI:auth-infra-ldap-$(git rev-parse --short HEAD)
+```
+
 ## AWS Deployment
 
 ### Basic Deployment
