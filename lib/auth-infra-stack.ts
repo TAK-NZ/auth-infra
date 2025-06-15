@@ -2,41 +2,36 @@
  * Main Auth Infrastructure Stack - CDK implementation
  */
 import { Construct } from 'constructs';
+import * as cdk from 'aws-cdk-lib';
 import {
   Stack,
   StackProps,
   aws_ec2 as ec2,
   aws_ecs as ecs,
   aws_kms as kms,
-  CfnOutput
+  CfnOutput,
+  Fn
 } from 'aws-cdk-lib';
-import { importBaseInfraValue } from './stack-naming';
+import { createBaseImportValue } from './stack-naming';
 import { getEnvironmentConfig } from './environment-config';
-import { AuthInfraParameters } from './parameters';
+import { resolveStackParameters } from './parameters';
+import { registerAuthInfraOutputs } from './outputs';
 import { Database } from './constructs/database';
 import { Redis } from './constructs/redis';
 import { Efs } from './constructs/efs';
 import { SecretsManager } from './constructs/secrets-manager';
 import { Authentik } from './constructs/authentik';
+import { Ldap } from './constructs/ldap';
+import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 
 /**
  * Properties for the Auth Infrastructure Stack
  */
 export interface AuthInfraStackProps extends StackProps {
   /**
-   * Stack name/environment
-   */
-  stackName: string;
-
-  /**
    * Environment type
    */
-  envType: 'prod' | 'dev-test';
-
-  /**
-   * Optional parameters override
-   */
-  parameters?: Partial<AuthInfraParameters>;
+  envType?: 'prod' | 'dev-test';
 }
 
 /**
@@ -68,20 +63,46 @@ export class AuthInfraStack extends Stack {
    */
   public readonly authentik: Authentik;
 
+  /**
+   * The LDAP construct
+   */
+  public readonly ldap: Ldap;
+
+  /**
+   * The LDAP token retriever construct
+   */
+  public readonly ldapTokenRetriever: LdapTokenRetriever;
+
   constructor(scope: Construct, id: string, props: AuthInfraStackProps) {
-    super(scope, id, props);
+    super(scope, id, {
+      ...props,
+      description: props.description || 'TAK Authentication Layer - Authentik',
+    });
+
+    // Resolve parameters from context, env vars, or defaults
+    const params = resolveStackParameters(this);
+    
+    const envType = (props.envType || params.envType) as 'prod' | 'dev-test';
+    const resolvedStackName = id;
 
     // Get environment configuration
-    const config = getEnvironmentConfig(props.envType);
+    const config = getEnvironmentConfig(envType);
+
+    // Add Environment Type tag to the stack
+    const environmentLabel = envType === 'prod' ? 'Prod' : 'Dev-Test';
+    cdk.Tags.of(this).add('Environment Type', environmentLabel);
+
+    const stackName = Fn.ref('AWS::StackName');
+    const region = cdk.Stack.of(this).region;
 
     // Import VPC and networking from base infrastructure
     const vpc = ec2.Vpc.fromLookup(this, 'VPC', {
-      vpcId: importBaseInfraValue(props.stackName, 'vpc-id')
+      vpcId: createBaseImportValue(resolvedStackName, 'vpc-id')
     });
 
     // Import KMS key from base infrastructure
     const kmsKey = kms.Key.fromKeyArn(this, 'KMSKey', 
-      importBaseInfraValue(props.stackName, 'kms')
+      createBaseImportValue(resolvedStackName, 'kms')
     );
 
     // Create ECS cluster
@@ -147,13 +168,13 @@ export class AuthInfraStack extends Stack {
 
     // Create SecretsManager construct
     this.secretsManager = new SecretsManager(this, 'SecretsManager', {
-      environment: props.stackName,
+      environment: resolvedStackName,
       kmsKey
     });
 
     // Create Database construct
     this.database = new Database(this, 'Database', {
-      environment: props.stackName,
+      environment: resolvedStackName,
       config,
       vpc,
       kmsKey,
@@ -162,7 +183,7 @@ export class AuthInfraStack extends Stack {
 
     // Create Redis construct
     this.redis = new Redis(this, 'Redis', {
-      environment: props.stackName,
+      environment: resolvedStackName,
       config,
       vpc,
       kmsKey,
@@ -171,43 +192,26 @@ export class AuthInfraStack extends Stack {
 
     // Create EFS construct
     this.efs = new Efs(this, 'EFS', {
-      environment: props.stackName,
+      environment: resolvedStackName,
       vpc,
       kmsKey,
       allowAccessFrom: [ecsSecurityGroup]
     });
 
-    // Create default parameters (these would normally come from the app)
-    const defaultParams: AuthInfraParameters = {
-      gitSha: 'development',
-      environment: props.stackName,
-      envType: props.envType,
-      enableExecute: false,
-      sslCertificateArn: '',
-      authentikAdminUserEmail: '',
-      authentikLdapBaseDn: 'DC=example,DC=com',
-      useAuthentikConfigFile: false,
-      ipAddressType: 'dualstack',
-      dockerImageLocation: 'Github'
-    };
-
-    // Merge with provided parameters
-    const parameters = { ...defaultParams, ...(props.parameters || {}) };
-
     // Create Authentik construct
     this.authentik = new Authentik(this, 'Authentik', {
-      environment: props.stackName,
+      environment: resolvedStackName,
       config,
       vpc,
       ecsSecurityGroup,
       ecsCluster,
-      sslCertificateArn: parameters.sslCertificateArn,
-      adminUserEmail: parameters.authentikAdminUserEmail,
-      ldapBaseDn: parameters.authentikLdapBaseDn,
-      useConfigFile: parameters.useAuthentikConfigFile,
-      ipAddressType: parameters.ipAddressType,
-      dockerImageLocation: parameters.dockerImageLocation,
-      enableExecute: parameters.enableExecute,
+      sslCertificateArn: params.sslCertificateArn || '',
+      adminUserEmail: params.authentikAdminUserEmail,
+      ldapBaseDn: params.authentikLdapBaseDn,
+      useConfigFile: params.useAuthentikConfigFile || false,
+      ipAddressType: params.ipAddressType,
+      dockerImageLocation: params.dockerImageLocation || 'Github',
+      enableExecute: params.enableExecute,
       dbSecret: this.database.masterSecret,
       dbHostname: this.database.hostname,
       redisAuthToken: this.redis.authToken,
@@ -221,20 +225,55 @@ export class AuthInfraStack extends Stack {
       efsCustomTemplatesAccessPointId: this.efs.customTemplatesAccessPoint.accessPointId
     });
 
-    // Create stack outputs
-    new CfnOutput(this, 'StackName', {
-      value: this.stackName,
-      description: 'Name of the deployed stack'
+    // Create LDAP token retriever to get the token from Authentik
+    this.ldapTokenRetriever = new LdapTokenRetriever(this, 'LdapTokenRetriever', {
+      environment: resolvedStackName,
+      config,
+      kmsKey,
+      authentikHost: `https://${this.authentik.dnsName}`,
+      outpostName: 'LDAP',
+      adminTokenSecret: this.secretsManager.adminUserToken,
+      ldapTokenSecret: this.secretsManager.ldapToken,
+      gitSha: params.gitSha
     });
 
-    new CfnOutput(this, 'Environment', {
-      value: props.stackName,
-      description: 'Environment name'
+    // Create LDAP outpost construct
+    this.ldap = new Ldap(this, 'LDAP', {
+      environment: resolvedStackName,
+      config,
+      vpc,
+      ecsSecurityGroup,
+      ecsCluster,
+      sslCertificateArn: params.sslCertificateArn || '',
+      authentikHost: this.authentik.dnsName,
+      dockerImageLocation: params.dockerImageLocation || 'Github',
+      enableExecute: params.enableExecute,
+      ldapToken: this.secretsManager.ldapToken
     });
 
-    new CfnOutput(this, 'EnvType', {
-      value: props.envType,
-      description: 'Environment type'
+    // Ensure LDAP waits for the token to be retrieved
+    this.ldap.node.addDependency(this.ldapTokenRetriever);
+
+    // Register outputs using the centralized outputs system
+    registerAuthInfraOutputs({
+      stack: this,
+      stackName: resolvedStackName,
+      databaseEndpoint: this.database.hostname,
+      databaseSecretArn: this.database.masterSecret.secretArn,
+      redisEndpoint: this.redis.hostname,
+      redisAuthTokenArn: this.redis.authToken.secretArn,
+      efsId: this.efs.fileSystem.fileSystemId,
+      efsMediaAccessPointId: this.efs.mediaAccessPoint.accessPointId,
+      efsTemplatesAccessPointId: this.efs.customTemplatesAccessPoint.accessPointId,
+      authentikSecretKeyArn: this.secretsManager.secretKey.secretArn,
+      authentikAdminTokenArn: this.secretsManager.adminUserToken.secretArn,
+      authentikLdapTokenArn: this.secretsManager.ldapToken.secretArn,
+      authentikAlbDns: this.authentik.loadBalancer.loadBalancerDnsName,
+      authentikUrl: `https://${this.authentik.dnsName}`,
+      ldapAlbDns: this.ldap.loadBalancer.loadBalancerDnsName,
+      ldapEndpoint: `${this.ldap.loadBalancer.loadBalancerDnsName}:389`,
+      ldapsEndpoint: `${this.ldap.loadBalancer.loadBalancerDnsName}:636`,
+      ldapTokenRetrieverLambdaArn: this.ldapTokenRetriever.lambdaFunction.functionArn
     });
   }
 }

@@ -3,28 +3,21 @@
  */
 import { Construct } from 'constructs';
 import { Stack, StackProps } from 'aws-cdk-lib';
-import { AuthInfraParameters } from './parameters';
 import { Database } from './constructs/database';
 import { Redis } from './constructs/redis';
 import { Efs } from './constructs/efs';
 import { SecretsManager } from './constructs/secrets-manager';
 import { Authentik } from './constructs/authentik';
+import { Ldap } from './constructs/ldap';
+import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 /**
  * Properties for the Auth Infrastructure Stack
  */
 export interface AuthInfraStackProps extends StackProps {
     /**
-     * Stack name/environment
-     */
-    stackName: string;
-    /**
      * Environment type
      */
-    envType: 'prod' | 'dev-test';
-    /**
-     * Optional parameters override
-     */
-    parameters?: Partial<AuthInfraParameters>;
+    envType?: 'prod' | 'dev-test';
 }
 /**
  * Main CDK stack for the Auth Infrastructure
@@ -50,5 +43,13 @@ export declare class AuthInfraStack extends Stack {
      * The Authentik construct
      */
     readonly authentik: Authentik;
+    /**
+     * The LDAP construct
+     */
+    readonly ldap: Ldap;
+    /**
+     * The LDAP token retriever construct
+     */
+    readonly ldapTokenRetriever: LdapTokenRetriever;
     constructor(scope: Construct, id: string, props: AuthInfraStackProps);
 }

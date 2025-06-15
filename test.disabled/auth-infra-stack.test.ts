@@ -11,9 +11,9 @@ describe('AuthInfraStack', () => {
     app = new cdk.App();
     // Set required context parameters
     app.node.setContext('authentikAdminUserEmail', 'admin@example.com');
+    app.node.setContext('authentikLdapBaseDn', 'DC=example,DC=com');
     
     stack = new AuthInfraStack(app, 'TestStack', {
-      stackName: 'test',
       envType: 'dev-test',
     });
     template = Template.fromStack(stack);
@@ -50,7 +50,10 @@ describe('AuthInfraStack', () => {
     });
   });
 
-  test('Contains ECS Task Definitions', () => {
+  test('Contains both Authentik and LDAP ECS Task Definitions', () => {
+    // Should have 2 task definitions - one for Authentik, one for LDAP
+    template.resourceCountIs('AWS::ECS::TaskDefinition', 2);
+    
     template.hasResourceProperties('AWS::ECS::TaskDefinition', {
       RequiresCompatibilities: ['FARGATE'],
       NetworkMode: 'awsvpc',

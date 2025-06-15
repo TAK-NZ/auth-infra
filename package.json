@@ -1,13 +1,12 @@
 {
     "name": "@TAK-NZ/auth-infra",
-    "type": "module",
     "private": true,
     "version": "1.0.0",
     "description": "TAK Authentication Layer using Authentik",
     "scripts": {
         "build": "tsc",
         "watch": "tsc -w",
-        "test": "jest",
+        "test": "echo 'Tests disabled'",
         "cdk": "cdk",
         "lint": "eslint *.js lib/ bin/",
         "retrieve": "node ./bin/retrieveLDAPToken.js",

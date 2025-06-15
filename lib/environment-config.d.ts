@@ -1,47 +1,83 @@
 /**
  * Environment-specific configuration objects and utilities
  */
+import * as cdk from 'aws-cdk-lib';
 /**
- * Environment Type
+ * Environment-specific configuration for auth infrastructure resources
  */
-export type EnvType = 'prod' | 'dev-test';
-/**
- * Base Configuration interface for all environments
- */
-export interface BaseConfig {
-    envType: EnvType;
+export interface AuthInfraEnvironmentConfig {
+    database: {
+        instanceClass: string;
+        instanceCount: number;
+        backupRetentionDays: number;
+        deletionProtection: boolean;
+        enablePerformanceInsights: boolean;
+        enableMonitoring: boolean;
+    };
+    redis: {
+        nodeType: string;
+        numCacheClusters: number;
+        automaticFailoverEnabled: boolean;
+    };
+    ecs: {
+        taskCpu: number;
+        taskMemory: number;
+        desiredCount: number;
+        minCapacity: number;
+        maxCapacity: number;
+    };
+    efs: {
+        throughputMode: 'bursting' | 'provisioned';
+        provisionedThroughput?: number;
+    };
     isProd: boolean;
     dbInstanceClass: string;
     dbInstanceCount: number;
     dbBackupRetentionDays: number;
-    redisCacheNodeType: string;
-    redisNumCacheClusters: number;
     ecsTaskCpu: number;
     ecsTaskMemory: number;
     ecsTaskDesiredCount: number;
-    efsThroughputMode: 'bursting' | 'provisioned';
-    efsProvisionedThroughput?: number;
+    redisCacheNodeType: string;
+    redisNumCacheClusters: number;
     minCapacity: number;
     maxCapacity: number;
+    general: {
+        removalPolicy: cdk.RemovalPolicy;
+        enableDetailedLogging: boolean;
+    };
+    monitoring: {
+        enableCloudWatchAlarms: boolean;
+        logRetentionDays: number;
+    };
 }
 /**
- * Production environment config
+ * Alias for backward compatibility
  */
-export declare const prodConfig: BaseConfig;
+export type BaseConfig = AuthInfraEnvironmentConfig;
 /**
- * Development/Test environment config
+ * Development/Test environment configuration
+ * Optimized for cost and development workflow
  */
-export declare const devTestConfig: BaseConfig;
+export declare const DEV_CONFIG: AuthInfraEnvironmentConfig;
+/**
+ * Production environment configuration
+ * Optimized for high availability, security, and production workloads
+ */
+export declare const PROD_CONFIG: AuthInfraEnvironmentConfig;
+/**
+ * Staging environment configuration (inherits from prod with some optimizations)
+ */
+export declare const STAGING_CONFIG: AuthInfraEnvironmentConfig;
 /**
  * Get environment-specific configuration based on the provided environment type
- * @param envType - Environment type ('prod' or 'dev-test')
+ * @param envType - Environment type ('prod', 'dev-test', 'staging', etc.)
  * @returns Environment-specific configuration
  */
-export declare function getEnvironmentConfig(envType: EnvType): BaseConfig;
+export declare function getEnvironmentConfig(envType: string): AuthInfraEnvironmentConfig;
 /**
  * Merge environment config with overrides
- * @param envType - Environment type ('prod' or 'dev-test')
- * @param overrides - Optional configuration overrides
+ * @param envType - Environment type
+ * @param overrides - Configuration overrides
  * @returns Merged configuration
  */
-export declare function mergeConfig(envType: EnvType, overrides?: Partial<BaseConfig>): BaseConfig;
+export declare function mergeEnvironmentConfig(envType: string, overrides: Partial<AuthInfraEnvironmentConfig>): AuthInfraEnvironmentConfig;
