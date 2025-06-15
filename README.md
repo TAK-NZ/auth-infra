@@ -1,135 +1,206 @@
 <h1 align=center>TAK Auth Infra</h1>
 
-<p align=center>Infrastructure to support LDAP based auth in TAK via <a href="https://goauthentik.io/">Authentik</a></p>
+<p align=center>TAK Authentication Layer (Authentik SSO & LDAP)</p>
 
 ## Background
 
 The [Team Awareness Kit (TAK)](https://tak.gov/solutions/emergency) provides Fire, Emergency Management, and First Responders an operationally agnostic tool for improved situational awareness and a common operational picture. 
-This repo deploys [Authentik](https://goauthentik.io/) as the LDAP based authentication layer for a [TAK server](https://tak.gov/solutions/emergency) on AWS.
-While a TAK sever supports build-in file based authentication mechanism, this approach is very limited. Also almost any other LDAP based authentication provider could be used, but Authentic here is a good choice to provide all the necessary functionality of an LDAP provider as well as advanced capabilities such as single-sign on via OIDC. 
+This repo - which is part of a [larger collection](https://github.com/TAK-NZ/) - deploys [Authentik](https://goauthentik.io/) as the authentication layer for a [TAK server](https://tak.gov/solutions/emergency) on AWS.
 
-The following additional layers are required after deploying this `coe-base-<name>` layer:
+While a TAK server supports built-in file-based authentication, this approach is very limited. This stack provides a robust LDAP-based authentication solution using Authentik, which offers advanced capabilities such as single sign-on via OIDC, user management, and enterprise-grade security features.
+
+This stack must be deployed after the base infrastructure layer:
 
 | Name                  | Notes |
 | --------------------- | ----- |
-| `coe-tak-<name>`      | TAK Server layer - [repo](https://github.com/TAK-NZ/tak-infra)      |
+| `TAK-<name>-BaseInfra` | Base Layer (VPC, ECS, ECR, S3, KMS) - [repo](https://github.com/TAK-NZ/base-infra) |
 
+The following additional layers should be deployed after this authentication layer:
+
+| Name                  | Notes |
+| --------------------- | ----- |
+| `TAK-<name>-TakInfra` | TAK Server layer - [repo](https://github.com/TAK-NZ/tak-infra) |
 
 ## Pre-Reqs
 
-> [!IMPORTANT]
-> The Auth-Infra service assumes some pre-requisite dependencies are deployed before
-> initial deployment.
-
 The following dependencies must be fulfilled:
-- An [AWS Account](https://signin.aws.amazon.com/signup?request_type=register).
-- A Domain Name under which the TAK server is made available, e.g. `tak.nz` in the example here.
-- An [AWS ACM certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs.html) certificate.
-  - This certificate should cover the main domain - e.g. `tak.nz`, as well as the wildcard subdomain, e.g. `*.tak.nz`.
+- An [AWS Account](https://signin.aws.amazon.com/signup?request_type=register). 
+  - Your AWS credentials must be configured for the CDK to access your account. You can configure credentials using the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) (`aws configure`) or [environment variables](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html). The deployment examples in this guide assume you have configured an AWS profile named `tak` - you can either create this profile or substitute it with your preferred profile name in the commands below.
+- The base infrastructure stack (`TAK-<name>-BaseInfra`) must be deployed first.
+  - This provides the VPC, ECS cluster, ECR repository, S3 bucket, KMS key, and ACM certificate.
+  - The ACM certificate from the base stack is automatically imported and used for HTTPS/TLS.
+- A public hosted zone in Route 53 for your domain name (e.g., `tak.nz`).
+  - This stack creates the following default hostnames (which can be changed):
+    - account: Authentik SSO (e.g., `account.tak.nz`)
+    - ldap: Internal LDAP endpoint (e.g., `ldap.tak.nz`)
 
-The following stack layers need to be created before deploying this layer:
+## Resources
 
-| Name                  | Notes |
-| --------------------- | ----- |
-| `coe-base-<name>`      | VPC, ECS cluster, and ECR repository - [repo](https://github.com/TAK-NZ/base-infra)      |
-
+This AWS CDK project provisions the following resources:
+- **Database**: RDS Aurora PostgreSQL cluster with encryption and backup retention
+- **Cache**: ElastiCache Redis cluster for session management
+- **Storage**: EFS file system for persistent Authentik data and certificates
+- **Secrets**: AWS Secrets Manager for database credentials and API tokens
+- **Authentik Service**: ECS service running Authentik containers with auto-scaling
+- **LDAP Outpost**: ECS service running Authentik LDAP provider
+- **Load Balancers**: Application Load Balancer (ALB) for web interface and Network Load Balancer (NLB) for LDAP
+- **Security Groups**: Fine-grained network access controls
+- **DNS Records**: Route 53 records for service endpoints
 
 ## AWS Deployment
 
 ### 1. Install Tooling Dependencies
+   ```bash
+   npm install
+   ```
 
-From the root directory, install the deploy dependencies
+### 2. Bootstrap your AWS environment (if not already done):
+   ```bash
+   npx cdk bootstrap --profile tak
+   ```
 
-```sh
-npm install
+### 3. (Optional) Authentik Configuration
+
+The base infrastructure stack creates an S3 bucket which can be used for advanced [Authentik configuration](https://docs.goauthentik.io/docs/install-config/configuration/) via an .env configuration file.
+
+> [!NOTE] 
+> The deployment automatically creates an empty `authentik-config.env` file in the S3 bucket if it doesn't already exist. The most common item that you might want to configure in Authentik are the [E-Mail provider settings](https://docs.goauthentik.io/docs/install-config/configuration/#authentik_email).
+
+### 4. Set required environment variables:
+
+> [!NOTE]  
+> Even when using AWS profiles, CDK requires explicit account/region specification for context providers (like Route 53 hosted zone lookups). The profile handles authentication, but CDK needs these values for CloudFormation template generation.
+
+```bash
+# Set AWS account and region for CDK deployment (using your profile)
+export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text --profile tak)
+export CDK_DEFAULT_REGION=$(aws configure get region --profile tak || echo "ap-southeast-2")
+
+# Verify the values
+echo "Account: $CDK_DEFAULT_ACCOUNT"
+echo "Region: $CDK_DEFAULT_REGION"
 ```
 
-### 2.(Optional) Authentik configuration
+### 5. Deploy the Auth Infrastructure Stack:
 
-The `coe-base-<name>` layer creates an S3 bucket with the name `coe-auth-config-s3-<name>-<region>-env-config` which can be used for advanced [Authentik configuration](https://docs.goauthentik.io/docs/install-config/configuration/) via an .env configuration file.
-An example configuration file with the name [authentik-config.env.example] is provided in this repo. Adjust this file based on your needs and store it in the created S3 bucket as `authentik-config.env`.
+The stack supports flexible parameter configuration through multiple methods with cascading priority:
 
-### 3. Authentik Server Deployment
+#### Method 1: Environment Variables (Recommended)
+```bash
+# Required parameters
+export AUTHENTIK_ADMIN_USER_EMAIL="admin@company.com"
 
-Deployment to AWS is handled via AWS Cloudformation. The template can be found in the `./cloudformation`
-directory. The deployment itself is performed by [Deploy](https://github.com/openaddresses/deploy) which
-was installed in the previous step.
+# Optional parameters with defaults
+export STACK_NAME="MyFirstStack"
+export ENV_TYPE="dev-test"
+export GIT_SHA="latest"
+export ENABLE_EXECUTE="false"
+export AUTHENTIK_LDAP_BASE_DN="DC=example,DC=com"
+export IP_ADDRESS_TYPE="dualstack"
 
-It is important that this layer is deployed into an existing `base-infra` stack.
-
-Use the command `npx deploy create <stack>` to create the main Authentik Server portion. For example: 
-
-```
-npx deploy create staging 
-```
-
-### 4. Setup a DNS CNAME for the web interface
-
-Create a DNS CNAME from your desired hostname for the Authentik server to the ALB hostname. The ALB hostname is one of the CloudFormation template outputs. An example would be:
-- Name: `auth.tak.nz`
-- Type: `CNAME`
-- Value: `coe-auth-staging-123456789.us-gov-west-1.elb.amazonaws.com`
-
-End-users and admins will communicate with this endpoint to manage user accounts. 
-
-### 5. Configure the Authentik LDAP Provider
-
-While the Authentik LDAP setup is mostly completed automatically based on the Authentik documentation to [create and LDAP provider](https://docs.goauthentik.io/docs/add-secure-apps/providers/ldap/generic_setup), it is necessary to store the Authentik LDAP Token in AWS Secrets Manager. 
-
-Use the command `node ./bin/retrieveLDAPToken.js --env <name> --authurl <url>` to do so. As an example:
-
-```
-node ./bin/retrieveLDAPToken.js --env staging --authurl https://auth.tak.nz 
+# Deploy the stack
+npx cdk deploy --profile tak --context environment=MyFirstStack --context envType=dev-test
 ```
 
-### 6. Create the Authentik LDAP Outpost
-
-Use the command `npx deploy create <stack> --template ./cloudformation/ldap.template.js` to create the LDAP Outpost into the same stack. For example: 
-```
-npx deploy create staging --template ./cloudformation/ldap.template.js
-```
-
-### 7. Setup a DNS CNAME for the LDAPS interface
-
-Create a DNS CNAME from your desired hostname for the LDAPS service to the internal NLB hostname. The NLB hostname is one of the CloudFormation template outputs. An example would be:
-- Name: `ldap.tak.nz`
-- Type: `CNAME`
-- Value: `coe-auth-ldap-staging-123456789.us-gov-west-1.elb.amazonaws.com`
-
-The TAK server will communicate with this endpoint to authenticate and authorize users over LDAPs. 
-
-## About the deploy tool
-
-The deploy tool can be run via the `npx deploy` command.
-
-To install it globally - view the deploy [README](https://github.com/openaddresses/deploy)
-
-Deploy uses your existing AWS credentials. Ensure that your `~/.aws/credentials` has an entry like:
- 
-```
-[coe]
-aws_access_key_id = <redacted>
-aws_secret_access_key = <redacted>
+#### Method 2: CLI Context
+```bash
+npx cdk deploy --profile tak --context environment=MyFirstStack --context envType=dev-test \
+  --parameters AuthentikAdminUserEmail=admin@company.com \
+  --parameters AuthentikLDAPBaseDN=DC=example,DC=com \
+  --parameters EnableExecute=false \
+  --parameters IpAddressType=dualstack
 ```
 
-Stacks can be created, deleted, cancelled, etc all via the deploy tool. For further information
-information about `deploy` functionality run the following for help.
- 
-```sh
-npx deploy
-```
- 
-Further help about a specific command can be obtained via something like:
+#### Method 3: Production Deployment
+```bash
+# Set production parameters
+export AUTHENTIK_ADMIN_USER_EMAIL="admin@company.com"
+export STACK_NAME="prod"
+export ENV_TYPE="prod"
 
-```sh
-npx deploy info --help
+# Deploy to production
+npx cdk deploy --profile tak --context environment=prod --context envType=prod
 ```
+
+**Parameters:**
+- `environment`: Deployment environment (dev, prod, staging). Default: `MyFirstStack`
+- `envType`: Environment type (`prod` or `dev-test`). Default: `dev-test`
+  - `prod`: Production-grade resources with enhanced performance and reliability
+  - `dev-test`: Cost-optimized for development/testing
+- `authentikAdminUserEmail`: **(Required)** Admin user email for Authentik
+- `authentikLdapBaseDn`: LDAP base DN. Default: `DC=example,DC=com`
+- `gitSha`: Git SHA for container image tagging. Default: `latest`
+- `enableExecute`: Enable ECS Exec for debugging. Default: `false`
+- `ipAddressType`: Load balancer IP type (ipv4/dualstack). Default: `dualstack`
+
+**Docker Images**: Automatically sourced from ECR using the pattern `${account}.dkr.ecr.${region}.amazonaws.com/TAK-${stackName}-BaseInfra:auth-infra-*-${gitSha}`
+
+**Parameter Resolution Priority:**
+1. Environment Variables (highest priority)
+2. CLI Context (`--context`)
+3. CLI Parameters (`--parameters`)
+4. Default Values (lowest priority)
+
+Higher priority methods override lower priority ones.
+
+### 6. Deploy the LDAP Stack:
+
+After the Auth Infrastructure stack is deployed, deploy the LDAP stack:
+
+```bash
+# Deploy LDAP stack with same environment configuration
+npx cdk deploy TAK-{STACK_NAME}-AuthInfra-LDAP --profile tak --context environment=MyFirstStack --context envType=dev-test \
+  --parameters AuthentikHost=account.tak.nz
+```
+
+### 7. Configure DNS Records
+
+The stacks automatically create Route 53 records for the following endpoints:
+- **account.{domain}**: Authentik web interface (SSO portal)
+- **ldap.{domain}**: LDAP endpoint for TAK server authentication
+
+No manual DNS configuration is required if using Route 53 hosted zones.
+
+### 8. Configure Authentik LDAP Provider
+
+After deployment, configure the Authentik LDAP provider:
+
+1. Access the Authentik admin interface at `https://account.{your-domain}`
+2. Use the admin credentials created during deployment
+3. The LDAP provider is automatically configured via blueprints
+4. Verify the LDAP outpost is connected and healthy
+
+## SSL Certificate Integration
+
+The stack automatically imports the SSL certificate from the base infrastructure stack. No manual certificate configuration is required.
+
+The certificate ARN is imported from the base stack export: `TAK-{STACK_NAME}-BaseInfra-CERTIFICATE-ARN`
+
+## Stack Dependencies
+
+This stack depends on the base infrastructure stack which provides:
+- VPC and subnets (public and private)
+- ECS cluster for container orchestration
+- ECR repository for container images
+- KMS key for encryption
+- S3 bucket for configuration and storage
+- ACM certificate for HTTPS/TLS
+
+Cross-stack references are automatically resolved using CloudFormation exports.
+
+## Notes
+
+- Make sure your AWS credentials are configured
+- The base infrastructure stack must be deployed first
+- The LDAP stack has an explicit dependency on the Auth Infrastructure stack
+- SSL certificates are automatically imported from the base stack
+- All resources are encrypted using the KMS key from the base stack
 
 ## Estimated Cost
 
-The estimated AWS cost for this layer of the stack without data transfer or data processing based usage is:
+The estimated AWS cost for this authentication layer without data transfer or processing-based usage is:
 
-| Environment type      | Estimated monthly cost | Estimated yearly cost |
-| --------------------- | ----- | ----- |
-| Prod                  | 366.87 USD | 4,402.44 USD |
-| Dev-Test              | 106.25 USD | 1,275.00 USD |
+| Environment type | Estimated monthly cost | Estimated yearly cost |
+| ---------------- | ---------------------- | -------------------- |
+| Prod            | $366.87 USD           | $4,402.44 USD        |
+| Dev-Test        | $106.25 USD           | $1,275.00 USD        |

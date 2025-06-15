@@ -1,0 +1,19 @@
+{
+  "preset": "ts-jest/presets/default-esm",
+  "extensionsToTreatAsEsm": [".ts"],
+  "testEnvironment": "node",
+  "roots": ["<rootDir>/test"],
+  "testMatch": ["**/*.test.ts"],
+  "transform": {
+    "^.+\\.ts$": ["ts-jest", {
+      "useESM": true
+    }]
+  },
+  "moduleNameMapper": {
+    "^(\\.{1,2}/.*)\\.js$": "$1"
+  },
+  "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"],
+  "transformIgnorePatterns": [
+    "node_modules/(?!(aws-cdk-lib)/)"
+  ]
+}

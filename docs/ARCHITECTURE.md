@@ -1,0 +1,221 @@
+# Architecture Documentation
+
+## System Architecture
+
+The TAK Authentication Infrastructure provides centralized authentication and authorization services with SSO via OIDC using Authentik, along with LDAP integration for the TAK server.
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Internet      │────│  Application     │────│   Authentik     │
+│   Users         │    │  Load Balancer   │    │   ECS Service   │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                                        │
+                                                 ┌──────┴──────────┐
+                                                 │                 │
+┌─────────────────┐    ┌──────────────────┐      ▼                 ▼
+│   TAK Server    │────│   Network        │ ┌──────────┐    ┌──────────────┐
+│   (External)    │    │   Load Balancer  │ │   RDS    │    │     EFS      │
+└─────────────────┘    │   (LDAP)         │ │ Aurora   │    │  Shared      │
+                       └──────────────────┘ │PostgreSQL│    │  Storage     │
+                                │           └──────────┘    └──────────────┘
+                        ┌───────┴────────┐       │
+                        │  LDAP Outpost  │       │
+                        │  ECS Service   │       │
+                        └────────────────┘       │
+                                │                │
+                                ▼                ▼
+                        ┌────────────────────────────┐
+                        │      ElastiCache Redis     │
+                        │     Session Storage        │
+                        └────────────────────────────┘
+```
+
+## Component Details
+
+### Core Services
+
+#### 1. Authentik Application Server
+- **Technology**: Python/Django application running in ECS Fargate
+- **Purpose**: Web-based authentication and identity management
+- **Scaling**: Auto-scaling based on CPU/memory utilization
+- **Storage**: Persistent data in Aurora PostgreSQL, session data in Redis
+
+#### 2. LDAP Outpost
+- **Technology**: Go-based LDAP proxy running in ECS Fargate
+- **Purpose**: Provides LDAP interface for TAK Server and other legacy applications
+- **Protocol**: LDAP over TLS on port 636
+- **Authentication**: Connects back to Authentik for user validation
+- **Access**: Accessed directly by TAK Server via Network Load Balancer
+
+#### 3. TAK Server Integration
+- **Location**: External to this authentication infrastructure
+- **Access Method**: Connects to LDAP Outpost via Network Load Balancer
+- **Protocol**: LDAPS (LDAP over TLS) on port 636
+- **Purpose**: Authenticates TAK users against the centralized identity store
+- **Protocol**: LDAP over TLS on port 636
+- **Authentication**: Connects back to Authentik for user validation
+
+### Data Layer
+
+#### 1. Aurora PostgreSQL Database
+- **Purpose**: Primary data store for Authentik configuration and user data
+- **Configuration**: Multi-AZ cluster for high availability
+- **Backup**: Automated backups with point-in-time recovery
+- **Encryption**: Encrypted at rest using AWS KMS
+
+#### 2. ElastiCache Redis
+- **Purpose**: Session storage and caching
+- **Configuration**: Single node (dev) or cluster mode (prod)
+- **Persistence**: Configured for session persistence
+- **Encryption**: In-transit and at-rest encryption
+
+#### 3. EFS File System
+- **Purpose**: Shared storage for Authentik media and certificates
+- **Mount Points**: `/media` and `/certs` in Authentik containers
+- **Backup**: AWS Backup service integration
+- **Encryption**: Encrypted at rest
+
+### Network Architecture
+
+#### 1. VPC Configuration
+- **Subnets**: Public subnets for ALB, private subnets for services
+- **Availability Zones**: Multi-AZ deployment for high availability
+- **NAT Gateway**: Outbound internet access for private subnets
+
+#### 2. Load Balancing
+- **Application Load Balancer**: HTTPS termination and routing for Authentik web interface (accessed by Internet Users)
+- **Network Load Balancer**: Layer 4 load balancing for LDAP traffic (accessed by TAK Server)
+- **Traffic Separation**: Web UI and LDAP protocols use separate load balancers for optimal performance
+- **Health Checks**: Custom health check endpoints for both services
+
+#### 3. Security Groups
+- **Principle of Least Privilege**: Minimal required access between components
+- **Ingress Rules**: Specific port and protocol restrictions
+- **Egress Rules**: Controlled outbound access
+
+## Environment Configuration System
+
+### 1. Environment Types
+
+#### **dev-test** (Default)
+- **Focus**: Cost optimization and development efficiency
+- **NAT Gateways**: Single NAT Gateway (AZ-A only)
+- **VPC Endpoints**: S3 gateway endpoint only
+- **Certificate Transparency**: Disabled
+- **Container Insights**: Disabled
+- **KMS Key Rotation**: Disabled
+- **S3 Versioning**: Disabled
+- **Resource Removal**: DESTROY policy (allows cleanup)
+
+#### **prod**
+- **Focus**: High availability, security, and production readiness
+- **NAT Gateways**: Redundant NAT Gateways (both AZs)
+- **VPC Endpoints**: Full interface endpoints (ECR, KMS, Secrets Manager, CloudWatch)
+- **Certificate Transparency**: Enabled (compliance requirement)
+- **Container Insights**: Enabled (monitoring and observability)
+- **KMS Key Rotation**: Enabled (annual rotation)
+- **S3 Versioning**: Enabled (data protection)
+- **Resource Removal**: RETAIN policy (protects production resources)
+
+#### **staging**
+- **Focus**: Production-like testing with cost optimizations
+- **NAT Gateways**: Redundant NAT Gateways (test HA setup)
+- **VPC Endpoints**: S3 gateway only (cost optimization)
+- **Certificate Transparency**: Enabled (test production certificate setup)
+- **Container Insights**: Enabled (test monitoring setup)
+- **KMS Key Rotation**: Disabled (cost optimization)
+- **S3 Versioning**: Enabled (test data protection)
+- **Resource Removal**: DESTROY policy (allows staging cleanup)
+
+### 2. Parameter Override System
+- **Environment Variables**: Highest precedence override mechanism
+- **CDK Context**: CLI-based parameter overrides
+- **Environment Defaults**: Fallback configuration based on environment type
+- **Hierarchical Resolution**: Context → Environment Variables → Environment Defaults
+
+## Security Architecture
+
+### 1. Encryption
+- **In Transit**: TLS 1.2+ for all communications
+- **At Rest**: AWS KMS encryption for all data stores
+- **Key Management**: Separate KMS keys per environment
+
+### 2. Access Control
+- **IAM Roles**: Service-specific roles with minimal permissions
+- **Security Groups**: Network-level access control
+- **Secrets Management**: AWS Secrets Manager for sensitive data
+
+### 3. Monitoring and Logging
+- **CloudWatch Logs**: Application and system logs
+- **CloudWatch Metrics**: Performance and health metrics
+- **AWS CloudTrail**: API access logging
+
+## Deployment Architecture
+
+### 1. Infrastructure as Code
+- **AWS CDK**: TypeScript-based infrastructure definitions
+- **Version Control**: Git-based infrastructure versioning
+- **Automated Testing**: Unit tests for infrastructure code
+
+### 2. Container Management
+- **ECR**: Private container registry
+- **ECS Fargate**: Serverless container orchestration
+- **Auto Scaling**: CPU and memory-based scaling policies
+
+### 3. Environment Separation
+- **Development**: Single AZ, minimal redundancy
+- **Production**: Multi-AZ, full redundancy and backups
+- **Staging**: Production-like for testing
+
+## Cost Optimization
+
+### 1. Environment-Based Scaling
+- **Development**: Minimal redundancy, single AZ where possible
+- **Production**: Full redundancy and high availability
+- **Staging**: Production-like with cost optimizations
+
+### 2. Resource Optimization
+- **NAT Gateway**: Single vs. redundant based on environment
+- **VPC Endpoints**: Gateway endpoints preferred for cost efficiency
+- **ECS Capacity**: FARGATE_SPOT integration for cost savings
+- **Storage**: Lifecycle policies and intelligent tiering
+
+### 3. Monitoring and Alerts
+- **Cost Tracking**: Resource tagging for cost allocation
+- **Usage Monitoring**: CloudWatch metrics for resource utilization
+- **Budget Integration**: Compatible with AWS Budgets and Cost Explorer
+
+## Disaster Recovery and High Availability
+
+### 1. Multi-AZ Deployment
+- **Database**: Aurora PostgreSQL cluster with primary instance, secondary instance for production environments
+- **Services**: ECS services deployed across multiple availability zones
+- **Load Balancers**: ALB and NLB distribute traffic across AZs
+
+### 2. Backup Configuration
+- **Database**: Aurora automated backups with 10-day retention period
+- **Database Snapshots**: Manual snapshots taken before stack deletion (RemovalPolicy.SNAPSHOT)
+- **EFS Storage**: Backups disabled (optimized for cost over recovery)
+- **Infrastructure**: All infrastructure defined as code in version control
+
+### 3. Auto-Recovery Features
+- **ECS Services**: Automatic container replacement on failure
+- **Aurora**: Built-in failover to secondary instance in production
+- **Auto Scaling**: ECS services scale based on CPU and memory utilization
+
+## Performance Considerations
+
+### 1. Scaling Patterns
+- **Horizontal Scaling**: ECS service auto-scaling
+- **Database Scaling**: Read replicas for read-heavy workloads
+- **Caching**: Redis for session and application caching
+
+### 2. Monitoring
+- **Response Time**: Application response time monitoring
+- **Resource Utilization**: CPU, memory, and network monitoring
+- **Error Rates**: Application error tracking and alerting
+
+### 3. Optimization
+- **Container Resources**: Right-sized CPU and memory allocation
+- **Database Performance**: Query optimization and indexing
+- **Network**: Optimized security group rules and routing
