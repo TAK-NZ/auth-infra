@@ -43,7 +43,22 @@ export interface AuthentikProps {
   /**
    * ECS cluster
    */
-  ecsCluster: ecs.Cluster;
+  ecsCluster: ecs.ICluster;
+
+  /**
+   * S3 configuration bucket for environment files
+   */
+  s3ConfBucket: s3.IBucket;
+
+  /**
+   * S3 URI for the environment file (optional)
+   */
+  envFileS3Uri?: string;
+
+  /**
+   * S3 key for the environment file (optional)
+   */
+  envFileS3Key?: string;
 
   /**
    * SSL certificate ARN for HTTPS
@@ -74,6 +89,11 @@ export interface AuthentikProps {
    * Docker image location (Github or Local ECR)
    */
   dockerImageLocation: 'Github' | 'Local ECR';
+
+  /**
+   * ECR repository ARN for local ECR images
+   */
+  ecrRepositoryArn?: string;
 
   /**
    * Allow SSH exec into container
@@ -234,6 +254,11 @@ export class Authentik extends Construct {
       configBucket.grantRead(taskRole);
     }
 
+    // Grant read access to S3 configuration bucket for environment files
+    if (props.envFileS3Key) {
+      props.s3ConfBucket.grantRead(taskRole);
+    }
+
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
       cpu: props.config.ecs.taskCpu,
@@ -270,10 +295,12 @@ export class Authentik extends Construct {
     // Determine Docker image
     const dockerImage = props.dockerImageLocation === 'Github' 
       ? 'ghcr.io/tak-nz/authentik-server:latest'
-      : 'placeholder-for-local-ecr'; // Replace with actual ECR URL in production
+      : props.ecrRepositoryArn 
+        ? `${props.ecrRepositoryArn}:latest`
+        : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
 
-    // Create container definition
-    const container = this.taskDefinition.addContainer('AuthentikServer', {
+    // Prepare container definition options
+    let containerDefinitionOptions: ecs.ContainerDefinitionOptions = {
       image: ecs.ContainerImage.fromRegistry(dockerImage),
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'authentik',
@@ -308,7 +335,19 @@ export class Authentik extends Construct {
         startPeriod: Duration.seconds(60)
       },
       essential: true
-    });
+    };
+
+    // Add environment files if S3 key is provided
+    if (props.envFileS3Key) {
+      containerDefinitionOptions = {
+        ...containerDefinitionOptions,
+        environmentFiles: [
+          ecs.EnvironmentFile.fromBucket(props.s3ConfBucket, props.envFileS3Key)
+        ]
+      };
+    }
+
+    const container = this.taskDefinition.addContainer('AuthentikServer', containerDefinitionOptions);
 
     // Add port mappings
     container.addPortMappings({

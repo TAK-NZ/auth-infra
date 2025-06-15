@@ -8,6 +8,7 @@ import {
   aws_elasticloadbalancingv2 as elbv2,
   aws_logs as logs,
   aws_secretsmanager as secretsmanager,
+  aws_s3 as s3,
   aws_iam as iam,
   Duration,
   RemovalPolicy,
@@ -43,7 +44,12 @@ export interface LdapProps {
   /**
    * ECS cluster
    */
-  ecsCluster: ecs.Cluster;
+  ecsCluster: ecs.ICluster;
+
+  /**
+   * S3 configuration bucket for environment files
+   */
+  s3ConfBucket: s3.IBucket;
 
   /**
    * SSL certificate ARN for LDAPS
@@ -59,6 +65,11 @@ export interface LdapProps {
    * Docker image location (Github or Local ECR)
    */
   dockerImageLocation: 'Github' | 'Local ECR';
+
+  /**
+   * ECR repository ARN for local ECR images
+   */
+  ecrRepositoryArn?: string;
 
   /**
    * Allow SSH exec into container
@@ -173,7 +184,9 @@ export class Ldap extends Construct {
     // Determine Docker image
     const dockerImage = props.dockerImageLocation === 'Github' 
       ? 'ghcr.io/tak-nz/authentik-ldap:latest'
-      : 'placeholder-for-local-ecr'; // Replace with actual ECR URL in production
+      : props.ecrRepositoryArn 
+        ? `${props.ecrRepositoryArn}:latest`
+        : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
 
     // Create container definition
     const container = this.taskDefinition.addContainer('AuthentikLdap', {

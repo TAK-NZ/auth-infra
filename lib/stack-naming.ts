@@ -76,6 +76,7 @@ export const AUTH_EXPORT_NAMES = {
 export const BASE_EXPORT_NAMES = {
   VPC_ID: 'VPC-ID',
   VPC_CIDR_IPV4: 'VpcIPv4CIDR',
+  VPC_CIDR_IPV6: 'VpcIPv6CIDR',
   SUBNET_PRIVATE_A: 'SubnetPrivateA',
   SUBNET_PRIVATE_B: 'SubnetPrivateB',
   SUBNET_PUBLIC_A: 'SubnetPublicA',
@@ -83,7 +84,9 @@ export const BASE_EXPORT_NAMES = {
   ECS_CLUSTER: 'Ecs-ARN',
   ECR_REPO: 'Ecr-ARN',
   KMS_KEY: 'Kms-ARN',
+  KMS_ALIAS: 'Kms-Alias',
   S3_BUCKET: 'S3ConfBucket-ARN',
+  S3_ID: 'S3-ID',
   CERTIFICATE_ARN: 'AcmCert-ARN',
   HOSTED_ZONE_ID: 'R53Zone-ID',
 } as const;

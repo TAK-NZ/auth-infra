@@ -7,12 +7,14 @@ import { SecretsManager } from './constructs/secrets-manager';
 import { Authentik } from './constructs/authentik';
 import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
+import { S3EnvFileManager } from './constructs/s3-env-file-manager';
 import { StackProps, Fn } from 'aws-cdk-lib';
 import { registerAuthInfraOutputs } from './outputs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import { createBaseImportValue } from './stack-naming';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import { createBaseImportValue, BASE_EXPORT_NAMES } from './stack-naming';
 import { getEnvironmentConfig } from './environment-config';
 import { resolveStackParameters } from './parameters';
 
@@ -34,7 +36,7 @@ export class AuthInfraStack extends cdk.Stack {
     const params = resolveStackParameters(this);
     
     const envType = (props.envType || params.envType) as 'prod' | 'dev-test';
-    const resolvedStackName = id;
+    const stackNameComponent = params.stackName; // This is the STACK_NAME part (e.g., "MyFirstStack")
 
     // Get environment configuration
     const config = getEnvironmentConfig(envType);
@@ -48,19 +50,32 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Import VPC and networking from base infrastructure
     const vpc = ec2.Vpc.fromLookup(this, 'VPC', {
-      vpcId: createBaseImportValue(resolvedStackName, 'vpc-id')
+      vpcId: createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_ID)
     });
 
     // Import KMS key from base infrastructure
     const kmsKey = kms.Key.fromKeyArn(this, 'KMSKey', 
-      createBaseImportValue(resolvedStackName, 'kms')
+      createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.KMS_KEY)
     );
 
-    // ECS Cluster
-    const ecsCluster = new ecs.Cluster(this, 'ECSCluster', {
-      vpc,
-      clusterName: `${id}-cluster`,
-      enableFargateCapacityProviders: true
+    // Import ECS Cluster from base infrastructure
+    const ecsCluster = ecs.Cluster.fromClusterArn(this, 'ECSCluster',
+      createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECS_CLUSTER)
+    );
+
+    // Import S3 configuration bucket from base infrastructure
+    const s3ConfBucket = s3.Bucket.fromBucketArn(this, 'S3ConfBucket',
+      createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.S3_BUCKET)
+    );
+
+    // Import ECR repository from base infrastructure (for local ECR option)
+    const ecrRepository = createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECR_REPO);
+
+    // S3 Environment File Manager - manages authentik-config.env file
+    const s3EnvFileManager = new S3EnvFileManager(this, 'S3EnvFileManager', {
+      environment: stackNameComponent,
+      s3ConfBucket,
+      envFileName: 'authentik-config.env'
     });
 
     // Security Groups
@@ -70,13 +85,13 @@ export class AuthInfraStack extends cdk.Stack {
 
     // SecretsManager
     const secretsManager = new SecretsManager(this, 'SecretsManager', {
-      environment: resolvedStackName,
+      environment: stackNameComponent,
       kmsKey
     });
 
     // Database
     const database = new Database(this, 'Database', {
-      environment: resolvedStackName,
+      environment: stackNameComponent,
       config,
       vpc,
       kmsKey,
@@ -85,7 +100,7 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Redis
     const redis = new Redis(this, 'Redis', {
-      environment: resolvedStackName,
+      environment: stackNameComponent,
       config,
       vpc,
       kmsKey,
@@ -94,7 +109,7 @@ export class AuthInfraStack extends cdk.Stack {
 
     // EFS
     const efs = new Efs(this, 'EFS', {
-      environment: resolvedStackName,
+      environment: stackNameComponent,
       vpc,
       kmsKey,
       allowAccessFrom: [ecsSecurityGroup]
@@ -102,17 +117,21 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Authentik
     const authentik = new Authentik(this, 'Authentik', {
-      environment: resolvedStackName,
+      environment: stackNameComponent,
       config,
       vpc,
       ecsSecurityGroup,
       ecsCluster,
+      s3ConfBucket,
+      envFileS3Uri: s3EnvFileManager.envFileS3Uri,
+      envFileS3Key: s3EnvFileManager.envFileS3Key,
       sslCertificateArn: params.sslCertificateArn || '',
       adminUserEmail: params.authentikAdminUserEmail,
       ldapBaseDn: params.authentikLdapBaseDn,
       useConfigFile: params.useAuthentikConfigFile || false,
       ipAddressType: params.ipAddressType,
       dockerImageLocation: params.dockerImageLocation || 'Github',
+      ecrRepositoryArn: ecrRepository,
       enableExecute: params.enableExecute,
       dbSecret: database.masterSecret,
       dbHostname: database.hostname,
@@ -129,7 +148,7 @@ export class AuthInfraStack extends cdk.Stack {
 
     // LDAP Token Retriever
     const ldapTokenRetriever = new LdapTokenRetriever(this, 'LdapTokenRetriever', {
-      environment: resolvedStackName,
+      environment: stackNameComponent,
       config,
       kmsKey,
       authentikHost: `https://${authentik.dnsName}`,
@@ -141,14 +160,16 @@ export class AuthInfraStack extends cdk.Stack {
 
     // LDAP
     const ldap = new Ldap(this, 'LDAP', {
-      environment: resolvedStackName,
+      environment: stackNameComponent,
       config,
       vpc,
       ecsSecurityGroup,
       ecsCluster,
+      s3ConfBucket,
       sslCertificateArn: params.sslCertificateArn || '',
       authentikHost: authentik.dnsName,
       dockerImageLocation: params.dockerImageLocation || 'Github',
+      ecrRepositoryArn: ecrRepository,
       enableExecute: params.enableExecute,
       ldapToken: secretsManager.ldapToken
     });
@@ -159,7 +180,7 @@ export class AuthInfraStack extends cdk.Stack {
     // Outputs
     registerAuthInfraOutputs({
       stack: this,
-      stackName: resolvedStackName,
+      stackName: stackNameComponent,
       databaseEndpoint: database.hostname,
       databaseSecretArn: database.masterSecret.secretArn,
       redisEndpoint: redis.hostname,

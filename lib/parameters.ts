@@ -73,7 +73,7 @@ export function resolveStackParameters(stack: cdk.Stack): {
 
   // Resolution with environment variables taking precedence
   const envType = process.env.ENV_TYPE || envTypeFromContext || 'dev-test';
-  const stackName = STACK_NAME_ENV || stackNameFromContext || `${envType}-stack`;
+  const stackName = STACK_NAME_ENV || stackNameFromContext || 'MyFirstStack';
   const gitSha = GIT_SHA || gitShaFromContext || getGitSha();
 
   // Get environment-specific configuration

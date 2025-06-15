@@ -99,12 +99,12 @@ export AUTHENTIK_LDAP_BASE_DN="DC=example,DC=com"
 export IP_ADDRESS_TYPE="dualstack"
 
 # Deploy the stack
-npx cdk deploy --profile tak --context environment=MyFirstStack --context envType=dev-test
+npx cdk deploy --profile tak --context stackName=MyFirstStack --context envType=dev-test
 ```
 
 #### Method 2: CLI Context
 ```bash
-npx cdk deploy --profile tak --context environment=MyFirstStack --context envType=dev-test \
+npx cdk deploy --profile tak --context stackName=MyFirstStack --context envType=dev-test \
   --parameters AuthentikAdminUserEmail=admin@company.com \
   --parameters AuthentikLDAPBaseDN=DC=example,DC=com \
   --parameters EnableExecute=false \
@@ -119,11 +119,11 @@ export STACK_NAME="prod"
 export ENV_TYPE="prod"
 
 # Deploy to production
-npx cdk deploy --profile tak --context environment=prod --context envType=prod
+npx cdk deploy --profile tak --context stackName=prod --context envType=prod
 ```
 
 **Parameters:**
-- `environment`: Deployment environment (dev, prod, staging). Default: `MyFirstStack`
+- `stackName`: Stack name component that creates the final stack name in format "TAK-<stackName>-AuthInfra". Default: `MyFirstStack`
 - `envType`: Environment type (`prod` or `dev-test`). Default: `dev-test`
   - `prod`: Production-grade resources with enhanced performance and reliability
   - `dev-test`: Cost-optimized for development/testing
@@ -136,8 +136,8 @@ npx cdk deploy --profile tak --context environment=prod --context envType=prod
 **Docker Images**: Automatically sourced from ECR using the pattern `${account}.dkr.ecr.${region}.amazonaws.com/TAK-${stackName}-BaseInfra:auth-infra-*-${gitSha}`
 
 **Parameter Resolution Priority:**
-1. Environment Variables (highest priority)
-2. CLI Context (`--context`)
+1. Environment Variables (highest priority) - use `STACK_NAME` env var
+2. CLI Context (`--context`) - use `stackName` context
 3. CLI Parameters (`--parameters`)
 4. Default Values (lowest priority)
 
@@ -149,7 +149,7 @@ After the Auth Infrastructure stack is deployed, deploy the LDAP stack:
 
 ```bash
 # Deploy LDAP stack with same environment configuration
-npx cdk deploy TAK-{STACK_NAME}-AuthInfra-LDAP --profile tak --context environment=MyFirstStack --context envType=dev-test \
+npx cdk deploy TAK-{STACK_NAME}-AuthInfra-LDAP --profile tak --context stackName=MyFirstStack --context envType=dev-test \
   --parameters AuthentikHost=account.tak.nz
 ```
 

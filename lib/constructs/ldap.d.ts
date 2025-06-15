@@ -2,7 +2,7 @@
  * LDAP Construct - CDK implementation of the Authentik LDAP outpost
  */
 import { Construct } from 'constructs';
-import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager } from 'aws-cdk-lib';
+import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager, aws_s3 as s3 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
  * Properties for the LDAP construct
@@ -27,7 +27,11 @@ export interface LdapProps {
     /**
      * ECS cluster
      */
-    ecsCluster: ecs.Cluster;
+    ecsCluster: ecs.ICluster;
+    /**
+     * S3 configuration bucket for environment files
+     */
+    s3ConfBucket: s3.IBucket;
     /**
      * SSL certificate ARN for LDAPS
      */
@@ -40,6 +44,10 @@ export interface LdapProps {
      * Docker image location (Github or Local ECR)
      */
     dockerImageLocation: 'Github' | 'Local ECR';
+    /**
+     * ECR repository ARN for local ECR images
+     */
+    ecrRepositoryArn?: string;
     /**
      * Allow SSH exec into container
      */

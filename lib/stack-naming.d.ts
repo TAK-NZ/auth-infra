@@ -52,6 +52,7 @@ export declare const AUTH_EXPORT_NAMES: {
 export declare const BASE_EXPORT_NAMES: {
     readonly VPC_ID: "VPC-ID";
     readonly VPC_CIDR_IPV4: "VpcIPv4CIDR";
+    readonly VPC_CIDR_IPV6: "VpcIPv6CIDR";
     readonly SUBNET_PRIVATE_A: "SubnetPrivateA";
     readonly SUBNET_PRIVATE_B: "SubnetPrivateB";
     readonly SUBNET_PUBLIC_A: "SubnetPublicA";
@@ -59,7 +60,9 @@ export declare const BASE_EXPORT_NAMES: {
     readonly ECS_CLUSTER: "Ecs-ARN";
     readonly ECR_REPO: "Ecr-ARN";
     readonly KMS_KEY: "Kms-ARN";
+    readonly KMS_ALIAS: "Kms-Alias";
     readonly S3_BUCKET: "S3ConfBucket-ARN";
+    readonly S3_ID: "S3-ID";
     readonly CERTIFICATE_ARN: "AcmCert-ARN";
     readonly HOSTED_ZONE_ID: "R53Zone-ID";
 };
