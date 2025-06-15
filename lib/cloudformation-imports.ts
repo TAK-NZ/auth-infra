@@ -22,6 +22,7 @@ export const BASE_EXPORT_NAMES = {
   S3_ID: 'S3-ID',
   CERTIFICATE_ARN: 'AcmCert-ARN',
   HOSTED_ZONE_ID: 'R53Zone-ID',
+  HOSTED_ZONE_NAME: 'R53Zone-Name',
 } as const;
 
 /**

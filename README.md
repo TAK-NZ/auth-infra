@@ -105,6 +105,8 @@ npx cdk deploy --context envType=dev-test \
 | `enableExecute` | No | `false` | Enable ECS exec for debugging |
 | `authentikAdminUserEmail` | **Yes** | None | Admin user email for Authentik setup |
 | `authentikLdapBaseDn` | No | `DC=example,DC=com` | LDAP base DN for directory structure |
+| `hostnameAuthentik` | No | `account` | Hostname for Authentik service (creates DNS A/AAAA records) |
+| `hostnameLdap` | No | `ldap` | Hostname for LDAP service (creates DNS A record) |
 
 *Environment-based defaults: `prod` = high-availability, `dev-test` = cost-optimized
 

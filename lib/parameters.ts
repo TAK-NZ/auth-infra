@@ -49,6 +49,8 @@ export function resolveStackParameters(stack: cdk.Stack): {
   authentikLdapBaseDn: string;
   sslCertificateArn: string;
   useAuthentikConfigFile: boolean;
+  hostnameAuthentik: string;
+  hostnameLdap: string;
   authentikHost: string;
 } {
   // Environment variables (first priority)
@@ -63,6 +65,8 @@ export function resolveStackParameters(stack: cdk.Stack): {
   const authentikLdapBaseDnFromContext = stack.node.tryGetContext('authentikLdapBaseDn');
   const sslCertificateArnFromContext = stack.node.tryGetContext('sslCertificateArn');
   const useAuthentikConfigFileFromContext = stack.node.tryGetContext('useAuthentikConfigFile');
+  const hostnameAuthentikFromContext = stack.node.tryGetContext('hostnameAuthentik');
+  const hostnameLdapFromContext = stack.node.tryGetContext('hostnameLdap');
   const authentikHostFromContext = stack.node.tryGetContext('authentikHost');
 
   // Resolution with environment variables taking precedence
@@ -90,6 +94,8 @@ export function resolveStackParameters(stack: cdk.Stack): {
   const authentikAdminUserEmail = AUTHENTIK_ADMIN_USER_EMAIL || authentikAdminUserEmailFromContext || '';
   const authentikLdapBaseDn = AUTHENTIK_LDAP_BASE_DN || authentikLdapBaseDnFromContext || 'DC=example,DC=com';
   const sslCertificateArn = SSL_CERTIFICATE_ARN || sslCertificateArnFromContext || '';
+  const hostnameAuthentik = hostnameAuthentikFromContext || 'account';
+  const hostnameLdap = hostnameLdapFromContext || 'ldap';
   
   // For LDAP, the authentik host will be derived from the Authentik construct within the same stack
   // This is a placeholder that gets overridden during stack construction
@@ -109,6 +115,8 @@ export function resolveStackParameters(stack: cdk.Stack): {
     authentikLdapBaseDn,
     sslCertificateArn,
     useAuthentikConfigFile,
+    hostnameAuthentik,
+    hostnameLdap,
     authentikHost,
   };
 }

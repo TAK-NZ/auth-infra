@@ -45,6 +45,8 @@ The stack automatically applies optimal defaults based on `envType`:
 | `authentikLdapBaseDn` | string | `DC=example,DC=com` | `DC=example,DC=com` | LDAP base DN |
 | `gitSha` | string | auto-detected | auto-detected | Git SHA for resource tagging |
 | `enableExecute` | boolean | `false` | `false` | Enable ECS exec for debugging |
+| `hostnameAuthentik` | string | `account` | `account` | Hostname for Authentik service DNS records |
+| `hostnameLdap` | string | `ldap` | `ldap` | Hostname for LDAP service DNS records |
 
 ### Infrastructure Overrides
 

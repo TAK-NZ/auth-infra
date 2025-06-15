@@ -136,8 +136,10 @@ The stack accepts the following parameters:
 - `AuthentikAdminUserEmail` - Admin user email
 - `AuthentikLDAPBaseDN` - LDAP base DN
 - `AuthentikConfigFile` - Use S3 config file
+- `HostnameAuthentik` - Hostname for Authentik service (default: 'account')
+- `HostnameLdap` - Hostname for LDAP service (default: 'ldap')
 
-**Note:** SSL Certificate ARN is automatically imported from the BaseInfra stack export and does not need to be provided as a parameter. Docker images are automatically sourced from ECR. Load balancers are configured with dualstack IP addressing.
+**Note:** SSL Certificate ARN is automatically imported from the BaseInfra stack export and does not need to be provided as a parameter. Docker images are automatically sourced from ECR. Load balancers are configured with dualstack IP addressing. DNS records are automatically created in the Route53 hosted zone from BaseInfra.
 
 ## Parameter Management
 

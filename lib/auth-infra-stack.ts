@@ -10,6 +10,7 @@ import { AuthentikWorker } from './constructs/authentik-worker';
 import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 import { S3EnvFileManager } from './constructs/s3-env-file-manager';
+import { Route53 } from './constructs/route53';
 import { StackProps, Fn } from 'aws-cdk-lib';
 import { registerOutputs } from './outputs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
@@ -81,6 +82,8 @@ export class AuthInfraStack extends cdk.Stack {
     const authentikLdapBaseDn = this.node.tryGetContext('authentikLdapBaseDn') || 'DC=example,DC=com';
     const sslCertificateArn = this.node.tryGetContext('sslCertificateArn') || '';
     const useAuthentikConfigFile = Boolean(this.node.tryGetContext('useAuthentikConfigFile') || false);
+    const hostnameAuthentik = this.node.tryGetContext('hostnameAuthentik') || 'account';
+    const hostnameLdap = this.node.tryGetContext('hostnameLdap') || 'ldap';
 
     // Validate required parameters
     if (!authentikAdminUserEmail || authentikAdminUserEmail.trim() === '') {
@@ -122,6 +125,10 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Import ECR repository from base infrastructure (for local ECR option)
     const ecrRepository = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECR_REPO));
+
+    // Import Route53 hosted zone from base infrastructure
+    const hostedZoneId = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_ID));
+    const hostedZoneName = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_NAME));
 
     // S3 Environment File Manager - manages authentik-config.env file
     const s3EnvFileManager = new S3EnvFileManager(this, 'S3EnvFileManager', {
@@ -256,6 +263,18 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Ensure LDAP waits for the token to be retrieved
     ldap.node.addDependency(ldapTokenRetriever);
+
+    // Route53 DNS Records
+    const route53 = new Route53(this, 'Route53', {
+      environment: stackNameComponent,
+      config: mergedConfig,
+      hostedZoneId: hostedZoneId,
+      hostedZoneName: hostedZoneName,
+      hostnameAuthentik: hostnameAuthentik,
+      hostnameLdap: hostnameLdap,
+      authentikLoadBalancer: authentikELB.loadBalancer,
+      ldapLoadBalancer: ldap.loadBalancer
+    });
 
     // Outputs
     registerOutputs({
