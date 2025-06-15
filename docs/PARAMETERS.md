@@ -1,75 +1,141 @@
 # Parameters Management
 
-The `lib/parameters.ts` module provides centralized parameter management for the TAK Authentication Infrastructure project. It supports cascading parameter resolution with multiple sources and validation.
+The AuthInfra project uses a context-driven parameter management system that aligns with CDK best practices. All stack configuration is handled through CDK context parameters, providing clear separation between AWS credentials and stack configuration.
 
-## Parameter Resolution Priority
+## Parameter Resolution Hierarchy
 
 Parameters are resolved in the following order (highest to lowest priority):
 
-1. **CDK Context** - Parameters passed via `--context` flag
-2. **Environment Variables** - System environment variables
-3. **Default Values** - Built-in defaults defined in the module
+1. **CDK Context** (highest precedence) - `--context` CLI parameters
+2. **Environment Defaults** - Based on `envType` (prod vs dev-test)
+3. **Built-in Defaults** - Hardcoded fallback values
 
-## Available Parameters
+## Environment-Specific Defaults
 
-### Auth Infrastructure Parameters
+The stack automatically applies optimal defaults based on `envType`:
 
-| Parameter | Environment Variable | Default | Description |
-|-----------|---------------------|---------|-------------|
-| `stackName` | `STACK_NAME` | `'MyFirstStack'` | Deployment environment (dev, prod, staging) |
-| `envType` | `ENV_TYPE` | `'dev-test'` | Environment type (prod, dev-test) |
-| `gitSha` | `GIT_SHA` | Auto-detected | Git SHA for container image tagging (automatically detected from git repository, can be overridden with environment variable) |
-| `enableExecute` | `ENABLE_EXECUTE` | `'false'` | Enable ECS Exec for debugging |
-| `authentikAdminUserEmail` | `AUTHENTIK_ADMIN_USER_EMAIL` | `''` | Admin user email ⚠️ **Required** |
-| `authentikLdapBaseDn` | `AUTHENTIK_LDAP_BASE_DN` | `'DC=example,DC=com'` | LDAP base DN |
-| `ipAddressType` | `IP_ADDRESS_TYPE` | `'dualstack'` | Load balancer IP type |
+### Development/Test (`envType=dev-test`)
+- **Database**: `db.t4g.micro`, single instance, 1-day backup retention
+- **Redis**: `cache.t4g.micro`, single node, no failover
+- **ECS**: 512 CPU / 1024 MB memory, 1-3 instances
+- **Monitoring**: Basic logging, no CloudWatch alarms
+- **Cost**: Optimized for minimal spend (~$106/month)
 
-**Note**: Docker images are automatically sourced from ECR using the pattern: `${account}.dkr.ecr.${region}.amazonaws.com/TAK-${stackName}-BaseInfra:auth-infra-*-${gitSha}`
+### Production (`envType=prod`)
+- **Database**: `db.t4g.small`, multi-AZ, 7-day backup retention
+- **Redis**: `cache.t4g.small`, multi-node, automatic failover
+- **ECS**: 1024 CPU / 2048 MB memory, 2-6 instances
+- **Monitoring**: Comprehensive alarms and extended log retention
+- **Reliability**: High availability configuration (~$367/month)
 
-### LDAP Parameters
+## Parameter Reference
 
-| Parameter | Environment Variable | Default | Description |
-|-----------|---------------------|---------|-------------|
-| `stackName` | `STACK_NAME` | `'MyFirstStack'` | Deployment environment |
-| `envType` | `ENV_TYPE` | `'dev-test'` | Environment type |
-| `gitSha` | `GIT_SHA` | Auto-detected | Git SHA for container image tagging (automatically detected from git repository, can be overridden with environment variable) |
-| `enableExecute` | `ENABLE_EXECUTE` | `'false'` | Enable ECS Exec for debugging |
-| `authentikHost` | `AUTHENTIK_HOST` | `''` | Authentik host URL ⚠️ **Required** |
+### Required Parameters
 
-**Note**: SSL Certificate ARN is automatically retrieved from the BaseInfra stack export `TAK-{stackName}-BaseInfra-CERTIFICATE-ARN` and does not need to be configured as a parameter. Docker images are automatically sourced from ECR.
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `stackName` | string | Stack identifier (e.g., `MyFirstStack`, `ProdStack`) |
 
-## Setting Parameters
+### Core Configuration
 
-### Method 1: CDK Context (Recommended for CI/CD)
+| Parameter | Type | Default (dev-test) | Default (prod) | Description |
+|-----------|------|-------------------|----------------|-------------|
+| `envType` | string | `dev-test` | - | Environment type: `prod` or `dev-test` |
+| `authentikAdminUserEmail` | string | `""` | `""` | Admin user email for Authentik |
+| `authentikLdapBaseDn` | string | `DC=example,DC=com` | `DC=example,DC=com` | LDAP base DN |
+| `gitSha` | string | auto-detected | auto-detected | Git SHA for resource tagging |
+| `enableExecute` | boolean | `false` | `false` | Enable ECS exec for debugging |
+| `ipAddressType` | string | `dualstack` | `dualstack` | Load balancer IP type |
+| `dockerImageLocation` | string | `Github` | `Github` | Docker image source |
+
+### Infrastructure Overrides
+
+| Parameter | Type | Default (dev-test) | Default (prod) | Description |
+|-----------|------|-------------------|----------------|-------------|
+| `dbInstanceClass` | string | `db.t4g.micro` | `db.t4g.small` | RDS instance class |
+| `dbInstanceCount` | number | `1` | `2` | Number of RDS instances |
+| `redisNodeType` | string | `cache.t4g.micro` | `cache.t4g.small` | Redis node type |
+| `ecsTaskCpu` | number | `512` | `1024` | ECS task CPU units |
+| `ecsTaskMemory` | number | `1024` | `2048` | ECS task memory (MB) |
+| `enableDetailedLogging` | boolean | `true` | `true` | Enable detailed CloudWatch logging |
+
+## Deployment Examples
+
+### Basic Development Deployment
 
 ```bash
-npx cdk deploy --context project=MyCompany \
-               --context stackName=Primary \
-               --context envType=prod \
+npx cdk deploy --context envType=dev-test \
+               --context stackName=MyFirstStack
+```
+
+### Production Deployment
+
+```bash
+npx cdk deploy --context envType=prod \
+               --context stackName=ProdStack \
                --context authentikAdminUserEmail=admin@company.com
 ```
 
-### Method 2: Environment Variables
+### Custom Configuration
 
 ```bash
-# Development
-export PROJECT=MyCompany
-export STACK_NAME=Development
-export ENV_TYPE=dev-test
-export ENABLE_EXECUTE=true
-npx cdk deploy
+npx cdk deploy --context envType=dev-test \
+               --context stackName=TestStack \
+               --context dbInstanceClass=db.t4g.small \
+               --context redisNodeType=cache.t4g.small \
+               --context authentikAdminUserEmail=admin@company.com \
+               --context enableDetailedLogging=true
 ```
+
+## AWS Credentials
+
+AWS credentials are handled separately from stack configuration:
 
 ```bash
-# Production
-export PROJECT=MyCompany
-export STACK_NAME=Production
-export ENV_TYPE=prod
-export AUTHENTIK_ADMIN_USER_EMAIL=admin@company.com
-export ENABLE_EXECUTE=false
+# Option 1: AWS Profile (recommended)
+aws configure --profile tak
+export AWS_PROFILE=tak
 
-npx cdk deploy
+# Option 2: Environment variables (AWS credentials only)
+export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+export CDK_DEFAULT_REGION=$(aws configure get region)
+
+# Option 3: IAM roles for CI/CD
+# AWS credentials automatically available in CI/CD environments
 ```
+
+## Stack Naming Convention
+
+Stack names follow the pattern: `TAK-<stackName>-AuthInfra`
+
+Examples:
+- `--context stackName=MyFirstStack` → `TAK-MyFirstStack-AuthInfra`
+- `--context stackName=ProdStack` → `TAK-ProdStack-AuthInfra`
+- `--context stackName=TestEnv` → `TAK-TestEnv-AuthInfra`
+
+## Resource Imports
+
+The AuthInfra stack imports resources from the BaseInfra stack using the pattern:
+`TAK-<stackName>-BaseInfra-<resource>`
+
+Required BaseInfra exports:
+- `TAK-<stackName>-BaseInfra-VPC-ID`
+- `TAK-<stackName>-BaseInfra-Kms-ARN`
+- `TAK-<stackName>-BaseInfra-Ecs-ARN`
+- `TAK-<stackName>-BaseInfra-S3ConfBucket-ARN`
+- `TAK-<stackName>-BaseInfra-Ecr-ARN`
+
+## Configuration Benefits
+
+**Cleaner separation**: AWS credentials (env vars) vs stack config (CDK context)
+
+**Better CI/CD integration**: Parameters explicitly defined in deployment commands
+
+**Type safety**: Full TypeScript typing for all parameters
+
+**Environment consistency**: Structured defaults for dev-test vs prod
+
+**Cost optimization**: Environment-specific defaults (dev-test optimized for cost)
 
 ### Method 3: .env File (Development)
 

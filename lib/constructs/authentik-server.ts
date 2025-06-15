@@ -1,5 +1,5 @@
 /**
- * Authentik Construct - CDK implementation of the Authentik service
+ * Authentik Server Construct - Server container and ECS service configuration
  */
 import { Construct } from 'constructs';
 import {
@@ -11,15 +11,14 @@ import {
   aws_s3 as s3,
   aws_iam as iam,
   Duration,
-  RemovalPolicy,
-  CfnOutput
+  RemovalPolicy
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 
 /**
- * Properties for the Authentik construct
+ * Properties for the Authentik Server construct
  */
-export interface AuthentikProps {
+export interface AuthentikServerProps {
   /**
    * Environment name (e.g. 'prod', 'dev', etc.)
    */
@@ -61,11 +60,6 @@ export interface AuthentikProps {
   envFileS3Key?: string;
 
   /**
-   * SSL certificate ARN for HTTPS
-   */
-  sslCertificateArn: string;
-
-  /**
    * Authentik admin user email
    */
   adminUserEmail: string;
@@ -76,14 +70,9 @@ export interface AuthentikProps {
   ldapBaseDn: string;
 
   /**
-   * Whether to use authentik-config.env file
+   * Use config file flag
    */
   useConfigFile: boolean;
-
-  /**
-   * IP address type for load balancers
-   */
-  ipAddressType: 'ipv4' | 'dualstack';
 
   /**
    * Docker image location (Github or Local ECR)
@@ -101,9 +90,9 @@ export interface AuthentikProps {
   enableExecute: boolean;
 
   /**
-   * Database credentials secret
+   * Database secret
    */
-  dbSecret: secretsmanager.Secret;
+  dbSecret: secretsmanager.ISecret;
 
   /**
    * Database hostname
@@ -111,9 +100,9 @@ export interface AuthentikProps {
   dbHostname: string;
 
   /**
-   * Redis auth token secret
+   * Redis auth token
    */
-  redisAuthToken: secretsmanager.Secret;
+  redisAuthToken: secretsmanager.ISecret;
 
   /**
    * Redis hostname
@@ -123,69 +112,59 @@ export interface AuthentikProps {
   /**
    * Authentik secret key
    */
-  secretKey: secretsmanager.Secret;
+  secretKey: secretsmanager.ISecret;
 
   /**
-   * Admin user password secret
+   * Admin user password
    */
-  adminUserPassword: secretsmanager.Secret;
+  adminUserPassword: secretsmanager.ISecret;
 
   /**
-   * Admin user token secret
+   * Admin user token
    */
-  adminUserToken: secretsmanager.Secret;
+  adminUserToken: secretsmanager.ISecret;
 
   /**
-   * LDAP token secret
+   * LDAP token
    */
-  ldapToken: secretsmanager.Secret;
+  ldapToken: secretsmanager.ISecret;
 
   /**
-   * EFS filesystem ID
+   * EFS file system ID
    */
   efsId: string;
 
   /**
-   * EFS access point ID for media
+   * EFS media access point ID
    */
   efsMediaAccessPointId: string;
 
   /**
-   * EFS access point ID for custom templates
+   * EFS custom templates access point ID
    */
   efsCustomTemplatesAccessPointId: string;
 }
 
 /**
- * CDK construct for the Authentik service
+ * CDK construct for the Authentik server container and ECS service
  */
-export class Authentik extends Construct {
+export class AuthentikServer extends Construct {
   /**
-   * The load balancer for the Authentik service
-   */
-  public readonly loadBalancer: elbv2.ApplicationLoadBalancer;
-
-  /**
-   * The ECS task definition for the Authentik service
+   * The ECS task definition for the Authentik server
    */
   public readonly taskDefinition: ecs.TaskDefinition;
 
   /**
-   * The ECS service for Authentik
+   * The ECS service for Authentik server
    */
   public readonly ecsService: ecs.FargateService;
 
-  /**
-   * DNS name of the load balancer
-   */
-  public readonly dnsName: string;
-
-  constructor(scope: Construct, id: string, props: AuthentikProps) {
+  constructor(scope: Construct, id: string, props: AuthentikServerProps) {
     super(scope, id);
 
     // Create the log group
-    const logGroup = new logs.LogGroup(this, 'Logs', {
-      logGroupName: id,
+    const logGroup = new logs.LogGroup(this, 'ServerLogs', {
+      logGroupName: `${id}-server`,
       retention: logs.RetentionDays.ONE_WEEK,
       removalPolicy: RemovalPolicy.DESTROY
     });
@@ -200,34 +179,6 @@ export class Authentik extends Construct {
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
       });
     }
-
-    // Create load balancer
-    this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'ALB', {
-      vpc: props.vpc,
-      internetFacing: true,
-      ipAddressType: props.ipAddressType === 'ipv4' ? 
-        elbv2.IpAddressType.IPV4 : 
-        elbv2.IpAddressType.DUAL_STACK
-    });
-
-    // Create HTTP listener and redirect to HTTPS
-    const httpListener = this.loadBalancer.addListener('HttpListener', {
-      port: 80,
-      open: true
-    });
-    httpListener.addAction('HttpRedirect', {
-      action: elbv2.ListenerAction.redirect({
-        port: '443',
-        protocol: 'HTTPS'
-      })
-    });
-
-    // Create HTTPS listener
-    const httpsListener = this.loadBalancer.addListener('HttpsListener', {
-      port: 443,
-      certificates: [{ certificateArn: props.sslCertificateArn }],
-      open: true
-    });
 
     // Create task execution role
     const executionRole = new iam.Role(this, 'TaskExecutionRole', {
@@ -303,7 +254,7 @@ export class Authentik extends Construct {
     let containerDefinitionOptions: ecs.ContainerDefinitionOptions = {
       image: ecs.ContainerImage.fromRegistry(dockerImage),
       logging: ecs.LogDrivers.awsLogs({
-        streamPrefix: 'authentik',
+        streamPrefix: 'authentik-server',
         logGroup
       }),
       environment: {
@@ -392,10 +343,15 @@ export class Authentik extends Construct {
       scaleInCooldown: Duration.minutes(3),
       scaleOutCooldown: Duration.minutes(1)
     });
+  }
 
+  /**
+   * Create and register a target group for this service
+   */
+  public createTargetGroup(vpc: ec2.IVpc, listener: elbv2.ApplicationListener): elbv2.ApplicationTargetGroup {
     // Create target group for the Authentik service
     const targetGroup = new elbv2.ApplicationTargetGroup(this, 'TargetGroup', {
-      vpc: props.vpc,
+      vpc: vpc,
       targetType: elbv2.TargetType.IP,
       port: 9000,
       protocol: elbv2.ApplicationProtocol.HTTP,
@@ -410,22 +366,10 @@ export class Authentik extends Construct {
     targetGroup.addTarget(this.ecsService);
 
     // Add default action to the HTTPS listener
-    httpsListener.addAction('DefaultAction', {
+    listener.addAction('DefaultAction', {
       action: elbv2.ListenerAction.forward([targetGroup])
     });
 
-    // Store the DNS name for output
-    this.dnsName = this.loadBalancer.loadBalancerDnsName;
-
-    // Export outputs
-    new CfnOutput(this, 'LoadBalancerDnsName', {
-      value: this.dnsName,
-      description: 'The DNS name of the load balancer'
-    });
-
-    new CfnOutput(this, 'AuthentikURL', {
-      value: `https://${this.dnsName}/`,
-      description: 'The URL of the Authentik service'
-    });
+    return targetGroup;
   }
 }

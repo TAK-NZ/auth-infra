@@ -49,6 +49,99 @@ This AWS CDK project provisions the following resources:
 
 ## AWS Deployment
 
+### Basic Deployment
+
+Deploy the stack with CDK context parameters (no environment variables needed for stack configuration):
+
+```bash
+# AWS credentials (auto-detectable from profile/environment)
+export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+export CDK_DEFAULT_REGION=$(aws configure get region)
+
+# Deploy with required parameters via CDK context
+npx cdk deploy --context envType=dev-test \
+               --context stackName=MyFirstStack
+```
+
+### Production Deployment
+
+For production deployments, use `envType=prod` which automatically applies production-optimized defaults:
+
+```bash
+# Production deployment with enhanced security and availability
+npx cdk deploy --context envType=prod \
+               --context stackName=ProdStack
+```
+
+### Custom Configuration
+
+Override specific settings using additional context parameters:
+
+```bash
+# Example: Custom database and Redis settings
+npx cdk deploy --context envType=dev-test \
+               --context stackName=TestStack \
+               --context dbInstanceClass=db.t4g.small \
+               --context redisNodeType=cache.t4g.small \
+               --context enableDetailedLogging=true
+```
+
+### Available Context Parameters
+
+| Parameter | Type | Default (dev-test) | Default (prod) | Description |
+|-----------|------|-------------------|----------------|-------------|
+| `envType` | string | `dev-test` | - | Environment type: `prod` or `dev-test` |
+| `stackName` | string | **Required** | **Required** | Stack identifier (e.g., `MyFirstStack`) |
+| `dbInstanceClass` | string | `db.t4g.micro` | `db.t4g.small` | RDS instance class |
+| `dbInstanceCount` | number | `1` | `2` | Number of RDS instances |
+| `redisNodeType` | string | `cache.t4g.micro` | `cache.t4g.small` | Redis node type |
+| `ecsTaskCpu` | number | `512` | `1024` | ECS task CPU units |
+| `ecsTaskMemory` | number | `1024` | `2048` | ECS task memory (MB) |
+| `enableDetailedLogging` | boolean | `true` | `true` | Enable detailed CloudWatch logging |
+| `gitSha` | string | auto-detected | auto-detected | Git SHA for resource tagging |
+| `enableExecute` | boolean | `false` | `false` | Enable ECS exec for debugging |
+| `authentikAdminUserEmail` | string | `""` | `""` | Admin user email for Authentik |
+| `authentikLdapBaseDn` | string | `DC=example,DC=com` | `DC=example,DC=com` | LDAP base DN |
+| `ipAddressType` | string | `dualstack` | `dualstack` | Load balancer IP type |
+| `dockerImageLocation` | string | `Github` | `Github` | Docker image source |
+
+### Environment-Specific Defaults
+
+The stack automatically applies optimal defaults based on `envType`:
+
+**Development/Test (`envType=dev-test`)**:
+- Cost-optimized instance sizes
+- Single database instance
+- Reduced backup retention
+- Simplified monitoring
+- Resources can be destroyed
+
+**Production (`envType=prod`)**:
+- High-availability configuration  
+- Multi-AZ database deployment
+- Extended backup retention
+- Comprehensive monitoring
+- Resources protected from deletion
+
+### AWS Credentials
+
+AWS credentials are handled separately from stack configuration:
+
+```bash
+# Option 1: AWS Profile (recommended)
+aws configure --profile tak
+export AWS_PROFILE=tak
+
+# Option 2: Environment variables
+export AWS_ACCESS_KEY_ID=your-access-key
+export AWS_SECRET_ACCESS_KEY=your-secret-key
+export AWS_DEFAULT_REGION=ap-southeast-2
+
+# Option 3: Auto-detection from current session
+export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+export CDK_DEFAULT_REGION=$(aws configure get region)
+```
+
 ### 1. Install Tooling Dependencies
    ```bash
    npm install
@@ -66,94 +159,48 @@ The base infrastructure stack creates an S3 bucket which can be used for advance
 > [!NOTE] 
 > The deployment automatically creates an empty `authentik-config.env` file in the S3 bucket if it doesn't already exist. The most common item that you might want to configure in Authentik are the [E-Mail provider settings](https://docs.goauthentik.io/docs/install-config/configuration/#authentik_email).
 
-### 4. Set required environment variables:
+### 4. Deploy the Auth Infrastructure Stack
 
-> [!NOTE]  
-> Even when using AWS profiles, CDK requires explicit account/region specification for context providers (like Route 53 hosted zone lookups). The profile handles authentication, but CDK needs these values for CloudFormation template generation.
+The stack uses CDK context parameters for all configuration (no environment variables needed):
 
+#### Basic Development Deployment
 ```bash
-# Set AWS account and region for CDK deployment (using your profile)
+# Set AWS credentials (auto-detectable)
 export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text --profile tak)
 export CDK_DEFAULT_REGION=$(aws configure get region --profile tak || echo "ap-southeast-2")
 
-# Verify the values
-echo "Account: $CDK_DEFAULT_ACCOUNT"
-echo "Region: $CDK_DEFAULT_REGION"
+# Deploy with minimal required parameters
+npx cdk deploy --profile tak \
+               --context envType=dev-test \
+               --context stackName=MyFirstStack
 ```
 
-### 5. Deploy the Auth Infrastructure Stack:
-
-The stack supports flexible parameter configuration through multiple methods with cascading priority:
-
-#### Method 1: Environment Variables (Recommended)
+#### Production Deployment
 ```bash
-# Required parameters
-export AUTHENTIK_ADMIN_USER_EMAIL="admin@company.com"
-
-# Optional parameters with defaults
-export STACK_NAME="MyFirstStack"
-export ENV_TYPE="dev-test"
-export GIT_SHA="latest"
-export ENABLE_EXECUTE="false"
-export AUTHENTIK_LDAP_BASE_DN="DC=example,DC=com"
-export IP_ADDRESS_TYPE="dualstack"
-
-# Deploy the stack
-npx cdk deploy --profile tak --context stackName=MyFirstStack --context envType=dev-test
+# Production deployment with admin email
+npx cdk deploy --profile tak \
+               --context envType=prod \
+               --context stackName=ProdStack \
+               --context authentikAdminUserEmail=admin@company.com
 ```
 
-#### Method 2: CLI Context
+#### Custom Configuration Deployment
 ```bash
-npx cdk deploy --profile tak --context stackName=MyFirstStack --context envType=dev-test \
-  --parameters AuthentikAdminUserEmail=admin@company.com \
-  --parameters AuthentikLDAPBaseDN=DC=example,DC=com \
-  --parameters EnableExecute=false \
-  --parameters IpAddressType=dualstack
+# Development with custom settings
+npx cdk deploy --profile tak \
+               --context envType=dev-test \
+               --context stackName=TestStack \
+               --context authentikAdminUserEmail=admin@company.com \
+               --context authentikLdapBaseDn=DC=company,DC=com \
+               --context dbInstanceClass=db.t4g.small \
+               --context enableDetailedLogging=true
 ```
 
-#### Method 3: Production Deployment
-```bash
-# Set production parameters
-export AUTHENTIK_ADMIN_USER_EMAIL="admin@company.com"
-export STACK_NAME="prod"
-export ENV_TYPE="prod"
-
-# Deploy to production
-npx cdk deploy --profile tak --context stackName=prod --context envType=prod
-```
-
-**Parameters:**
-- `stackName`: Stack name component that creates the final stack name in format "TAK-<stackName>-AuthInfra". Default: `MyFirstStack`
-- `envType`: Environment type (`prod` or `dev-test`). Default: `dev-test`
-  - `prod`: Production-grade resources with enhanced performance and reliability
-  - `dev-test`: Cost-optimized for development/testing
-- `authentikAdminUserEmail`: **(Required)** Admin user email for Authentik
-- `authentikLdapBaseDn`: LDAP base DN. Default: `DC=example,DC=com`
-- `gitSha`: Git SHA for container image tagging. Default: `latest`
-- `enableExecute`: Enable ECS Exec for debugging. Default: `false`
-- `ipAddressType`: Load balancer IP type (ipv4/dualstack). Default: `dualstack`
+**Stack Naming**: The final AWS stack name follows the pattern `TAK-<stackName>-AuthInfra`
 
 **Docker Images**: Automatically sourced from ECR using the pattern `${account}.dkr.ecr.${region}.amazonaws.com/TAK-${stackName}-BaseInfra:auth-infra-*-${gitSha}`
 
-**Parameter Resolution Priority:**
-1. Environment Variables (highest priority) - use `STACK_NAME` env var
-2. CLI Context (`--context`) - use `stackName` context
-3. CLI Parameters (`--parameters`)
-4. Default Values (lowest priority)
-
-Higher priority methods override lower priority ones.
-
-### 6. Deploy the LDAP Stack:
-
-After the Auth Infrastructure stack is deployed, deploy the LDAP stack:
-
-```bash
-# Deploy LDAP stack with same environment configuration
-npx cdk deploy TAK-{STACK_NAME}-AuthInfra-LDAP --profile tak --context stackName=MyFirstStack --context envType=dev-test \
-  --parameters AuthentikHost=account.tak.nz
-```
-
-### 7. Configure DNS Records
+### 5. Configure DNS Records
 
 The stacks automatically create Route 53 records for the following endpoints:
 - **account.{domain}**: Authentik web interface (SSO portal)

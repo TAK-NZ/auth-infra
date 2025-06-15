@@ -15,5 +15,9 @@
   "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"],
   "transformIgnorePatterns": [
     "node_modules/(?!(aws-cdk-lib)/)"
+  ],
+  "collectCoverageFrom": [
+    "lib/**/*.ts",
+    "!lib/**/*.d.ts"
   ]
 }

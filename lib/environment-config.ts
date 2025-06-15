@@ -1,5 +1,6 @@
 /**
  * Environment-specific configuration objects and utilities
+ * Pure configuration approach following reference template pattern
  */
 import * as cdk from 'aws-cdk-lib';
 
@@ -31,6 +32,9 @@ export interface AuthInfraEnvironmentConfig {
     desiredCount: number;
     minCapacity: number;
     maxCapacity: number;
+    workerDesiredCount?: number;
+    workerMinCapacity?: number;
+    workerMaxCapacity?: number;
   };
    // EFS configuration
   efs: {
@@ -75,6 +79,9 @@ export const DEV_CONFIG: AuthInfraEnvironmentConfig = {
     desiredCount: 1,
     minCapacity: 1,
     maxCapacity: 3,
+    workerDesiredCount: 1,
+    workerMinCapacity: 1,
+    workerMaxCapacity: 2,
   },
   efs: {
     throughputMode: 'bursting',
@@ -113,6 +120,9 @@ export const PROD_CONFIG: AuthInfraEnvironmentConfig = {
     desiredCount: 2,
     minCapacity: 2,
     maxCapacity: 6,
+    workerDesiredCount: 2,
+    workerMinCapacity: 1,
+    workerMaxCapacity: 4,
   },
   efs: {
     throughputMode: 'bursting',

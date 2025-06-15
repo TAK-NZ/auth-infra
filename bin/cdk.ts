@@ -1,43 +1,62 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { AuthInfraStack } from '../lib/auth-infra-stack';
-import { generateStackName, FIXED_STACK_CONFIG } from '../lib/stack-naming';
+import { createStackConfig } from '../lib/stack-config';
 
 const app = new cdk.App();
 
-// Read project tag with cascading priority:
-// Priority: 1. Environment Variables, 2. CLI Context, 3. Defaults
-const projectTag = process.env.PROJECT || 
-                   app.node.tryGetContext('project') || 
-                   FIXED_STACK_CONFIG.PROJECT;
+// Read configuration from CDK context only (command line --context parameters)
+const envType = app.node.tryGetContext('envType') || 'dev-test';
+const stackName = app.node.tryGetContext('stackName');
 
-const envType = process.env.ENV_TYPE || 
-               app.node.tryGetContext('envType') || 
-               'dev-test';
+// Validate envType
+if (envType !== 'prod' && envType !== 'dev-test') {
+  throw new Error(`Invalid envType: ${envType}. Must be 'prod' or 'dev-test'`);
+}
 
-const stackNameSuffix = process.env.STACK_NAME || 
-                       app.node.tryGetContext('stackName') || 
-                       'MyFirstStack';
+// Validate required parameters
+if (!stackName) {
+  throw new Error('stackName is required. Use --context stackName=YourStackName');
+}
 
-// Generate consistent stack name using the utility function
-const stackName = generateStackName({
-  project: FIXED_STACK_CONFIG.PROJECT,
-  environment: stackNameSuffix,
-  component: FIXED_STACK_CONFIG.COMPONENT
-});
+// Read optional context overrides
+const overrides = {
+  ...(app.node.tryGetContext('dbInstanceClass') && {
+    database: { instanceClass: app.node.tryGetContext('dbInstanceClass') }
+  }),
+  ...(app.node.tryGetContext('dbInstanceCount') && {
+    database: { instanceCount: parseInt(app.node.tryGetContext('dbInstanceCount'), 10) }
+  }),
+  ...(app.node.tryGetContext('redisNodeType') && {
+    redis: { nodeType: app.node.tryGetContext('redisNodeType') }
+  }),
+  ...(app.node.tryGetContext('ecsTaskCpu') && {
+    ecs: { taskCpu: parseInt(app.node.tryGetContext('ecsTaskCpu'), 10) }
+  }),
+  ...(app.node.tryGetContext('ecsTaskMemory') && {
+    ecs: { taskMemory: parseInt(app.node.tryGetContext('ecsTaskMemory'), 10) }
+  }),
+  ...(app.node.tryGetContext('enableDetailedLogging') !== undefined && {
+    general: { enableDetailedLogging: app.node.tryGetContext('enableDetailedLogging') === 'true' }
+  }),
+};
 
-// Tag every resource in the stack with the project name
-cdk.Tags.of(app).add("Project", projectTag);
+// Create configuration
+const config = createStackConfig(
+  envType as 'prod' | 'dev-test',
+  stackName,
+  Object.keys(overrides).length > 0 ? overrides : undefined,
+  'TAK', // Always use TAK as project prefix
+  'AuthInfra'
+);
 
-// Deploy main auth infrastructure stack (contains both Authentik and LDAP)
-new AuthInfraStack(app, stackName, {
-  envType: envType as 'prod' | 'dev-test',
-  
-  // Environment can be resolved from AWS profile or environment variables
+// Create the stack with environment configuration for AWS API calls only
+const resolvedStackName = `${config.projectName}-${stackName}-${config.componentName}`;
+const stack = new AuthInfraStack(app, resolvedStackName, {
+  stackConfig: config,
   env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT || process.env.CDK_DEPLOY_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION || process.env.CDK_DEPLOY_REGION || 'ap-southeast-2'
+    account: process.env.CDK_DEFAULT_ACCOUNT,
+    region: process.env.CDK_DEFAULT_REGION || 'ap-southeast-2',
   },
-  
   description: 'TAK Authentication Layer - Authentik & LDAP',
 });

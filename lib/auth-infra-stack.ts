@@ -4,7 +4,9 @@ import { Database } from './constructs/database';
 import { Redis } from './constructs/redis';
 import { Efs } from './constructs/efs';
 import { SecretsManager } from './constructs/secrets-manager';
-import { Authentik } from './constructs/authentik';
+import { Elb } from './constructs/elb';
+import { AuthentikServer } from './constructs/authentik-server';
+import { AuthentikWorker } from './constructs/authentik-worker';
 import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 import { S3EnvFileManager } from './constructs/s3-env-file-manager';
@@ -15,61 +17,108 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { createBaseImportValue, BASE_EXPORT_NAMES } from './stack-naming';
-import { getEnvironmentConfig } from './environment-config';
-import { resolveStackParameters } from './parameters';
+import { getEnvironmentConfig, mergeEnvironmentConfig } from './environment-config';
+import { AuthInfraConfig } from './stack-config';
 
 export interface AuthInfraStackProps extends StackProps {
-  envType?: 'prod' | 'dev-test';
+  stackConfig: AuthInfraConfig;
 }
 
 /**
- * Main CDK stack for the Auth Infrastructure
+ * Main CDK stack for the TAK Auth Infrastructure
  */
 export class AuthInfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: AuthInfraStackProps) {
     super(scope, id, {
       ...props,
-      description: 'TAK Authentication Layer - Authentik, LDAP, Database, Cache',
+      description: 'TAK Authentication Layer - Authentik, LDAP Outpost',
     });
 
-    // Resolve parameters from context, env vars, or defaults
-    const params = resolveStackParameters(this);
+    const config = props.stackConfig;
     
-    const envType = (props.envType || params.envType) as 'prod' | 'dev-test';
-    const stackNameComponent = params.stackName; // This is the STACK_NAME part (e.g., "MyFirstStack")
-
-    // Get environment configuration
-    const config = getEnvironmentConfig(envType);
+    // Extract configuration values
+    const envType = config.envType;
+    const stackNameComponent = config.stackName; // This is the STACK_NAME part (e.g., "MyFirstStack")
+    const resolvedStackName = id;
+    
+    // Get environment-specific defaults (following reference template pattern)
+    const envConfig = config.envType === 'prod' ? 
+      { enableHighAvailability: true, enableDetailedMonitoring: true } :
+      { enableHighAvailability: false, enableDetailedMonitoring: false };
+    
+    const enableHighAvailability = envConfig.enableHighAvailability;
+    
+    // Get base configuration and merge with overrides
+    const baseConfig = getEnvironmentConfig(envType);
+    const mergedConfig = config.overrides ? 
+      mergeEnvironmentConfig(baseConfig, config.overrides) : 
+      baseConfig;
+    
+    // Set container counts based on high availability setting
+    // enableHighAvailability=true: 2 containers (Server, Worker, LDAP)
+    // enableHighAvailability=false: 1 container each
+    const desiredContainerCount = enableHighAvailability ? 2 : 1;
+    
+    // Override container counts in merged config unless explicitly set via context
+    if (!config.overrides?.ecs?.desiredCount) {
+      mergedConfig.ecs.desiredCount = desiredContainerCount;
+    }
+    if (!config.overrides?.ecs?.workerDesiredCount) {
+      mergedConfig.ecs.workerDesiredCount = desiredContainerCount;
+    }
 
     // Add Environment Type tag to the stack
     const environmentLabel = envType === 'prod' ? 'Prod' : 'Dev-Test';
     cdk.Tags.of(this).add('Environment Type', environmentLabel);
 
+    const awsStackName = Fn.ref('AWS::StackName');
+    const awsRegion = cdk.Stack.of(this).region;
+
+    // Context-based parameter resolution (CDK context only)
+    const gitSha = this.node.tryGetContext('gitSha') || this.getGitSha();
+    const enableExecute = Boolean(this.node.tryGetContext('enableExecute') || false);
+    const authentikAdminUserEmail = this.node.tryGetContext('authentikAdminUserEmail') || '';
+    const authentikLdapBaseDn = this.node.tryGetContext('authentikLdapBaseDn') || 'DC=example,DC=com';
+    const ipAddressType = this.node.tryGetContext('ipAddressType') || 'dualstack';
+    const sslCertificateArn = this.node.tryGetContext('sslCertificateArn') || '';
+    const useAuthentikConfigFile = Boolean(this.node.tryGetContext('useAuthentikConfigFile') || false);
+    const dockerImageLocation = this.node.tryGetContext('dockerImageLocation') || 'Github';
+
     const stackName = Fn.ref('AWS::StackName');
     const region = cdk.Stack.of(this).region;
 
     // Import VPC and networking from base infrastructure
-    const vpc = ec2.Vpc.fromLookup(this, 'VPC', {
-      vpcId: createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_ID)
+    const vpc = ec2.Vpc.fromVpcAttributes(this, 'VPC', {
+      vpcId: Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_ID)),
+      availabilityZones: this.availabilityZones,
+      // Import subnet IDs from base infrastructure
+      publicSubnetIds: [
+        Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.SUBNET_PUBLIC_A)),
+        Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.SUBNET_PUBLIC_B))
+      ],
+      privateSubnetIds: [
+        Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.SUBNET_PRIVATE_A)),
+        Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.SUBNET_PRIVATE_B))
+      ]
     });
 
     // Import KMS key from base infrastructure
     const kmsKey = kms.Key.fromKeyArn(this, 'KMSKey', 
-      createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.KMS_KEY)
+      Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.KMS_KEY))
     );
 
     // Import ECS Cluster from base infrastructure
     const ecsCluster = ecs.Cluster.fromClusterArn(this, 'ECSCluster',
-      createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECS_CLUSTER)
+      Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECS_CLUSTER))
     );
 
     // Import S3 configuration bucket from base infrastructure
     const s3ConfBucket = s3.Bucket.fromBucketArn(this, 'S3ConfBucket',
-      createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.S3_BUCKET)
+      Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.S3_BUCKET))
     );
 
     // Import ECR repository from base infrastructure (for local ECR option)
-    const ecrRepository = createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECR_REPO);
+    const ecrRepository = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECR_REPO));
 
     // S3 Environment File Manager - manages authentik-config.env file
     const s3EnvFileManager = new S3EnvFileManager(this, 'S3EnvFileManager', {
@@ -92,7 +141,7 @@ export class AuthInfraStack extends cdk.Stack {
     // Database
     const database = new Database(this, 'Database', {
       environment: stackNameComponent,
-      config,
+      config: mergedConfig,
       vpc,
       kmsKey,
       securityGroups: [dbSecurityGroup]
@@ -101,7 +150,7 @@ export class AuthInfraStack extends cdk.Stack {
     // Redis
     const redis = new Redis(this, 'Redis', {
       environment: stackNameComponent,
-      config,
+      config: mergedConfig,
       vpc,
       kmsKey,
       securityGroups: [redisSecurityGroup]
@@ -115,24 +164,31 @@ export class AuthInfraStack extends cdk.Stack {
       allowAccessFrom: [ecsSecurityGroup]
     });
 
-    // Authentik
-    const authentik = new Authentik(this, 'Authentik', {
+    // Authentik Load Balancer
+    const authentikELB = new Elb(this, 'AuthentikELB', {
       environment: stackNameComponent,
-      config,
+      config: mergedConfig,
+      vpc,
+      sslCertificateArn: sslCertificateArn,
+      ipAddressType: ipAddressType
+    });
+
+    // Authentik Server
+    const authentikServer = new AuthentikServer(this, 'AuthentikServer', {
+      environment: stackNameComponent,
+      config: mergedConfig,
       vpc,
       ecsSecurityGroup,
       ecsCluster,
       s3ConfBucket,
       envFileS3Uri: s3EnvFileManager.envFileS3Uri,
       envFileS3Key: s3EnvFileManager.envFileS3Key,
-      sslCertificateArn: params.sslCertificateArn || '',
-      adminUserEmail: params.authentikAdminUserEmail,
-      ldapBaseDn: params.authentikLdapBaseDn,
-      useConfigFile: params.useAuthentikConfigFile || false,
-      ipAddressType: params.ipAddressType,
-      dockerImageLocation: params.dockerImageLocation || 'Github',
+      adminUserEmail: authentikAdminUserEmail,
+      ldapBaseDn: authentikLdapBaseDn,
+      useConfigFile: useAuthentikConfigFile,
+      dockerImageLocation: dockerImageLocation,
       ecrRepositoryArn: ecrRepository,
-      enableExecute: params.enableExecute,
+      enableExecute: enableExecute,
       dbSecret: database.masterSecret,
       dbHostname: database.hostname,
       redisAuthToken: redis.authToken,
@@ -146,31 +202,56 @@ export class AuthInfraStack extends cdk.Stack {
       efsCustomTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId
     });
 
+    // Authentik Worker
+    const authentikWorker = new AuthentikWorker(this, 'AuthentikWorker', {
+      environment: stackNameComponent,
+      config: mergedConfig,
+      vpc,
+      ecsSecurityGroup,
+      ecsCluster,
+      s3ConfBucket,
+      envFileS3Key: s3EnvFileManager.envFileS3Key,
+      dockerImageLocation: dockerImageLocation,
+      ecrRepositoryArn: ecrRepository,
+      enableExecute: enableExecute,
+      dbSecret: database.masterSecret,
+      dbHostname: database.hostname,
+      redisAuthToken: redis.authToken,
+      redisHostname: redis.hostname,
+      secretKey: secretsManager.secretKey,
+      efsId: efs.fileSystem.fileSystemId,
+      efsMediaAccessPointId: efs.mediaAccessPoint.accessPointId,
+      efsCustomTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId
+    });
+
+    // Connect Authentik Server to Load Balancer
+    authentikServer.createTargetGroup(vpc, authentikELB.httpsListener);
+
     // LDAP Token Retriever
     const ldapTokenRetriever = new LdapTokenRetriever(this, 'LdapTokenRetriever', {
       environment: stackNameComponent,
-      config,
+      config: mergedConfig,
       kmsKey,
-      authentikHost: `https://${authentik.dnsName}`,
+      authentikHost: `https://${authentikELB.dnsName}`,
       outpostName: 'LDAP',
       adminTokenSecret: secretsManager.adminUserToken,
       ldapTokenSecret: secretsManager.ldapToken,
-      gitSha: params.gitSha
+      gitSha: gitSha
     });
 
     // LDAP
     const ldap = new Ldap(this, 'LDAP', {
       environment: stackNameComponent,
-      config,
+      config: mergedConfig,
       vpc,
       ecsSecurityGroup,
       ecsCluster,
       s3ConfBucket,
-      sslCertificateArn: params.sslCertificateArn || '',
-      authentikHost: authentik.dnsName,
-      dockerImageLocation: params.dockerImageLocation || 'Github',
+      sslCertificateArn: sslCertificateArn,
+      authentikHost: authentikELB.dnsName,
+      dockerImageLocation: dockerImageLocation,
       ecrRepositoryArn: ecrRepository,
-      enableExecute: params.enableExecute,
+      enableExecute: enableExecute,
       ldapToken: secretsManager.ldapToken
     });
 
@@ -191,8 +272,8 @@ export class AuthInfraStack extends cdk.Stack {
       authentikSecretKeyArn: secretsManager.secretKey.secretArn,
       authentikAdminTokenArn: secretsManager.adminUserToken.secretArn,
       authentikLdapTokenArn: secretsManager.ldapToken.secretArn,
-      authentikAlbDns: authentik.loadBalancer.loadBalancerDnsName,
-      authentikUrl: `https://${authentik.dnsName}`,
+      authentikAlbDns: authentikELB.loadBalancer.loadBalancerDnsName,
+      authentikUrl: `https://${authentikELB.dnsName}`,
       ldapAlbDns: ldap.loadBalancer.loadBalancerDnsName,
       ldapEndpoint: `${ldap.loadBalancer.loadBalancerDnsName}:389`,
       ldapsEndpoint: `${ldap.loadBalancer.loadBalancerDnsName}:636`,
@@ -261,5 +342,20 @@ export class AuthInfraStack extends cdk.Stack {
     );
 
     return redisSecurityGroup;
+  }
+
+  /**
+   * Get the current git SHA for tagging resources
+   * @returns Current git SHA
+   */
+  private getGitSha(): string {
+    try {
+      // Get the current git SHA
+      const { execSync } = require('child_process');
+      return execSync('git rev-parse --short HEAD').toString().trim();
+    } catch (error) {
+      console.warn('Unable to get git SHA, using "development"');
+      return 'development';
+    }
   }
 }
