@@ -16,6 +16,10 @@ export interface EfsProps {
      */
     vpc: ec2.IVpc;
     /**
+     * VPC CIDR block for security group rules
+     */
+    vpcCidrBlock: string;
+    /**
      * KMS key for encryption
      */
     kmsKey: kms.IKey;

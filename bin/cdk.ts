@@ -17,7 +17,10 @@ if (envType !== 'prod' && envType !== 'dev-test') {
 
 // Validate required parameters
 if (!stackName) {
-  throw new Error('stackName is required. Use --context stackName=YourStackName');
+  throw new Error('stackName is required. Use --context stackName=YourStackName\n' +
+    'This parameter is mandatory as it determines the correct CloudFormation export names\n' +
+    'for importing VPC and other resources from the base infrastructure stack.\n' +
+    'Examples: --context stackName=Demo (for TAK-Demo-BaseInfra exports)');
 }
 
 if (!authentikAdminUserEmail || authentikAdminUserEmail.trim() === '') {

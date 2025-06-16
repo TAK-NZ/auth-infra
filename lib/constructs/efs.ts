@@ -25,6 +25,11 @@ export interface EfsProps {
   vpc: ec2.IVpc;
 
   /**
+   * VPC CIDR block for security group rules
+   */
+  vpcCidrBlock: string;
+
+  /**
    * KMS key for encryption
    */
   kmsKey: kms.IKey;
@@ -75,7 +80,7 @@ export class Efs extends Construct {
 
     // Also allow access from VPC CIDR for broader compatibility
     efsSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
+      ec2.Peer.ipv4(props.vpcCidrBlock), // Reverted to use props.vpcCidrBlock directly
       ec2.Port.tcp(2049),
       'Allow NFS access from VPC'
     );

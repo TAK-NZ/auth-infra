@@ -94,6 +94,17 @@ docker push $ECR_URI:auth-infra-ldap-$(git rev-parse --short HEAD)
 
 ## AWS Deployment
 
+### Required Parameters
+
+The following parameters are **mandatory** for deployment:
+
+- **`stackName`**: The environment/stack name component (e.g., "Demo", "Prod")
+  - **CRITICAL**: This determines CloudFormation export names for importing VPC and resources from base infrastructure
+  - Must match the `<name>` part of your base infrastructure stack name `TAK-<name>-BaseInfra`
+  - Example: If your base stack is `TAK-Demo-BaseInfra`, use `stackName=Demo`
+
+- **`authentikAdminUserEmail`**: Email address for the Authentik administrator account
+
 ### Basic Deployment
 
 Deploy the stack with CDK context parameters (no environment variables needed for stack configuration):

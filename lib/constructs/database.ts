@@ -134,7 +134,7 @@ export class Database extends Construct {
         enablePerformanceInsights: props.config.database.enablePerformanceInsights,
         performanceInsightRetention: props.config.database.enablePerformanceInsights ? 
           rds.PerformanceInsightRetention.MONTHS_6 : 
-          rds.PerformanceInsightRetention.DEFAULT
+          undefined
       },
       instances: props.config.database.instanceCount,
       parameterGroup,

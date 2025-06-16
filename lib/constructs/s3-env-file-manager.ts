@@ -11,7 +11,8 @@ import {
   custom_resources as cr,
   Duration,
   RemovalPolicy,
-  CfnOutput
+  CfnOutput,
+  CustomResource
 } from 'aws-cdk-lib';
 import * as path from 'path';
 
@@ -66,6 +67,7 @@ export class S3EnvFileManager extends Construct {
 import boto3
 import json
 import logging
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -94,12 +96,13 @@ def handler(event, context):
                     'Status': 'EXISTS',
                     'Message': f'File {object_key} already exists and was not modified'
                 }
-            except s3_client.exceptions.NoSuchKey:
-                # File doesn't exist, create it with empty content
-                logger.info(f"Creating empty file {object_key} in bucket {bucket_name}")
-                
-                # Create empty .env file with helpful comments
-                empty_env_content = """# Authentik Configuration Environment File
+            except ClientError as e:
+                if e.response['Error']['Code'] == '404':
+                    # File doesn't exist, create it with empty content
+                    logger.info(f"Creating empty file {object_key} in bucket {bucket_name}")
+                    
+                    # Create empty .env file with helpful comments
+                    empty_env_content = """# Authentik Configuration Environment File
 # This file is automatically created by the AuthInfra stack
 # Add your custom Authentik configuration variables here
 # 
@@ -114,18 +117,21 @@ def handler(event, context):
 # For more configuration options, see:
 # https://docs.goauthentik.io/docs/install-config/configuration/
 """
-                
-                s3_client.put_object(
-                    Bucket=bucket_name,
-                    Key=object_key,
-                    Body=empty_env_content.encode('utf-8'),
-                    ContentType='text/plain'
-                )
-                
-                response_data = {
-                    'Status': 'CREATED',
-                    'Message': f'Created empty file {object_key} in bucket {bucket_name}'
-                }
+                    
+                    s3_client.put_object(
+                        Bucket=bucket_name,
+                        Key=object_key,
+                        Body=empty_env_content.encode('utf-8'),
+                        ContentType='text/plain'
+                    )
+                    
+                    response_data = {
+                        'Status': 'CREATED',
+                        'Message': f'Created empty file {object_key} in bucket {bucket_name}'
+                    }
+                else:
+                    # Re-raise other ClientErrors
+                    raise e
             
         elif request_type == 'Delete':
             # On stack deletion, we don't delete the file to preserve user configuration
@@ -158,51 +164,12 @@ def handler(event, context):
       logRetention: logs.RetentionDays.ONE_WEEK
     });
 
-    const envFileManagerCustomResource = new cr.AwsCustomResource(this, 'EnvFileManagerCustomResource', {
-      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE
-      }),
-      onCreate: {
-        service: 'Lambda',
-        action: 'invoke',
-        parameters: {
-          FunctionName: envFileManagerFunction.functionName,
-          Payload: JSON.stringify({
-            RequestType: 'Create',
-            ResourceProperties: {
-              BucketName: props.s3ConfBucket.bucketName,
-              ObjectKey: this.envFileS3Key
-            }
-          })
-        }
-      },
-      onUpdate: {
-        service: 'Lambda',
-        action: 'invoke',
-        parameters: {
-          FunctionName: envFileManagerFunction.functionName,
-          Payload: JSON.stringify({
-            RequestType: 'Update',
-            ResourceProperties: {
-              BucketName: props.s3ConfBucket.bucketName,
-              ObjectKey: this.envFileS3Key
-            }
-          })
-        }
-      },
-      onDelete: {
-        service: 'Lambda',
-        action: 'invoke',
-        parameters: {
-          FunctionName: envFileManagerFunction.functionName,
-          Payload: JSON.stringify({
-            RequestType: 'Delete',
-            ResourceProperties: {
-              BucketName: props.s3ConfBucket.bucketName,
-              ObjectKey: this.envFileS3Key
-            }
-          })
-        }
+    // Create the custom resource using the provider
+    const envFileManagerCustomResource = new CustomResource(this, 'EnvFileManagerCustomResource', {
+      serviceToken: envFileManagerProvider.serviceToken,
+      properties: {
+        BucketName: props.s3ConfBucket.bucketName,
+        ObjectKey: this.envFileS3Key
       }
     });
 

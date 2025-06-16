@@ -36,13 +36,22 @@ export class EcrImageValidator extends Construct {
 
     // Extract repository name from ARN
     // ECR ARN format: arn:aws:ecr:region:account:repository/repository-name
-    if (!props.ecrRepositoryArn.startsWith('arn:aws:ecr:') || !props.ecrRepositoryArn.includes('repository/')) {
-      throw new Error(`Invalid ECR repository ARN: ${props.ecrRepositoryArn}`);
-    }
+    // Note: At construct time, props.ecrRepositoryArn might be a CloudFormation token
+    // so we'll defer the repository name extraction to the Lambda function
     
-    const repositoryName = props.ecrRepositoryArn.split('/').pop();
-    if (!repositoryName) {
-      throw new Error(`Invalid ECR repository ARN: ${props.ecrRepositoryArn}`);
+    // For validation during synthesis, check if it's a token or a real ARN
+    const isToken = cdk.Token.isUnresolved(props.ecrRepositoryArn);
+    
+    if (!isToken) {
+      // Only validate format if it's not a CloudFormation token
+      if (!props.ecrRepositoryArn.startsWith('arn:aws:ecr:') || !props.ecrRepositoryArn.includes('repository/')) {
+        throw new Error(`Invalid ECR repository ARN: ${props.ecrRepositoryArn}`);
+      }
+      
+      const repositoryName = props.ecrRepositoryArn.split('/').pop();
+      if (!repositoryName) {
+        throw new Error(`Invalid ECR repository ARN: ${props.ecrRepositoryArn}`);
+      }
     }
 
     // Create IAM role for the custom resource Lambda
@@ -90,13 +99,31 @@ def handler(event, context):
     print(f"Event: {json.dumps(event)}")
     
     ecr_client = boto3.client('ecr')
-    repository_name = event['ResourceProperties']['RepositoryName']
+    ecr_repository_arn = event['ResourceProperties']['EcrRepositoryArn']
     required_tags = event['ResourceProperties']['RequiredTags']
     
     try:
         if event['RequestType'] in ['Create', 'Update']:
-            print(f"Validating images in repository: {repository_name}")
+            print(f"ECR Repository ARN: {ecr_repository_arn}")
             print(f"Required tags: {required_tags}")
+            
+            # Extract repository name from ARN at runtime
+            # ECR ARN format: arn:aws:ecr:region:account:repository/repository-name
+            if not ecr_repository_arn.startswith('arn:aws:ecr:') or 'repository/' not in ecr_repository_arn:
+                error_msg = f"Invalid ECR repository ARN: {ecr_repository_arn}"
+                print(f"ERROR: {error_msg}")
+                send_response(event, context, "FAILED", {"Error": error_msg})
+                return
+                
+            repository_name = ecr_repository_arn.split('/')[-1]
+            if not repository_name:
+                error_msg = f"Could not extract repository name from ARN: {ecr_repository_arn}"
+                print(f"ERROR: {error_msg}")
+                send_response(event, context, "FAILED", {"Error": error_msg})
+                return
+            
+            print(f"Extracted repository name: {repository_name}")
+            print(f"Validating images in repository: {repository_name}")
             
             # List all images in the repository
             response = ecr_client.describe_images(repositoryName=repository_name)
@@ -180,7 +207,7 @@ def send_response(event, context, response_status, response_data):
     const customResource = new cdk.CustomResource(this, 'ImageValidation', {
       serviceToken: provider.serviceToken,
       properties: {
-        RepositoryName: repositoryName,
+        EcrRepositoryArn: props.ecrRepositoryArn,
         RequiredTags: props.requiredImageTags,
         // Add a timestamp to force updates when tags change
         Timestamp: new Date().toISOString()

@@ -30,7 +30,7 @@ describe('ECR Image Validator', () => {
     expect(validator).toBeDefined();
   });
 
-  test('throws error for invalid ECR repository ARN', () => {
+  test('throws error for invalid ECR repository ARN when not a token', () => {
     // Arrange
     const invalidEcrRepositoryArn = 'invalid-arn';
     const requiredImageTags = ['auth-infra-server-abc123'];
@@ -44,6 +44,22 @@ describe('ECR Image Validator', () => {
         environment
       });
     }).toThrow('Invalid ECR repository ARN: invalid-arn');
+  });
+
+  test('accepts CloudFormation tokens as ECR repository ARN', () => {
+    // Arrange
+    const tokenEcrRepositoryArn = '${Token[TOKEN.123]}'; // Simulated token
+    const requiredImageTags = ['auth-infra-server-abc123'];
+    const environment = 'test';
+
+    // Act & Assert - should not throw for tokens
+    expect(() => {
+      new EcrImageValidator(stack, 'TestValidator', {
+        ecrRepositoryArn: tokenEcrRepositoryArn,
+        requiredImageTags,
+        environment
+      });
+    }).not.toThrow();
   });
 
   test('validator has correct metadata', () => {

@@ -354,7 +354,7 @@ export class AuthentikServer extends Construct {
       port: 9000,
       protocol: elbv2.ApplicationProtocol.HTTP,
       healthCheck: {
-        path: '/healthz/',
+        path: '/-/health/live/',
         interval: Duration.seconds(30),
         healthyHttpCodes: '200-299'
       }

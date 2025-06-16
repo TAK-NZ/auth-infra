@@ -95,9 +95,12 @@ export class AuthInfraStack extends cdk.Stack {
     const region = cdk.Stack.of(this).region;
 
     // Import VPC and networking from base infrastructure
+    // Note: Base infrastructure provides 2 subnets (A and B), so we limit to 2 AZs
+    const vpcAvailabilityZones = this.availabilityZones.slice(0, 2);
+    
     const vpc = ec2.Vpc.fromVpcAttributes(this, 'VPC', {
       vpcId: Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_ID)),
-      availabilityZones: this.availabilityZones,
+      availabilityZones: vpcAvailabilityZones,
       // Import subnet IDs from base infrastructure
       publicSubnetIds: [
         Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.SUBNET_PUBLIC_A)),
@@ -106,7 +109,8 @@ export class AuthInfraStack extends cdk.Stack {
       privateSubnetIds: [
         Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.SUBNET_PRIVATE_A)),
         Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.SUBNET_PRIVATE_B))
-      ]
+      ],
+      vpcCidrBlock: Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))
     });
 
     // Import KMS key from base infrastructure
@@ -115,9 +119,13 @@ export class AuthInfraStack extends cdk.Stack {
     );
 
     // Import ECS Cluster from base infrastructure
-    const ecsCluster = ecs.Cluster.fromClusterArn(this, 'ECSCluster',
-      Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECS_CLUSTER))
-    );
+    const ecsClusterArn = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECS_CLUSTER));
+    const ecsCluster = ecs.Cluster.fromClusterAttributes(this, 'ECSCluster', {
+      clusterArn: ecsClusterArn,
+      clusterName: `TAK-${stackNameComponent}-EcsCluster`, // Standard cluster name from base infra
+      vpc: vpc,
+      securityGroups: []
+    });
 
     // Import S3 configuration bucket from base infrastructure
     const s3ConfBucket = s3.Bucket.fromBucketArn(this, 'S3ConfBucket',
@@ -183,6 +191,7 @@ export class AuthInfraStack extends cdk.Stack {
     const efs = new Efs(this, 'EFS', {
       environment: stackNameComponent,
       vpc,
+      vpcCidrBlock: Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4)),
       kmsKey,
       allowAccessFrom: [ecsSecurityGroup]
     });

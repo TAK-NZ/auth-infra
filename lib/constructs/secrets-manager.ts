@@ -5,7 +5,8 @@ import { Construct } from 'constructs';
 import {
   aws_secretsmanager as secretsmanager,
   aws_kms as kms,
-  CfnOutput
+  CfnOutput,
+  SecretValue
 } from 'aws-cdk-lib';
 
 /**
@@ -90,7 +91,7 @@ export class SecretsManager extends Construct {
       description: `${id} Authentik LDAP Outpost Token`,
       secretName: `${id}/authentik-ldap-token`,
       encryptionKey: props.kmsKey,
-      secretStringValue: 'replace-me' as any // Will be updated manually later
+      secretStringValue: SecretValue.unsafePlainText('replace-me') // Will be updated manually later
     });
 
     // Create bootstrap secrets for Authentik default system objects
@@ -98,14 +99,14 @@ export class SecretsManager extends Construct {
       description: `${id} Authentik Bootstrap Crypto Certificate`,
       secretName: `${id}/authentik-bootstrap-crypto`,
       encryptionKey: props.kmsKey,
-      secretStringValue: 'replace-me' as any // Will be populated by bootstrap
+      secretStringValue: SecretValue.unsafePlainText('replace-me') // Will be populated by bootstrap
     });
 
     new secretsmanager.Secret(this, 'AuthentikBootstrapSigning', {
       description: `${id} Authentik Bootstrap Signing Certificate`,
       secretName: `${id}/authentik-bootstrap-signing`,
       encryptionKey: props.kmsKey,
-      secretStringValue: 'replace-me' as any // Will be populated by bootstrap
+      secretStringValue: SecretValue.unsafePlainText('replace-me') // Will be populated by bootstrap
     });
 
     // Create outputs
