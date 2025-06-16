@@ -8,6 +8,7 @@ import {
   aws_secretsmanager as secretsmanager,
   aws_iam as iam,
   aws_kms as kms,
+  aws_logs as logs,
   Duration,
   RemovalPolicy,
   CfnOutput
@@ -22,6 +23,11 @@ export interface DatabaseProps {
    * Environment name (e.g. 'prod', 'dev', etc.)
    */
   environment: string;
+
+  /**
+   * Full stack name (e.g., 'TAK-Demo-AuthInfra')
+   */
+  stackName: string;
 
   /**
    * Environment configuration
@@ -68,8 +74,8 @@ export class Database extends Construct {
 
     // Create the master secret
     this.masterSecret = new secretsmanager.Secret(this, 'DBMasterSecret', {
-      description: `${id} Aurora PostgreSQL Master Password`,
-      secretName: `${id}/rds/secret`,
+      description: `${id}: PostgreSQL Master Password`,
+      secretName: `${props.stackName}/Database/secret`,
       encryptionKey: props.kmsKey,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'authentik' }),
@@ -100,7 +106,7 @@ export class Database extends Construct {
     // Create parameter group for PostgreSQL
     const parameterGroup = new rds.ParameterGroup(this, 'DBParameterGroup', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_15_4
+        version: rds.AuroraPostgresEngineVersion.VER_17_4
       }),
       description: `${id} cluster parameter group`,
       parameters: {
@@ -112,43 +118,81 @@ export class Database extends Construct {
       }
     });
 
-    // Create the database cluster
-    this.cluster = new rds.DatabaseCluster(this, 'DBCluster', {
-      engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_15_4
-      }),
-      credentials: rds.Credentials.fromSecret(this.masterSecret),
-      defaultDatabaseName: 'authentik',
-      instanceProps: {
-        instanceType: ec2.InstanceType.of(
-          ec2.InstanceClass.T4G,
-          props.config.database.instanceClass.includes('micro') ? ec2.InstanceSize.MICRO :
-          props.config.database.instanceClass.includes('small') ? ec2.InstanceSize.SMALL :
-          ec2.InstanceSize.MEDIUM
-        ),
+    // Create the database cluster with conditional configuration for serverless vs provisioned
+    const isServerless = props.config.database.instanceClass === 'db.serverless';
+    
+    if (isServerless) {
+      // Aurora Serverless v2 configuration
+      this.cluster = new rds.DatabaseCluster(this, 'DBCluster', {
+        engine: rds.DatabaseClusterEngine.auroraPostgres({
+          version: rds.AuroraPostgresEngineVersion.VER_17_4
+        }),
+        credentials: rds.Credentials.fromSecret(this.masterSecret),
+        defaultDatabaseName: 'authentik',
+        port: 5432,
+        serverlessV2MinCapacity: 0.5,
+        serverlessV2MaxCapacity: 4,
+        instances: props.config.database.instanceCount,
+        parameterGroup,
+        subnetGroup,
+        vpc: props.vpc,
         vpcSubnets: {
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
         },
-        vpc: props.vpc,
         securityGroups: props.securityGroups,
-        enablePerformanceInsights: props.config.database.enablePerformanceInsights,
-        performanceInsightRetention: props.config.database.enablePerformanceInsights ? 
-          rds.PerformanceInsightRetention.MONTHS_6 : 
-          undefined
-      },
-      instances: props.config.database.instanceCount,
-      parameterGroup,
-      subnetGroup,
-      storageEncrypted: true,
-      storageEncryptionKey: props.kmsKey,
-      backup: {
-        retention: Duration.days(props.config.database.backupRetentionDays),
-        preferredWindow: '03:00-04:00' // UTC time
-      },
-      preferredMaintenanceWindow: 'sun:04:00-sun:05:00', // UTC time
-      deletionProtection: props.config.database.deletionProtection,
-      removalPolicy: props.config.general.removalPolicy
-    });
+        storageEncrypted: true,
+        storageEncryptionKey: props.kmsKey,
+        backup: {
+          retention: Duration.days(props.config.database.backupRetentionDays)
+        },
+        deletionProtection: props.config.database.deletionProtection,
+        removalPolicy: props.config.general.removalPolicy,
+        cloudwatchLogsExports: ['postgresql'],
+        cloudwatchLogsRetention: props.config.general.enableDetailedLogging ? 
+          logs.RetentionDays.ONE_MONTH : 
+          logs.RetentionDays.ONE_WEEK
+      });
+    } else {
+      // Provisioned instances configuration
+      this.cluster = new rds.DatabaseCluster(this, 'DBCluster', {
+        engine: rds.DatabaseClusterEngine.auroraPostgres({
+          version: rds.AuroraPostgresEngineVersion.VER_17_4
+        }),
+        credentials: rds.Credentials.fromSecret(this.masterSecret),
+        defaultDatabaseName: 'authentik',
+        port: 5432,
+        instanceProps: {
+          instanceType: ec2.InstanceType.of(
+            ec2.InstanceClass.T4G,
+            props.config.database.instanceClass.includes('large') ? ec2.InstanceSize.LARGE :
+            ec2.InstanceSize.MEDIUM
+          ),
+          vpcSubnets: {
+            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+          },
+          vpc: props.vpc,
+          securityGroups: props.securityGroups,
+          enablePerformanceInsights: props.config.database.enablePerformanceInsights,
+          performanceInsightRetention: props.config.database.enablePerformanceInsights ? 
+            rds.PerformanceInsightRetention.MONTHS_6 : 
+            undefined
+        },
+        instances: props.config.database.instanceCount,
+        parameterGroup,
+        subnetGroup,
+        storageEncrypted: true,
+        storageEncryptionKey: props.kmsKey,
+        backup: {
+          retention: Duration.days(props.config.database.backupRetentionDays)
+        },
+        deletionProtection: props.config.database.deletionProtection,
+        removalPolicy: props.config.general.removalPolicy,
+        cloudwatchLogsExports: ['postgresql'],
+        cloudwatchLogsRetention: props.config.general.enableDetailedLogging ? 
+          logs.RetentionDays.ONE_MONTH : 
+          logs.RetentionDays.ONE_WEEK
+      });
+    }
 
     // Store the hostname
     this.hostname = this.cluster.clusterEndpoint.hostname;

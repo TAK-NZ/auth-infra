@@ -19,6 +19,11 @@ export interface SecretsManagerProps {
   environment: string;
 
   /**
+   * Full stack name (e.g., 'TAK-Demo-AuthInfra')
+   */
+  stackName: string;
+
+  /**
    * KMS key for encryption
    */
   kmsKey: kms.IKey;
@@ -34,12 +39,12 @@ export class SecretsManager extends Construct {
   public readonly secretKey: secretsmanager.Secret;
 
   /**
-   * The admin user password secret
+   * The admin password secret
    */
   public readonly adminUserPassword: secretsmanager.Secret;
 
   /**
-   * The admin user token secret
+   * The admin API token secret
    */
   public readonly adminUserToken: secretsmanager.Secret;
 
@@ -53,8 +58,8 @@ export class SecretsManager extends Construct {
 
     // Create Authentik secret key
     this.secretKey = new secretsmanager.Secret(this, 'AuthentikSecretKey', {
-      description: `${id} Authentik Secret Key`,
-      secretName: `${id}/authentik-secret-key`,
+      description: `Authentik: Secret Key`,
+      secretName: `${props.stackName}/Authentik/Secret-Key`,
       encryptionKey: props.kmsKey,
       generateSecretString: {
         excludePunctuation: true,
@@ -64,8 +69,8 @@ export class SecretsManager extends Construct {
 
     // Create admin user password
     this.adminUserPassword = new secretsmanager.Secret(this, 'AuthentikAdminUserPassword', {
-      description: `${id} Authentik Admin User Password`,
-      secretName: `${id}/authentik-admin-user-password`,
+      description: `Authentik: Admin Password`,
+      secretName: `${props.stackName}/Authentik/Admin-Password`,
       encryptionKey: props.kmsKey,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'akadmin' }),
@@ -77,8 +82,8 @@ export class SecretsManager extends Construct {
 
     // Create admin user token
     this.adminUserToken = new secretsmanager.Secret(this, 'AuthentikAdminUserToken', {
-      description: `${id} Authentik Admin User Token`,
-      secretName: `${id}/authentik-admin-token`,
+      description: `Authentik: Admin API Token`,
+      secretName: `${props.stackName}/Authentik/Admin-API-Token`,
       encryptionKey: props.kmsKey,
       generateSecretString: {
         excludePunctuation: true,
@@ -88,25 +93,10 @@ export class SecretsManager extends Construct {
 
     // Create LDAP token (initially with placeholder value)
     this.ldapToken = new secretsmanager.Secret(this, 'AuthentikLDAPToken', {
-      description: `${id} Authentik LDAP Outpost Token`,
-      secretName: `${id}/authentik-ldap-token`,
+      description: `Authentik: LDAP Outpost Token`,
+      secretName: `${props.stackName}/Authentik/LDAP-Token`,
       encryptionKey: props.kmsKey,
       secretStringValue: SecretValue.unsafePlainText('replace-me') // Will be updated manually later
-    });
-
-    // Create bootstrap secrets for Authentik default system objects
-    new secretsmanager.Secret(this, 'AuthentikBootstrapCrypto', {
-      description: `${id} Authentik Bootstrap Crypto Certificate`,
-      secretName: `${id}/authentik-bootstrap-crypto`,
-      encryptionKey: props.kmsKey,
-      secretStringValue: SecretValue.unsafePlainText('replace-me') // Will be populated by bootstrap
-    });
-
-    new secretsmanager.Secret(this, 'AuthentikBootstrapSigning', {
-      description: `${id} Authentik Bootstrap Signing Certificate`,
-      secretName: `${id}/authentik-bootstrap-signing`,
-      encryptionKey: props.kmsKey,
-      secretStringValue: SecretValue.unsafePlainText('replace-me') // Will be populated by bootstrap
     });
 
     // Create outputs

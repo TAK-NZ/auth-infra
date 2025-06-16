@@ -61,7 +61,7 @@ export interface AuthInfraEnvironmentConfig {
  */
 export const DEV_CONFIG: AuthInfraEnvironmentConfig = {
   database: {
-    instanceClass: 'db.t4g.micro',
+    instanceClass: 'db.serverless',
     instanceCount: 1,
     backupRetentionDays: 1,
     deletionProtection: false,
@@ -102,7 +102,7 @@ export const DEV_CONFIG: AuthInfraEnvironmentConfig = {
  */
 export const PROD_CONFIG: AuthInfraEnvironmentConfig = {
   database: {
-    instanceClass: 'db.t4g.small',
+    instanceClass: 'db.t4g.large',
     instanceCount: 2,
     backupRetentionDays: 7,
     deletionProtection: true,

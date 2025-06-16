@@ -54,6 +54,11 @@ export interface AuthentikWorkerProps {
   envFileS3Key?: string;
 
   /**
+   * Use environment file from S3 (default: false)
+   */
+  useEnvironmentFile: boolean;
+
+  /**
    * ECR repository ARN for ECR images
    */
   ecrRepositoryArn?: string;
@@ -216,8 +221,8 @@ export class AuthentikWorker extends Construct {
       essential: true
     };
 
-    // Add environment files if S3 key is provided
-    if (props.envFileS3Key) {
+    // Add environment files if S3 key is provided and useEnvironmentFile is enabled
+    if (props.envFileS3Key && props.useEnvironmentFile) {
       containerDefinitionOptions = {
         ...containerDefinitionOptions,
         environmentFiles: [

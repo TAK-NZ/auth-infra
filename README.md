@@ -232,6 +232,7 @@ export CDK_DEFAULT_REGION=$(aws configure get region)
 ### 3. (Optional) Authentik Configuration
 
 The base infrastructure stack creates an S3 bucket which can be used for advanced [Authentik configuration](https://docs.goauthentik.io/docs/install-config/configuration/) via an .env configuration file.
+You can use the CDK context parameter `--context useEnvironmentFile=true` to instruct CDK to use this file. 
 
 > [!NOTE] 
 > The deployment automatically creates an empty `authentik-config.env` file in the S3 bucket if it doesn't already exist. The most common item that you might want to configure in Authentik are the [E-Mail provider settings](https://docs.goauthentik.io/docs/install-config/configuration/#authentik_email).

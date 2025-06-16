@@ -22,6 +22,11 @@ export interface RedisProps {
   environment: string;
 
   /**
+   * Full stack name (e.g., 'TAK-Demo-AuthInfra')
+   */
+  stackName: string;
+
+  /**
    * Environment configuration
    */
   config: AuthInfraEnvironmentConfig;
@@ -66,8 +71,8 @@ export class Redis extends Construct {
 
     // Create the auth token secret
     this.authToken = new secretsmanager.Secret(this, 'RedisAuthToken', {
-      description: `${id} Redis Auth Token`,
-      secretName: `${id}/redis/auth-token`,
+      description: `${id}: Auth Token`,
+      secretName: `${props.stackName}/Redis/Auth-Token`,
       encryptionKey: props.kmsKey,
       generateSecretString: {
         excludePunctuation: true,

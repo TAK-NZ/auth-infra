@@ -12,6 +12,10 @@ export interface SecretsManagerProps {
      */
     environment: string;
     /**
+     * Full stack name (e.g., 'TAK-Demo-AuthInfra')
+     */
+    stackName: string;
+    /**
      * KMS key for encryption
      */
     kmsKey: kms.IKey;
@@ -25,11 +29,11 @@ export declare class SecretsManager extends Construct {
      */
     readonly secretKey: secretsmanager.Secret;
     /**
-     * The admin user password secret
+     * The admin password secret
      */
     readonly adminUserPassword: secretsmanager.Secret;
     /**
-     * The admin user token secret
+     * The admin API token secret
      */
     readonly adminUserToken: secretsmanager.Secret;
     /**

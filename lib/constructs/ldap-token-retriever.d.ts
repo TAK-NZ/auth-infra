@@ -7,7 +7,7 @@
  * but the token can only be retrieved after Authentik is fully running.
  */
 import { Construct } from 'constructs';
-import { aws_lambda as lambda, aws_secretsmanager as secretsmanager, aws_kms as kms, CustomResource } from 'aws-cdk-lib';
+import { aws_lambda as lambda, aws_secretsmanager as secretsmanager, aws_kms as kms, aws_ecs as ecs, CustomResource } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
  * Properties for the LDAP Token Retriever construct
@@ -45,6 +45,14 @@ export interface LdapTokenRetrieverProps {
      * Git SHA for versioning
      */
     gitSha: string;
+    /**
+     * Authentik server ECS service (to ensure it's running before token retrieval)
+     */
+    authentikServerService: ecs.FargateService;
+    /**
+     * Authentik worker ECS service (to ensure it's running before token retrieval)
+     */
+    authentikWorkerService: ecs.FargateService;
 }
 /**
  * LDAP Token Retriever construct

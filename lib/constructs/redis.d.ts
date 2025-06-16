@@ -13,6 +13,10 @@ export interface RedisProps {
      */
     environment: string;
     /**
+     * Full stack name (e.g., 'TAK-Demo-AuthInfra')
+     */
+    stackName: string;
+    /**
      * Environment configuration
      */
     config: AuthInfraEnvironmentConfig;

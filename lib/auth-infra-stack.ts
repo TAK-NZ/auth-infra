@@ -9,7 +9,6 @@ import { AuthentikServer } from './constructs/authentik-server';
 import { AuthentikWorker } from './constructs/authentik-worker';
 import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
-import { S3EnvFileManager } from './constructs/s3-env-file-manager';
 import { Route53 } from './constructs/route53';
 import { EcrImageValidator } from './constructs/ecr-image-validator';
 import { StackProps, Fn } from 'aws-cdk-lib';
@@ -83,6 +82,7 @@ export class AuthInfraStack extends cdk.Stack {
     const authentikLdapBaseDn = this.node.tryGetContext('authentikLdapBaseDn') || 'DC=example,DC=com';
     const sslCertificateArn = this.node.tryGetContext('sslCertificateArn') || '';
     const useAuthentikConfigFile = Boolean(this.node.tryGetContext('useAuthentikConfigFile') || false);
+    const useEnvironmentFile = Boolean(this.node.tryGetContext('useEnvironmentFile') || false);
     const hostnameAuthentik = this.node.tryGetContext('hostnameAuthentik') || 'account';
     const hostnameLdap = this.node.tryGetContext('hostnameLdap') || 'ldap';
 
@@ -151,12 +151,9 @@ export class AuthInfraStack extends cdk.Stack {
     const hostedZoneId = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_ID));
     const hostedZoneName = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_NAME));
 
-    // S3 Environment File Manager - manages authentik-config.env file
-    const s3EnvFileManager = new S3EnvFileManager(this, 'S3EnvFileManager', {
-      environment: stackNameComponent,
-      s3ConfBucket,
-      envFileName: 'authentik-config.env'
-    });
+    // S3 Environment File paths - assumes authentik-config.env already exists in S3
+    const envFileS3Key = `${stackNameComponent}/authentik-config.env`;
+    const envFileS3Uri = `arn:aws:s3:::${s3ConfBucket.bucketName}/${envFileS3Key}`;
 
     // Security Groups
     const ecsSecurityGroup = this.createEcsSecurityGroup(vpc);
@@ -164,14 +161,17 @@ export class AuthInfraStack extends cdk.Stack {
     const redisSecurityGroup = this.createRedisSecurityGroup(vpc, ecsSecurityGroup);
 
     // SecretsManager
+    // SecretsManager
     const secretsManager = new SecretsManager(this, 'SecretsManager', {
       environment: stackNameComponent,
+      stackName: resolvedStackName,
       kmsKey
     });
 
     // Database
     const database = new Database(this, 'Database', {
       environment: stackNameComponent,
+      stackName: resolvedStackName,
       config: mergedConfig,
       vpc,
       kmsKey,
@@ -179,8 +179,10 @@ export class AuthInfraStack extends cdk.Stack {
     });
 
     // Redis
+    // Redis
     const redis = new Redis(this, 'Redis', {
       environment: stackNameComponent,
+      stackName: resolvedStackName,
       config: mergedConfig,
       vpc,
       kmsKey,
@@ -212,11 +214,12 @@ export class AuthInfraStack extends cdk.Stack {
       ecsSecurityGroup,
       ecsCluster,
       s3ConfBucket,
-      envFileS3Uri: s3EnvFileManager.envFileS3Uri,
-      envFileS3Key: s3EnvFileManager.envFileS3Key,
+      envFileS3Uri: envFileS3Uri,
+      envFileS3Key: envFileS3Key,
       adminUserEmail: authentikAdminUserEmail,
       ldapBaseDn: authentikLdapBaseDn,
       useConfigFile: useAuthentikConfigFile,
+      useEnvironmentFile: useEnvironmentFile,
       ecrRepositoryArn: ecrRepository,
       gitSha: gitSha,
       enableExecute: enableExecute,
@@ -244,7 +247,8 @@ export class AuthInfraStack extends cdk.Stack {
       ecsSecurityGroup,
       ecsCluster,
       s3ConfBucket,
-      envFileS3Key: s3EnvFileManager.envFileS3Key,
+      envFileS3Key: envFileS3Key,
+      useEnvironmentFile: useEnvironmentFile,
       ecrRepositoryArn: ecrRepository,
       gitSha: gitSha,
       enableExecute: enableExecute,
@@ -273,7 +277,9 @@ export class AuthInfraStack extends cdk.Stack {
       outpostName: 'LDAP',
       adminTokenSecret: secretsManager.adminUserToken,
       ldapTokenSecret: secretsManager.ldapToken,
-      gitSha: gitSha
+      gitSha: gitSha,
+      authentikServerService: authentikServer.ecsService,
+      authentikWorkerService: authentikWorker.ecsService
     });
 
     // LDAP

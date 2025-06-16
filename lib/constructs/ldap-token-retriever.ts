@@ -13,6 +13,7 @@ import {
   aws_logs as logs,
   aws_secretsmanager as secretsmanager,
   aws_kms as kms,
+  aws_ecs as ecs,
   CustomResource,
   Duration,
   RemovalPolicy,
@@ -64,6 +65,16 @@ export interface LdapTokenRetrieverProps {
    * Git SHA for versioning
    */
   gitSha: string;
+
+  /**
+   * Authentik server ECS service (to ensure it's running before token retrieval)
+   */
+  authentikServerService: ecs.FargateService;
+
+  /**
+   * Authentik worker ECS service (to ensure it's running before token retrieval)
+   */
+  authentikWorkerService: ecs.FargateService;
 }
 
 /**
@@ -377,5 +388,9 @@ export const handler = async (event, context) => {
     // Add dependency to ensure the custom resource runs after the secrets are created
     this.customResource.node.addDependency(props.adminTokenSecret);
     this.customResource.node.addDependency(props.ldapTokenSecret);
+    
+    // Add dependency to ensure the custom resource runs after ECS services are deployed
+    this.customResource.node.addDependency(props.authentikServerService);
+    this.customResource.node.addDependency(props.authentikWorkerService);
   }
 }

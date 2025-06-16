@@ -53,6 +53,10 @@ export interface AuthentikServerProps {
      */
     useConfigFile: boolean;
     /**
+     * Use environment file from S3 (default: false)
+     */
+    useEnvironmentFile: boolean;
+    /**
      * ECR repository ARN for ECR images
      */
     ecrRepositoryArn?: string;

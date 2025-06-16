@@ -43,6 +43,7 @@ The stack automatically applies optimal defaults based on `envType`:
 | `envType` | string | `dev-test` | - | Environment type: `prod` or `dev-test` |
 | `authentikAdminUserEmail` | string | **Required** | **Required** | Admin user email for Authentik |
 | `authentikLdapBaseDn` | string | `DC=example,DC=com` | `DC=example,DC=com` | LDAP base DN |
+| `useEnvironmentFile` | boolean | `false` | `false` | Load environment variables from S3 authentik-config.env file |
 | `gitSha` | string | auto-detected | auto-detected | Git SHA for resource tagging |
 | `enableExecute` | boolean | `false` | `false` | Enable ECS exec for debugging |
 | `hostnameAuthentik` | string | `account` | `account` | Hostname for Authentik service DNS records |
@@ -85,6 +86,54 @@ npx cdk deploy --context envType=dev-test \
                --context redisNodeType=cache.t4g.small \
                --context authentikAdminUserEmail=admin@company.com \
                --context enableDetailedLogging=true
+```
+
+### Using S3 Environment File
+
+```bash
+# Deploy with S3 environment file enabled (assumes authentik-config.env exists in S3)
+npx cdk deploy --context envType=dev-test \
+               --context stackName=MyStack \
+               --context authentikAdminUserEmail=admin@company.com \
+               --context useEnvironmentFile=true
+```
+
+## S3 Environment File Configuration
+
+The stack can optionally load environment variables from an S3-stored configuration file for Authentik containers.
+
+### Configuration
+
+| Parameter | Description |
+|-----------|-------------|
+| `useEnvironmentFile` | When `true`, ECS containers will load environment variables from S3 |
+| **S3 Path** | `{stackName}/authentik-config.env` in the configuration bucket |
+| **Default Behavior** | Environment file is **not** loaded (containers use only CDK-defined environment variables) |
+
+### Prerequisites
+
+Before enabling `useEnvironmentFile=true`, ensure:
+
+1. **File exists**: `authentik-config.env` must exist in S3 at `{stackName}/authentik-config.env`
+2. **Proper format**: File should contain environment variables in `KEY=value` format
+3. **S3 permissions**: ECS tasks have read access to the configuration bucket (handled automatically)
+
+### Example Usage
+
+```bash
+# Deploy without S3 environment file (default)
+npx cdk deploy --context stackName=MyStack
+
+# Deploy with S3 environment file
+npx cdk deploy --context stackName=MyStack \
+               --context useEnvironmentFile=true
+```
+
+### File Location
+
+For `stackName=MyStack`, the file should be located at:
+```
+s3://tak-mystack-config-bucket/MyStack/authentik-config.env
 ```
 
 ## AWS Credentials
