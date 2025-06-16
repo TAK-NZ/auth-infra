@@ -1,6 +1,5 @@
 /**
- * Environment-specific configuration objects and utilities
- * Pure configuration approach following reference template pattern
+ * Environment-specific configuration for auth infrastructure resources
  */
 import * as cdk from 'aws-cdk-lib';
 /**
@@ -47,16 +46,14 @@ export interface AuthInfraEnvironmentConfig {
  * Development/Test environment configuration
  * Optimized for cost and development workflow
  */
-export declare const DEV_CONFIG: AuthInfraEnvironmentConfig;
+export declare const DEV_TEST_CONFIG: AuthInfraEnvironmentConfig;
 /**
  * Production environment configuration
  * Optimized for high availability, security, and production workloads
  */
 export declare const PROD_CONFIG: AuthInfraEnvironmentConfig;
 /**
- * Get environment-specific configuration based on the provided environment type
- * @param envType - Environment type ('prod', 'dev-test', 'staging', etc.)
- * @returns Environment-specific configuration
+ * Get environment configuration based on environment type
  */
 export declare function getEnvironmentConfig(envType: string): AuthInfraEnvironmentConfig;
 /**

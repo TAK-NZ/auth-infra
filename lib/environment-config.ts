@@ -1,6 +1,5 @@
 /**
- * Environment-specific configuration objects and utilities
- * Pure configuration approach following reference template pattern
+ * Environment-specific configuration for auth infrastructure resources
  */
 import * as cdk from 'aws-cdk-lib';
 
@@ -10,48 +9,49 @@ import * as cdk from 'aws-cdk-lib';
 export interface AuthInfraEnvironmentConfig {
   // Database configuration
   database: {
-    instanceClass: string;
-    instanceCount: number;
-    backupRetentionDays: number;
-    deletionProtection: boolean;
-    enablePerformanceInsights: boolean;
-    enableMonitoring: boolean;
+    instanceClass: string;                // RDS instance class (e.g., 'db.serverless', 'db.t4g.large')
+    instanceCount: number;                // Number of database instances
+    backupRetentionDays: number;          // Backup retention period in days
+    deletionProtection: boolean;          // Enable deletion protection
+    enablePerformanceInsights: boolean;   // Enable RDS Performance Insights
+    enableMonitoring: boolean;            // Enable enhanced monitoring
   };
   
   // Redis configuration
   redis: {
-    nodeType: string;
-    numCacheClusters: number;
-    automaticFailoverEnabled: boolean;
+    nodeType: string;                     // ElastiCache node type
+    numCacheClusters: number;             // Number of cache clusters
+    automaticFailoverEnabled: boolean;    // Enable automatic failover
   };
   
   // ECS configuration
   ecs: {
-    taskCpu: number;
-    taskMemory: number;
-    desiredCount: number;
-    minCapacity: number;
-    maxCapacity: number;
-    workerDesiredCount?: number;
-    workerMinCapacity?: number;
-    workerMaxCapacity?: number;
+    taskCpu: number;                      // CPU units for ECS tasks
+    taskMemory: number;                   // Memory (MB) for ECS tasks
+    desiredCount: number;                 // Desired number of server tasks
+    minCapacity: number;                  // Minimum capacity for auto scaling
+    maxCapacity: number;                  // Maximum capacity for auto scaling
+    workerDesiredCount?: number;          // Desired number of worker tasks
+    workerMinCapacity?: number;           // Minimum worker capacity
+    workerMaxCapacity?: number;           // Maximum worker capacity
   };
-   // EFS configuration
+  
+  // EFS configuration
   efs: {
-    throughputMode: 'bursting' | 'provisioned';
-    provisionedThroughput?: number;
+    throughputMode: 'bursting' | 'provisioned';  // EFS throughput mode
+    provisionedThroughput?: number;               // Provisioned throughput (MB/s)
   };
 
   // General infrastructure settings
   general: {
-    removalPolicy: cdk.RemovalPolicy;
-    enableDetailedLogging: boolean;
+    removalPolicy: cdk.RemovalPolicy;     // Resource removal policy
+    enableDetailedLogging: boolean;       // Enable detailed CloudWatch logging
   };
 
   // Monitoring configuration
   monitoring: {
-    enableCloudWatchAlarms: boolean;
-    logRetentionDays: number;
+    enableCloudWatchAlarms: boolean;      // Enable CloudWatch alarms
+    logRetentionDays: number;             // Log retention period in days
   };
 }
 
@@ -59,40 +59,40 @@ export interface AuthInfraEnvironmentConfig {
  * Development/Test environment configuration
  * Optimized for cost and development workflow
  */
-export const DEV_CONFIG: AuthInfraEnvironmentConfig = {
+export const DEV_TEST_CONFIG: AuthInfraEnvironmentConfig = {
   database: {
-    instanceClass: 'db.serverless',
-    instanceCount: 1,
-    backupRetentionDays: 1,
-    deletionProtection: false,
-    enablePerformanceInsights: false,
-    enableMonitoring: false,
+    instanceClass: 'db.serverless',      // Aurora Serverless v2 for cost optimization
+    instanceCount: 1,                    // Single instance for dev/test
+    backupRetentionDays: 1,              // Minimal backup retention
+    deletionProtection: false,           // Allow deletion for dev/test
+    enablePerformanceInsights: false,    // Disable to save costs
+    enableMonitoring: false,             // Disable enhanced monitoring
   },
   redis: {
-    nodeType: 'cache.t4g.micro',
-    numCacheClusters: 1,
-    automaticFailoverEnabled: false,
+    nodeType: 'cache.t4g.micro',         // Smallest instance for cost optimization
+    numCacheClusters: 1,                 // Single cluster
+    automaticFailoverEnabled: false,     // Disable failover for cost savings
   },
   ecs: {
-    taskCpu: 512,
-    taskMemory: 1024,
-    desiredCount: 1,
-    minCapacity: 1,
-    maxCapacity: 3,
-    workerDesiredCount: 1,
-    workerMinCapacity: 1,
-    workerMaxCapacity: 2,
+    taskCpu: 512,                        // Minimal CPU allocation
+    taskMemory: 1024,                    // Minimal memory allocation
+    desiredCount: 1,                     // Single server instance
+    minCapacity: 1,                      // Minimum scaling capacity
+    maxCapacity: 3,                      // Limited scaling for cost control
+    workerDesiredCount: 1,               // Single worker instance
+    workerMinCapacity: 1,                // Minimum worker capacity
+    workerMaxCapacity: 2,                // Limited worker scaling
   },
   efs: {
-    throughputMode: 'bursting',
+    throughputMode: 'bursting',          // Bursting mode for cost optimization
   },
   general: {
-    removalPolicy: cdk.RemovalPolicy.DESTROY,
-    enableDetailedLogging: true,
+    removalPolicy: cdk.RemovalPolicy.DESTROY,  // Allow resource deletion
+    enableDetailedLogging: true,               // Keep logging for debugging
   },
   monitoring: {
-    enableCloudWatchAlarms: false,
-    logRetentionDays: 7,
+    enableCloudWatchAlarms: false,       // Disable alarms to save costs
+    logRetentionDays: 7,                 // Short retention for cost savings
   },
 };
 
@@ -102,48 +102,46 @@ export const DEV_CONFIG: AuthInfraEnvironmentConfig = {
  */
 export const PROD_CONFIG: AuthInfraEnvironmentConfig = {
   database: {
-    instanceClass: 'db.t4g.large',
-    instanceCount: 2,
-    backupRetentionDays: 7,
-    deletionProtection: true,
-    enablePerformanceInsights: true,
-    enableMonitoring: true,
+    instanceClass: 'db.t4g.large',       // Larger instance for production workloads
+    instanceCount: 2,                    // Multi-AZ deployment for high availability
+    backupRetentionDays: 7,              // Extended backup retention
+    deletionProtection: true,            // Protect production data
+    enablePerformanceInsights: true,     // Enable performance monitoring
+    enableMonitoring: true,              // Enable enhanced monitoring
   },
   redis: {
-    nodeType: 'cache.t4g.small',
-    numCacheClusters: 2,
-    automaticFailoverEnabled: true,
+    nodeType: 'cache.t4g.small',         // Adequate size for production
+    numCacheClusters: 2,                 // Multi-node for high availability
+    automaticFailoverEnabled: true,      // Enable automatic failover
   },
   ecs: {
-    taskCpu: 1024,
-    taskMemory: 2048,
-    desiredCount: 2,
-    minCapacity: 2,
-    maxCapacity: 6,
-    workerDesiredCount: 2,
-    workerMinCapacity: 1,
-    workerMaxCapacity: 4,
+    taskCpu: 1024,                       // Higher CPU for production performance
+    taskMemory: 2048,                    // Higher memory for production performance
+    desiredCount: 2,                     // Multiple instances for availability
+    minCapacity: 2,                      // Minimum production capacity
+    maxCapacity: 6,                      // Higher scaling limits
+    workerDesiredCount: 2,               // Multiple worker instances
+    workerMinCapacity: 1,                // Minimum worker capacity
+    workerMaxCapacity: 4,                // Higher worker scaling limits
   },
   efs: {
-    throughputMode: 'bursting',
+    throughputMode: 'bursting',          // Bursting mode for most workloads
   },
   general: {
-    removalPolicy: cdk.RemovalPolicy.RETAIN,
-    enableDetailedLogging: true,
+    removalPolicy: cdk.RemovalPolicy.RETAIN,  // Protect production resources
+    enableDetailedLogging: true,              // Enable detailed logging
   },
   monitoring: {
-    enableCloudWatchAlarms: true,
-    logRetentionDays: 30,
+    enableCloudWatchAlarms: true,        // Enable production monitoring
+    logRetentionDays: 30,                // Extended log retention
   },
 };
 
 /**
- * Get environment-specific configuration based on the provided environment type
- * @param envType - Environment type ('prod', 'dev-test', 'staging', etc.)
- * @returns Environment-specific configuration
+ * Get environment configuration based on environment type
  */
 export function getEnvironmentConfig(envType: string): AuthInfraEnvironmentConfig {
-  switch (envType) {
+  switch (envType.toLowerCase()) {
     case 'prod':
     case 'production':
       return PROD_CONFIG;
@@ -151,7 +149,7 @@ export function getEnvironmentConfig(envType: string): AuthInfraEnvironmentConfi
     case 'dev-test':
     case 'development':
     default:
-      return DEV_CONFIG;
+      return DEV_TEST_CONFIG;
   }
 }
 
@@ -170,7 +168,6 @@ export function mergeEnvironmentConfig(
     monitoring?: Partial<AuthInfraEnvironmentConfig['monitoring']>;
   }
 ): AuthInfraEnvironmentConfig {
-  // Deep merge the configuration
   return {
     database: { ...baseConfig.database, ...overrides.database },
     redis: { ...baseConfig.redis, ...overrides.redis },

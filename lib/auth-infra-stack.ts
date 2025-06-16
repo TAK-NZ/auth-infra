@@ -1,5 +1,12 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { RemovalPolicy, StackProps, Fn, CfnOutput } from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as kms from 'aws-cdk-lib/aws-kms';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+
+// Construct imports
 import { Database } from './constructs/database';
 import { Redis } from './constructs/redis';
 import { Efs } from './constructs/efs';
@@ -11,12 +18,9 @@ import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 import { Route53 } from './constructs/route53';
 import { EcrImageValidator } from './constructs/ecr-image-validator';
-import { StackProps, Fn } from 'aws-cdk-lib';
+
+// Utility imports
 import { registerOutputs } from './outputs';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as kms from 'aws-cdk-lib/aws-kms';
-import * as s3 from 'aws-cdk-lib/aws-s3';
 import { createBaseImportValue, BASE_EXPORT_NAMES } from './cloudformation-imports';
 import { getEnvironmentConfig, mergeEnvironmentConfig } from './environment-config';
 import { AuthInfraConfig } from './stack-config';
@@ -42,12 +46,13 @@ export class AuthInfraStack extends cdk.Stack {
     const stackNameComponent = config.stackName; // This is the STACK_NAME part (e.g., "MyFirstStack")
     const resolvedStackName = id;
     
-    // Get environment-specific defaults (following reference template pattern)
+    // Get environment-specific defaults
     const envConfig = config.envType === 'prod' ? 
       { enableHighAvailability: true, enableDetailedMonitoring: true } :
       { enableHighAvailability: false, enableDetailedMonitoring: false };
     
     const enableHighAvailability = envConfig.enableHighAvailability;
+    const enableDetailedMonitoring = config.overrides?.general?.enableDetailedLogging ?? envConfig.enableDetailedMonitoring;
     
     // Get base configuration and merge with overrides
     const baseConfig = getEnvironmentConfig(envType);
@@ -72,8 +77,8 @@ export class AuthInfraStack extends cdk.Stack {
     const environmentLabel = envType === 'prod' ? 'Prod' : 'Dev-Test';
     cdk.Tags.of(this).add('Environment Type', environmentLabel);
 
-    const awsStackName = Fn.ref('AWS::StackName');
-    const awsRegion = cdk.Stack.of(this).region;
+    const stackName = Fn.ref('AWS::StackName');
+    const region = cdk.Stack.of(this).region;
 
     // Context-based parameter resolution (CDK context only)
     const gitSha = this.node.tryGetContext('gitSha') || this.getGitSha();
@@ -91,8 +96,9 @@ export class AuthInfraStack extends cdk.Stack {
       throw new Error('authentikAdminUserEmail is required. Set it via --context authentikAdminUserEmail=user@example.com');
     }
 
-    const stackName = Fn.ref('AWS::StackName');
-    const region = cdk.Stack.of(this).region;
+    // =================
+    // IMPORT BASE INFRASTRUCTURE RESOURCES
+    // =================
 
     // Import VPC and networking from base infrastructure
     // Note: Base infrastructure provides 2 subnets (A and B), so we limit to 2 AZs
@@ -113,12 +119,12 @@ export class AuthInfraStack extends cdk.Stack {
       vpcCidrBlock: Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))
     });
 
-    // Import KMS key from base infrastructure
+    // KMS
     const kmsKey = kms.Key.fromKeyArn(this, 'KMSKey', 
       Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.KMS_KEY))
     );
 
-    // Import ECS Cluster from base infrastructure
+    // ECS
     const ecsClusterArn = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECS_CLUSTER));
     const ecsCluster = ecs.Cluster.fromClusterAttributes(this, 'ECSCluster', {
       clusterArn: ecsClusterArn,
@@ -127,27 +133,15 @@ export class AuthInfraStack extends cdk.Stack {
       securityGroups: []
     });
 
-    // Import S3 configuration bucket from base infrastructure
+    // S3
     const s3ConfBucket = s3.Bucket.fromBucketArn(this, 'S3ConfBucket',
       Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.S3_BUCKET))
     );
 
-    // Import ECR repository from base infrastructure (for local ECR option)
+    // ECR
     const ecrRepository = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECR_REPO));
 
-    // Validate required ECR images exist before deployment
-    const requiredImageTags = [
-      `auth-infra-server-${gitSha}`,
-      `auth-infra-ldap-${gitSha}`
-    ];
-    
-    const ecrValidator = new EcrImageValidator(this, 'EcrImageValidator', {
-      ecrRepositoryArn: ecrRepository,
-      requiredImageTags: requiredImageTags,
-      environment: stackNameComponent
-    });
-
-    // Import Route53 hosted zone from base infrastructure
+    // Route53
     const hostedZoneId = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_ID));
     const hostedZoneName = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_NAME));
 
@@ -155,12 +149,19 @@ export class AuthInfraStack extends cdk.Stack {
     const envFileS3Key = `${stackNameComponent}/authentik-config.env`;
     const envFileS3Uri = `arn:aws:s3:::${s3ConfBucket.bucketName}/${envFileS3Key}`;
 
+    // =================
+    // SECURITY GROUPS
+    // =================
+
     // Security Groups
     const ecsSecurityGroup = this.createEcsSecurityGroup(vpc);
     const dbSecurityGroup = this.createDbSecurityGroup(vpc, ecsSecurityGroup);
     const redisSecurityGroup = this.createRedisSecurityGroup(vpc, ecsSecurityGroup);
 
-    // SecretsManager
+    // =================
+    // CORE INFRASTRUCTURE
+    // =================
+
     // SecretsManager
     const secretsManager = new SecretsManager(this, 'SecretsManager', {
       environment: stackNameComponent,
@@ -179,7 +180,6 @@ export class AuthInfraStack extends cdk.Stack {
     });
 
     // Redis
-    // Redis
     const redis = new Redis(this, 'Redis', {
       environment: stackNameComponent,
       stackName: resolvedStackName,
@@ -197,6 +197,26 @@ export class AuthInfraStack extends cdk.Stack {
       kmsKey,
       allowAccessFrom: [ecsSecurityGroup]
     });
+
+    // =================
+    // IMAGE VALIDATION
+    // =================
+
+    // Validate required ECR images exist before deployment
+    const requiredImageTags = [
+      `auth-infra-server-${gitSha}`,
+      `auth-infra-ldap-${gitSha}`
+    ];
+    
+    const ecrValidator = new EcrImageValidator(this, 'EcrImageValidator', {
+      ecrRepositoryArn: ecrRepository,
+      requiredImageTags: requiredImageTags,
+      environment: stackNameComponent
+    });
+
+    // =================
+    // APPLICATION SERVICES
+    // =================
 
     // Authentik Load Balancer
     const authentikELB = new Elb(this, 'AuthentikELB', {
@@ -268,6 +288,10 @@ export class AuthInfraStack extends cdk.Stack {
     // Connect Authentik Server to Load Balancer
     authentikServer.createTargetGroup(vpc, authentikELB.httpsListener);
 
+    // =================
+    // LDAP CONFIGURATION
+    // =================
+
     // LDAP Token Retriever
     const ldapTokenRetriever = new LdapTokenRetriever(this, 'LdapTokenRetriever', {
       environment: stackNameComponent,
@@ -303,6 +327,10 @@ export class AuthInfraStack extends cdk.Stack {
     // Ensure LDAP waits for the token to be retrieved
     ldap.node.addDependency(ldapTokenRetriever);
 
+    // =================
+    // DNS AND ROUTING
+    // =================
+
     // Route53 DNS Records
     const route53 = new Route53(this, 'Route53', {
       environment: stackNameComponent,
@@ -314,6 +342,10 @@ export class AuthInfraStack extends cdk.Stack {
       authentikLoadBalancer: authentikELB.loadBalancer,
       ldapLoadBalancer: ldap.loadBalancer
     });
+
+    // =================
+    // STACK OUTPUTS
+    // =================
 
     // Outputs
     registerOutputs({
@@ -336,6 +368,15 @@ export class AuthInfraStack extends cdk.Stack {
     });
   }
 
+  // =================
+  // HELPER METHODS
+  // =================
+
+  /**
+   * Create security group for ECS tasks
+   * @param vpc The VPC to create the security group in
+   * @returns The created security group
+   */
   private createEcsSecurityGroup(vpc: ec2.IVpc): ec2.SecurityGroup {
     const ecsSecurityGroup = new ec2.SecurityGroup(this, 'ECSSecurityGroup', {
       vpc,
@@ -365,6 +406,12 @@ export class AuthInfraStack extends cdk.Stack {
     return ecsSecurityGroup;
   }
 
+  /**
+   * Create security group for database access
+   * @param vpc The VPC to create the security group in
+   * @param ecsSecurityGroup The ECS security group to allow access from
+   * @returns The created security group
+   */
   private createDbSecurityGroup(vpc: ec2.IVpc, ecsSecurityGroup: ec2.SecurityGroup): ec2.SecurityGroup {
     const dbSecurityGroup = new ec2.SecurityGroup(this, 'DBSecurityGroup', {
       vpc,
@@ -382,6 +429,12 @@ export class AuthInfraStack extends cdk.Stack {
     return dbSecurityGroup;
   }
 
+  /**
+   * Create security group for Redis access
+   * @param vpc The VPC to create the security group in
+   * @param ecsSecurityGroup The ECS security group to allow access from
+   * @returns The created security group
+   */
   private createRedisSecurityGroup(vpc: ec2.IVpc, ecsSecurityGroup: ec2.SecurityGroup): ec2.SecurityGroup {
     const redisSecurityGroup = new ec2.SecurityGroup(this, 'RedisSecurityGroup', {
       vpc,
@@ -401,7 +454,7 @@ export class AuthInfraStack extends cdk.Stack {
 
   /**
    * Get the current git SHA for tagging resources
-   * @returns Current git SHA
+   * @returns Current git SHA or 'development' if unable to determine
    */
   private getGitSha(): string {
     try {

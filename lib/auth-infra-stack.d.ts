@@ -10,12 +10,29 @@ export interface AuthInfraStackProps extends StackProps {
  */
 export declare class AuthInfraStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: AuthInfraStackProps);
+    /**
+     * Create security group for ECS tasks
+     * @param vpc The VPC to create the security group in
+     * @returns The created security group
+     */
     private createEcsSecurityGroup;
+    /**
+     * Create security group for database access
+     * @param vpc The VPC to create the security group in
+     * @param ecsSecurityGroup The ECS security group to allow access from
+     * @returns The created security group
+     */
     private createDbSecurityGroup;
+    /**
+     * Create security group for Redis access
+     * @param vpc The VPC to create the security group in
+     * @param ecsSecurityGroup The ECS security group to allow access from
+     * @returns The created security group
+     */
     private createRedisSecurityGroup;
     /**
      * Get the current git SHA for tagging resources
-     * @returns Current git SHA
+     * @returns Current git SHA or 'development' if unable to determine
      */
     private getGitSha;
 }
