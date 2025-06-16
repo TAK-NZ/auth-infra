@@ -85,9 +85,7 @@ export class AuthInfraStack extends cdk.Stack {
     const enableExecute = Boolean(this.node.tryGetContext('enableExecute') || false);
     const authentikAdminUserEmail = this.node.tryGetContext('authentikAdminUserEmail') || '';
     const authentikLdapBaseDn = this.node.tryGetContext('authentikLdapBaseDn') || 'DC=example,DC=com';
-    const sslCertificateArn = this.node.tryGetContext('sslCertificateArn') || '';
     const useAuthentikConfigFile = Boolean(this.node.tryGetContext('useAuthentikConfigFile') || false);
-    const useEnvironmentFile = Boolean(this.node.tryGetContext('useEnvironmentFile') || false);
     const hostnameAuthentik = this.node.tryGetContext('hostnameAuthentik') || 'account';
     const hostnameLdap = this.node.tryGetContext('hostnameLdap') || 'ldap';
 
@@ -126,12 +124,7 @@ export class AuthInfraStack extends cdk.Stack {
 
     // ECS
     const ecsClusterArn = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECS_CLUSTER));
-    const ecsCluster = ecs.Cluster.fromClusterAttributes(this, 'ECSCluster', {
-      clusterArn: ecsClusterArn,
-      clusterName: `TAK-${stackNameComponent}-EcsCluster`, // Standard cluster name from base infra
-      vpc: vpc,
-      securityGroups: []
-    });
+    const ecsCluster = ecs.Cluster.fromClusterArn(this, 'ECSCluster', ecsClusterArn);
 
     // S3
     const s3ConfBucket = s3.Bucket.fromBucketArn(this, 'S3ConfBucket',
@@ -144,6 +137,12 @@ export class AuthInfraStack extends cdk.Stack {
     // Route53
     const hostedZoneId = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_ID));
     const hostedZoneName = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_NAME));
+
+    // SSL Certificate
+    const sslCertificateArn = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.CERTIFICATE_ARN));
+
+    // Add DNS domain name tag
+    cdk.Tags.of(this).add('DNS Zone', hostedZoneName);
 
     // S3 Environment File paths - assumes authentik-config.env already exists in S3
     const envFileS3Key = `${stackNameComponent}/authentik-config.env`;
@@ -238,8 +237,7 @@ export class AuthInfraStack extends cdk.Stack {
       envFileS3Key: envFileS3Key,
       adminUserEmail: authentikAdminUserEmail,
       ldapBaseDn: authentikLdapBaseDn,
-      useConfigFile: useAuthentikConfigFile,
-      useEnvironmentFile: useEnvironmentFile,
+      useAuthentikConfigFile: useAuthentikConfigFile,
       ecrRepositoryArn: ecrRepository,
       gitSha: gitSha,
       enableExecute: enableExecute,
@@ -268,7 +266,7 @@ export class AuthInfraStack extends cdk.Stack {
       ecsCluster,
       s3ConfBucket,
       envFileS3Key: envFileS3Key,
-      useEnvironmentFile: useEnvironmentFile,
+      useAuthentikConfigFile: useAuthentikConfigFile,
       ecrRepositoryArn: ecrRepository,
       gitSha: gitSha,
       enableExecute: enableExecute,
@@ -342,6 +340,10 @@ export class AuthInfraStack extends cdk.Stack {
       authentikLoadBalancer: authentikELB.loadBalancer,
       ldapLoadBalancer: ldap.loadBalancer
     });
+
+    // Add dependency for LDAP token retriever to wait for Authentik DNS records
+    ldapTokenRetriever.customResource.node.addDependency(route53.authentikARecord);
+    ldapTokenRetriever.customResource.node.addDependency(route53.authentikAAAARecord);
 
     // =================
     // STACK OUTPUTS

@@ -49,13 +49,9 @@ export interface AuthentikServerProps {
      */
     ldapBaseDn: string;
     /**
-     * Use config file flag
+     * Use authentik config file from S3 (default: false)
      */
-    useConfigFile: boolean;
-    /**
-     * Use environment file from S3 (default: false)
-     */
-    useEnvironmentFile: boolean;
+    useAuthentikConfigFile: boolean;
     /**
      * ECR repository ARN for ECR images
      */

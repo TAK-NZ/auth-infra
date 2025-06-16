@@ -37,9 +37,9 @@ export interface AuthentikWorkerProps {
      */
     envFileS3Key?: string;
     /**
-     * Use environment file from S3 (default: false)
+     * Use authentik config file from S3 (default: false)
      */
-    useEnvironmentFile: boolean;
+    useAuthentikConfigFile: boolean;
     /**
      * ECR repository ARN for ECR images
      */

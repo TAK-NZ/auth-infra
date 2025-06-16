@@ -6,8 +6,9 @@ import { createStackConfig } from '../lib/stack-config';
 const app = new cdk.App();
 
 // Read configuration from CDK context only (command line --context parameters)
+const ProjectName = app.node.tryGetContext('project');
+const customStackName = app.node.tryGetContext('stackName');
 const envType = app.node.tryGetContext('envType') || 'dev-test';
-const stackName = app.node.tryGetContext('stackName');
 const authentikAdminUserEmail = app.node.tryGetContext('authentikAdminUserEmail');
 
 // Validate envType
@@ -16,7 +17,7 @@ if (envType !== 'prod' && envType !== 'dev-test') {
 }
 
 // Validate required parameters
-if (!stackName) {
+if (!customStackName) {
   throw new Error('stackName is required. Use --context stackName=YourStackName\n' +
     'This parameter is mandatory as it determines the correct CloudFormation export names\n' +
     'for importing VPC and other resources from the base infrastructure stack.\n' +
@@ -49,22 +50,30 @@ const overrides = {
   }),
 };
 
+// Create the stack name early so we can use it in configuration
+const environmentName = customStackName || 'Dev';
+const stackName = `TAK-${environmentName}-AuthInfra`; // Always use TAK prefix
+
 // Create configuration
 const config = createStackConfig(
   envType as 'prod' | 'dev-test',
-  stackName,
+  customStackName,
   Object.keys(overrides).length > 0 ? overrides : undefined,
   'TAK', // Always use TAK as project prefix
   'AuthInfra'
 );
 
 // Create the stack with environment configuration for AWS API calls only
-const resolvedStackName = `${config.projectName}-${stackName}-${config.componentName}`;
-const stack = new AuthInfraStack(app, resolvedStackName, {
+const stack = new AuthInfraStack(app, stackName, {
   stackConfig: config,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION || 'ap-southeast-2',
   },
-  description: 'TAK Authentication Layer - Authentik & LDAP',
+  tags: {
+    Project: ProjectName || 'TAK',
+    'Environment Name': environmentName,
+    Component: 'AuthInfra',
+    ManagedBy: 'CDK',    
+  }
 });

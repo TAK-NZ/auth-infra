@@ -70,14 +70,9 @@ export interface AuthentikServerProps {
   ldapBaseDn: string;
 
   /**
-   * Use config file flag
+   * Use authentik config file from S3 (default: false)
    */
-  useConfigFile: boolean;
-
-  /**
-   * Use environment file from S3 (default: false)
-   */
-  useEnvironmentFile: boolean;
+  useAuthentikConfigFile: boolean;
 
   /**
    * ECR repository ARN for ECR images
@@ -176,7 +171,7 @@ export class AuthentikServer extends Construct {
 
     // Create config bucket if using config file
     let configBucket;
-    if (props.useConfigFile) {
+    if (props.useAuthentikConfigFile) {
       configBucket = new s3.Bucket(this, 'ConfigBucket', {
         bucketName: `${id}-config`.toLowerCase(),
         removalPolicy: RemovalPolicy.RETAIN,
@@ -206,7 +201,7 @@ export class AuthentikServer extends Construct {
     });
 
     // Add task permissions
-    if (props.useConfigFile && configBucket) {
+    if (props.useAuthentikConfigFile && configBucket) {
       configBucket.grantRead(taskRole);
     }
 
@@ -291,8 +286,8 @@ export class AuthentikServer extends Construct {
       essential: true
     };
 
-    // Add environment files if S3 key is provided and useEnvironmentFile is enabled
-    if (props.envFileS3Key && props.useEnvironmentFile) {
+    // Add environment files if S3 key is provided and useAuthentikConfigFile is enabled
+    if (props.envFileS3Key && props.useAuthentikConfigFile) {
       containerDefinitionOptions = {
         ...containerDefinitionOptions,
         environmentFiles: [

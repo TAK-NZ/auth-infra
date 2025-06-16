@@ -132,7 +132,11 @@ export class Database extends Construct {
         port: 5432,
         serverlessV2MinCapacity: 0.5,
         serverlessV2MaxCapacity: 4,
-        instances: props.config.database.instanceCount,
+        writer: rds.ClusterInstance.serverlessV2('writer'),
+        readers: props.config.database.instanceCount > 1 ? 
+          Array.from({ length: props.config.database.instanceCount - 1 }, (_, i) => 
+            rds.ClusterInstance.serverlessV2(`reader${i + 1}`)
+          ) : [],
         parameterGroup,
         subnetGroup,
         vpc: props.vpc,
@@ -154,6 +158,12 @@ export class Database extends Construct {
       });
     } else {
       // Provisioned instances configuration
+      const instanceType = ec2.InstanceType.of(
+        ec2.InstanceClass.T4G,
+        props.config.database.instanceClass.includes('large') ? ec2.InstanceSize.LARGE :
+        ec2.InstanceSize.MEDIUM
+      );
+
       this.cluster = new rds.DatabaseCluster(this, 'DBCluster', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
           version: rds.AuroraPostgresEngineVersion.VER_17_4
@@ -161,25 +171,30 @@ export class Database extends Construct {
         credentials: rds.Credentials.fromSecret(this.masterSecret),
         defaultDatabaseName: 'authentik',
         port: 5432,
-        instanceProps: {
-          instanceType: ec2.InstanceType.of(
-            ec2.InstanceClass.T4G,
-            props.config.database.instanceClass.includes('large') ? ec2.InstanceSize.LARGE :
-            ec2.InstanceSize.MEDIUM
-          ),
-          vpcSubnets: {
-            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
-          },
-          vpc: props.vpc,
-          securityGroups: props.securityGroups,
+        writer: rds.ClusterInstance.provisioned('writer', {
+          instanceType,
           enablePerformanceInsights: props.config.database.enablePerformanceInsights,
           performanceInsightRetention: props.config.database.enablePerformanceInsights ? 
             rds.PerformanceInsightRetention.MONTHS_6 : 
             undefined
-        },
-        instances: props.config.database.instanceCount,
+        }),
+        readers: props.config.database.instanceCount > 1 ? 
+          Array.from({ length: props.config.database.instanceCount - 1 }, (_, i) => 
+            rds.ClusterInstance.provisioned(`reader${i + 1}`, {
+              instanceType,
+              enablePerformanceInsights: props.config.database.enablePerformanceInsights,
+              performanceInsightRetention: props.config.database.enablePerformanceInsights ? 
+                rds.PerformanceInsightRetention.MONTHS_6 : 
+                undefined
+            })
+          ) : [],
         parameterGroup,
         subnetGroup,
+        vpc: props.vpc,
+        vpcSubnets: {
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+        },
+        securityGroups: props.securityGroups,
         storageEncrypted: true,
         storageEncryptionKey: props.kmsKey,
         backup: {
