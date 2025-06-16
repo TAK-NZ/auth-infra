@@ -49,6 +49,11 @@ export class SecretsManager extends Construct {
   public readonly adminUserToken: secretsmanager.Secret;
 
   /**
+   * The LDAP service user secret
+   */
+  public readonly ldapServiceUser: secretsmanager.Secret;
+
+  /**
    * The LDAP token secret
    */
   public readonly ldapToken: secretsmanager.Secret;
@@ -91,6 +96,19 @@ export class SecretsManager extends Construct {
       }
     });
 
+    // Create LDAP service user
+    this.ldapServiceUser = new secretsmanager.Secret(this, 'AuthentikLDAPServiceUser', {
+      description: `Authentik: LDAP Service User`,
+      secretName: `${props.stackName}/Authentik/LDAP-Service-User`,
+      encryptionKey: props.kmsKey,
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({ username: 'ldapservice' }),
+        generateStringKey: 'password',
+        excludePunctuation: true,
+        passwordLength: 32
+      }
+    });
+
     // Create LDAP token (initially with placeholder value)
     this.ldapToken = new secretsmanager.Secret(this, 'AuthentikLDAPToken', {
       description: `Authentik: LDAP Outpost Token`,
@@ -113,6 +131,11 @@ export class SecretsManager extends Construct {
     new CfnOutput(this, 'AuthentikAdminUserTokenArn', {
       value: this.adminUserToken.secretArn,
       description: 'Authentik admin user token ARN'
+    });
+
+    new CfnOutput(this, 'AuthentikLDAPServiceUserArn', {
+      value: this.ldapServiceUser.secretArn,
+      description: 'Authentik LDAP service user ARN'
     });
 
     new CfnOutput(this, 'AuthentikLDAPTokenArn', {

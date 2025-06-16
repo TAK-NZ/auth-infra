@@ -1,9 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { StackProps } from 'aws-cdk-lib';
-import { AuthInfraConfig } from './stack-config';
+import { AuthInfraConfigResult } from './stack-config';
 export interface AuthInfraStackProps extends StackProps {
-    stackConfig: AuthInfraConfig;
+    configResult: AuthInfraConfigResult;
 }
 /**
  * Main CDK stack for the TAK Auth Infrastructure
@@ -30,9 +30,4 @@ export declare class AuthInfraStack extends cdk.Stack {
      * @returns The created security group
      */
     private createRedisSecurityGroup;
-    /**
-     * Get the current git SHA for tagging resources
-     * @returns Current git SHA or 'development' if unable to determine
-     */
-    private getGitSha;
 }

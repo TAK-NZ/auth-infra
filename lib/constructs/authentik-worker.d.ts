@@ -2,7 +2,7 @@
  * Authentik Worker Construct - Worker container configuration for background tasks
  */
 import { Construct } from 'constructs';
-import { aws_ec2 as ec2, aws_ecs as ecs, aws_secretsmanager as secretsmanager, aws_s3 as s3 } from 'aws-cdk-lib';
+import { aws_ec2 as ec2, aws_ecs as ecs, aws_secretsmanager as secretsmanager, aws_s3 as s3, aws_kms as kms } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
  * Properties for the Authentik Worker construct
@@ -53,6 +53,18 @@ export interface AuthentikWorkerProps {
      */
     enableExecute: boolean;
     /**
+     * Authentik admin user email
+     */
+    adminUserEmail: string;
+    /**
+     * LDAP base DN
+     */
+    ldapBaseDn: string;
+    /**
+     * LDAP service user secret
+     */
+    ldapServiceUser: secretsmanager.ISecret;
+    /**
      * Database secret
      */
     dbSecret: secretsmanager.ISecret;
@@ -73,6 +85,14 @@ export interface AuthentikWorkerProps {
      */
     secretKey: secretsmanager.ISecret;
     /**
+     * Admin user password secret
+     */
+    adminUserPassword: secretsmanager.ISecret;
+    /**
+     * Admin user token secret
+     */
+    adminUserToken: secretsmanager.ISecret;
+    /**
      * EFS file system ID
      */
     efsId: string;
@@ -84,6 +104,10 @@ export interface AuthentikWorkerProps {
      * EFS custom templates access point ID
      */
     efsCustomTemplatesAccessPointId: string;
+    /**
+     * KMS key for secrets encryption
+     */
+    kmsKey: kms.IKey;
 }
 /**
  * CDK construct for the Authentik worker container
@@ -97,5 +121,11 @@ export declare class AuthentikWorker extends Construct {
      * The ECS service for Authentik worker
      */
     readonly ecsService: ecs.FargateService;
+    /**
+     * Converts an ECR repository ARN to a proper ECR repository URI for Docker images
+     * @param ecrArn - ECR repository ARN (e.g., "arn:aws:ecr:region:account:repository/repo-name")
+     * @returns ECR repository URI (e.g., "account.dkr.ecr.region.amazonaws.com/repo-name")
+     */
+    private convertEcrArnToRepositoryUri;
     constructor(scope: Construct, id: string, props: AuthentikWorkerProps);
 }

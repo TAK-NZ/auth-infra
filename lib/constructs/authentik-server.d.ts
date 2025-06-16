@@ -2,7 +2,7 @@
  * Authentik Server Construct - Server container and ECS service configuration
  */
 import { Construct } from 'constructs';
-import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager, aws_s3 as s3 } from 'aws-cdk-lib';
+import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager, aws_s3 as s3, aws_kms as kms } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
  * Properties for the Authentik Server construct
@@ -97,6 +97,10 @@ export interface AuthentikServerProps {
      */
     ldapToken: secretsmanager.ISecret;
     /**
+     * KMS key for secrets encryption
+     */
+    kmsKey: kms.IKey;
+    /**
      * EFS file system ID
      */
     efsId: string;
@@ -121,6 +125,12 @@ export declare class AuthentikServer extends Construct {
      * The ECS service for Authentik server
      */
     readonly ecsService: ecs.FargateService;
+    /**
+     * Converts an ECR repository ARN to a proper ECR repository URI for Docker images
+     * @param ecrArn - ECR repository ARN (e.g., "arn:aws:ecr:region:account:repository/repo-name")
+     * @returns ECR repository URI (e.g., "account.dkr.ecr.region.amazonaws.com/repo-name")
+     */
+    private convertEcrArnToRepositoryUri;
     constructor(scope: Construct, id: string, props: AuthentikServerProps);
     /**
      * Create and register a target group for this service

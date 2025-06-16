@@ -9,6 +9,7 @@ import {
   CfnOutput,
   RemovalPolicy
 } from 'aws-cdk-lib';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 
 /**
  * Properties for the EFS construct
@@ -18,6 +19,11 @@ export interface EfsProps {
    * Environment name (e.g. 'prod', 'dev', etc.)
    */
   environment: string;
+
+  /**
+   * Environment configuration
+   */
+  config: AuthInfraEnvironmentConfig;
 
   /**
    * VPC for deployment
@@ -85,16 +91,31 @@ export class Efs extends Construct {
       'Allow NFS access from VPC'
     );
 
-    // Create the EFS file system
-    this.fileSystem = new efs.FileSystem(this, 'EFS', {
+    // Determine removal policy and throughput mode from environment configuration
+    // Production: RETAIN policy to preserve data, Dev/Test: DESTROY to avoid costs
+    const efsRemovalPolicy = props.config.efs.removalPolicy;
+    const throughputMode = props.config.efs.throughputMode === 'provisioned' 
+      ? efs.ThroughputMode.PROVISIONED 
+      : efs.ThroughputMode.BURSTING;
+
+    // Build EFS configuration object
+    const efsConfig: any = {
       vpc: props.vpc,
       encrypted: true,
       kmsKey: props.kmsKey,
       performanceMode: efs.PerformanceMode.GENERAL_PURPOSE,
-      throughputMode: efs.ThroughputMode.BURSTING,
+      throughputMode: throughputMode,
       securityGroup: efsSecurityGroup,
-      removalPolicy: RemovalPolicy.RETAIN
-    });
+      removalPolicy: efsRemovalPolicy
+    };
+
+    // Add provisioned throughput if specified
+    if (props.config.efs.throughputMode === 'provisioned' && props.config.efs.provisionedThroughput) {
+      efsConfig.provisionedThroughputPerSecond = props.config.efs.provisionedThroughput;
+    }
+
+    // Create the EFS file system
+    this.fileSystem = new efs.FileSystem(this, 'EFS', efsConfig);
 
     // Create access point for media files
     this.mediaAccessPoint = new efs.AccessPoint(this, 'EFSAccessPointMedia', {

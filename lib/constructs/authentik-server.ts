@@ -10,8 +10,12 @@ import {
   aws_secretsmanager as secretsmanager,
   aws_s3 as s3,
   aws_iam as iam,
+  aws_kms as kms,
   Duration,
-  RemovalPolicy
+  RemovalPolicy,
+  Fn,
+  Token,
+  Stack
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 
@@ -130,6 +134,11 @@ export interface AuthentikServerProps {
   ldapToken: secretsmanager.ISecret;
 
   /**
+   * KMS key for secrets encryption
+   */
+  kmsKey: kms.IKey;
+
+  /**
    * EFS file system ID
    */
   efsId: string;
@@ -158,6 +167,35 @@ export class AuthentikServer extends Construct {
    * The ECS service for Authentik server
    */
   public readonly ecsService: ecs.FargateService;
+
+  /**
+   * Converts an ECR repository ARN to a proper ECR repository URI for Docker images
+   * @param ecrArn - ECR repository ARN (e.g., "arn:aws:ecr:region:account:repository/repo-name")
+   * @returns ECR repository URI (e.g., "account.dkr.ecr.region.amazonaws.com/repo-name")
+   */
+  private convertEcrArnToRepositoryUri(ecrArn: string): string {
+    // Handle CDK tokens (unresolved references)
+    if (Token.isUnresolved(ecrArn)) {
+      // For tokens, we need to use CDK's Fn.sub to perform the conversion at deploy time
+      return Fn.sub('${Account}.dkr.ecr.${Region}.amazonaws.com/${RepoName}', {
+        Account: Fn.select(4, Fn.split(':', ecrArn)),
+        Region: Fn.select(3, Fn.split(':', ecrArn)),
+        RepoName: Fn.select(1, Fn.split('/', Fn.select(5, Fn.split(':', ecrArn))))
+      });
+    }
+    
+    // Parse ARN: arn:aws:ecr:region:account:repository/repo-name
+    const arnParts = ecrArn.split(':');
+    if (arnParts.length !== 6 || !arnParts[5].startsWith('repository/')) {
+      throw new Error(`Invalid ECR repository ARN format: ${ecrArn}`);
+    }
+    
+    const region = arnParts[3];
+    const account = arnParts[4];
+    const repositoryName = arnParts[5].replace('repository/', '');
+    
+    return `${account}.dkr.ecr.${region}.amazonaws.com/${repositoryName}`;
+  }
 
   constructor(scope: Construct, id: string, props: AuthentikServerProps) {
     super(scope, id);
@@ -195,10 +233,28 @@ export class AuthentikServer extends Construct {
     props.adminUserPassword.grantRead(executionRole);
     props.adminUserToken.grantRead(executionRole);
 
+    // Grant explicit KMS permissions for secrets decryption
+    props.kmsKey.grantDecrypt(executionRole);
+
     // Create task role
     const taskRole = new iam.Role(this, 'TaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
+
+    // Add EFS permissions for task role
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'elasticfilesystem:ClientMount',
+        'elasticfilesystem:ClientWrite',
+        'elasticfilesystem:ClientRootAccess'
+      ],
+      resources: [
+        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:file-system/${props.efsId}`,
+        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:access-point/${props.efsMediaAccessPointId}`,
+        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:access-point/${props.efsCustomTemplatesAccessPointId}`
+      ]
+    }));
 
     // Add task permissions
     if (props.useAuthentikConfigFile && configBucket) {
@@ -243,10 +299,14 @@ export class AuthentikServer extends Construct {
       }
     });
 
-    // Determine Docker image - Always use ECR
-    const dockerImage = props.ecrRepositoryArn 
-      ? `${props.ecrRepositoryArn}:auth-infra-server-${props.gitSha}`
-      : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
+    // Determine Docker image - ECR repository is required
+    if (!props.ecrRepositoryArn) {
+      throw new Error('ecrRepositoryArn is required for Authentik Server deployment');
+    }
+    
+    // Convert ECR ARN to proper repository URI
+    const ecrRepositoryUri = this.convertEcrArnToRepositoryUri(props.ecrRepositoryArn);
+    const dockerImage = `${ecrRepositoryUri}:auth-infra-server-${props.gitSha}`;
 
     // Prepare container definition options
     let containerDefinitionOptions: ecs.ContainerDefinitionOptions = {
@@ -255,29 +315,21 @@ export class AuthentikServer extends Construct {
         streamPrefix: 'authentik-server',
         logGroup
       }),
+      command: ['server'], // Server command
       environment: {
-        AUTHENTIK_REDIS__HOST: props.redisHostname,
         AUTHENTIK_POSTGRESQL__HOST: props.dbHostname,
-        AUTHENTIK_POSTGRESQL__NAME: 'authentik',
         AUTHENTIK_POSTGRESQL__USER: 'authentik',
-        AUTHENTIK_BOOTSTRAP_EMAIL: props.adminUserEmail,
-        AUTHENTIK_BOOTSTRAP_FLOW_AUTHENTICATION: 'default-authentication-flow',
-        AUTHENTIK_BOOTSTRAP_FLOW_AUTHORIZATION: 'default-provider-authorization-explicit-consent',
-        AUTHENTIK_BOOTSTRAP_FLOW_ENROLLMENT: 'default-enrollment-flow',
-        AUTHENTIK_BOOTSTRAP_FLOW_INVALIDATION: 'default-invalidation-flow',
-        AUTHENTIK_BOOTSTRAP_FLOW_RECOVERY: 'default-recovery-flow',
-        AUTHENTIK_BOOTSTRAP_FLOW_UNENROLLMENT: 'default-unenrollment-flow',
-        AUTHENTIK_BOOTSTRAP_TOKEN: props.adminUserToken.secretValueFromJson('SecretString').toString(),
-        AUTHENTIK_LDAP__BIND_DN_TEMPLATE: props.ldapBaseDn
+        AUTHENTIK_REDIS__HOST: props.redisHostname,
+        AUTHENTIK_REDIS__TLS: 'True',
+        AUTHENTIK_REDIS__TLS_REQS: 'required',
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__PASSWORD: ecs.Secret.fromSecretsManager(props.dbSecret, 'password'),
         AUTHENTIK_REDIS__PASSWORD: ecs.Secret.fromSecretsManager(props.redisAuthToken),
         AUTHENTIK_SECRET_KEY: ecs.Secret.fromSecretsManager(props.secretKey),
-        AUTHENTIK_BOOTSTRAP_PASSWORD: ecs.Secret.fromSecretsManager(props.adminUserPassword, 'password')
       },
       healthCheck: {
-        command: ['CMD-SHELL', 'curl -f http://localhost:9000/healthz/ || exit 1'],
+        command: ['CMD', 'ak', 'healthcheck'],
         interval: Duration.seconds(30),
         timeout: Duration.seconds(5),
         retries: 3,
@@ -326,7 +378,8 @@ export class AuthentikServer extends Construct {
       securityGroups: [props.ecsSecurityGroup],
       enableExecuteCommand: props.enableExecute,
       assignPublicIp: false,
-      circuitBreaker: { rollback: true }
+      // Disable circuit breaker temporarily to get better error information
+      // circuitBreaker: { rollback: true }
     });
 
     // Add auto scaling

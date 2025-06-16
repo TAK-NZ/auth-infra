@@ -40,6 +40,7 @@ export interface AuthInfraEnvironmentConfig {
   efs: {
     throughputMode: 'bursting' | 'provisioned';  // EFS throughput mode
     provisionedThroughput?: number;               // Provisioned throughput (MB/s)
+    removalPolicy: cdk.RemovalPolicy;            // EFS file system removal policy
   };
 
   // General infrastructure settings
@@ -85,6 +86,7 @@ export const DEV_TEST_CONFIG: AuthInfraEnvironmentConfig = {
   },
   efs: {
     throughputMode: 'bursting',          // Bursting mode for cost optimization
+    removalPolicy: cdk.RemovalPolicy.DESTROY,  // Delete EFS in dev/test environments
   },
   general: {
     removalPolicy: cdk.RemovalPolicy.DESTROY,  // Allow resource deletion
@@ -126,6 +128,7 @@ export const PROD_CONFIG: AuthInfraEnvironmentConfig = {
   },
   efs: {
     throughputMode: 'bursting',          // Bursting mode for most workloads
+    removalPolicy: cdk.RemovalPolicy.RETAIN,  // Retain EFS in production environments
   },
   general: {
     removalPolicy: cdk.RemovalPolicy.RETAIN,  // Protect production resources

@@ -2,7 +2,7 @@
  * LDAP Construct - CDK implementation of the Authentik LDAP outpost
  */
 import { Construct } from 'constructs';
-import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager, aws_s3 as s3 } from 'aws-cdk-lib';
+import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager, aws_s3 as s3, aws_kms as kms } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
  * Properties for the LDAP construct
@@ -56,6 +56,10 @@ export interface LdapProps {
      * LDAP token secret from Authentik
      */
     ldapToken: secretsmanager.ISecret;
+    /**
+     * KMS key for secrets encryption
+     */
+    kmsKey: kms.IKey;
 }
 /**
  * CDK construct for the LDAP outpost service
@@ -77,5 +81,11 @@ export declare class Ldap extends Construct {
      * DNS name of the load balancer
      */
     readonly dnsName: string;
+    /**
+     * Converts an ECR repository ARN to a proper ECR repository URI for Docker images
+     * @param ecrArn - ECR repository ARN (e.g., "arn:aws:ecr:region:account:repository/repo-name")
+     * @returns ECR repository URI (e.g., "account.dkr.ecr.region.amazonaws.com/repo-name")
+     */
+    private convertEcrArnToRepositoryUri;
     constructor(scope: Construct, id: string, props: LdapProps);
 }

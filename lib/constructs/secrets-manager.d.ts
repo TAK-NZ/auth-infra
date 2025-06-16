@@ -37,6 +37,10 @@ export declare class SecretsManager extends Construct {
      */
     readonly adminUserToken: secretsmanager.Secret;
     /**
+     * The LDAP service user secret
+     */
+    readonly ldapServiceUser: secretsmanager.Secret;
+    /**
      * The LDAP token secret
      */
     readonly ldapToken: secretsmanager.Secret;

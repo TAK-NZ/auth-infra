@@ -9,8 +9,12 @@ import {
   aws_secretsmanager as secretsmanager,
   aws_s3 as s3,
   aws_iam as iam,
+  aws_kms as kms,
   Duration,
-  RemovalPolicy
+  RemovalPolicy,
+  Fn,
+  Token,
+  Stack
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 
@@ -74,6 +78,21 @@ export interface AuthentikWorkerProps {
   enableExecute: boolean;
 
   /**
+   * Authentik admin user email
+   */
+  adminUserEmail: string;
+
+  /**
+   * LDAP base DN
+   */
+  ldapBaseDn: string;
+
+  /**
+   * LDAP service user secret
+   */
+  ldapServiceUser: secretsmanager.ISecret;
+
+  /**
    * Database secret
    */
   dbSecret: secretsmanager.ISecret;
@@ -99,6 +118,16 @@ export interface AuthentikWorkerProps {
   secretKey: secretsmanager.ISecret;
 
   /**
+   * Admin user password secret
+   */
+  adminUserPassword: secretsmanager.ISecret;
+
+  /**
+   * Admin user token secret
+   */
+  adminUserToken: secretsmanager.ISecret;
+
+  /**
    * EFS file system ID
    */
   efsId: string;
@@ -112,6 +141,11 @@ export interface AuthentikWorkerProps {
    * EFS custom templates access point ID
    */
   efsCustomTemplatesAccessPointId: string;
+
+  /**
+   * KMS key for secrets encryption
+   */
+  kmsKey: kms.IKey;
 }
 
 /**
@@ -127,6 +161,35 @@ export class AuthentikWorker extends Construct {
    * The ECS service for Authentik worker
    */
   public readonly ecsService: ecs.FargateService;
+
+  /**
+   * Converts an ECR repository ARN to a proper ECR repository URI for Docker images
+   * @param ecrArn - ECR repository ARN (e.g., "arn:aws:ecr:region:account:repository/repo-name")
+   * @returns ECR repository URI (e.g., "account.dkr.ecr.region.amazonaws.com/repo-name")
+   */
+  private convertEcrArnToRepositoryUri(ecrArn: string): string {
+    // Handle CDK tokens (unresolved references)
+    if (Token.isUnresolved(ecrArn)) {
+      // For tokens, we need to use CDK's Fn.sub to perform the conversion at deploy time
+      return Fn.sub('${Account}.dkr.ecr.${Region}.amazonaws.com/${RepoName}', {
+        Account: Fn.select(4, Fn.split(':', ecrArn)),
+        Region: Fn.select(3, Fn.split(':', ecrArn)),
+        RepoName: Fn.select(1, Fn.split('/', Fn.select(5, Fn.split(':', ecrArn))))
+      });
+    }
+    
+    // Parse ARN: arn:aws:ecr:region:account:repository/repo-name
+    const arnParts = ecrArn.split(':');
+    if (arnParts.length !== 6 || !arnParts[5].startsWith('repository/')) {
+      throw new Error(`Invalid ECR repository ARN format: ${ecrArn}`);
+    }
+    
+    const region = arnParts[3];
+    const account = arnParts[4];
+    const repositoryName = arnParts[5].replace('repository/', '');
+    
+    return `${account}.dkr.ecr.${region}.amazonaws.com/${repositoryName}`;
+  }
 
   constructor(scope: Construct, id: string, props: AuthentikWorkerProps) {
     super(scope, id);
@@ -150,11 +213,32 @@ export class AuthentikWorker extends Construct {
     props.dbSecret.grantRead(executionRole);
     props.redisAuthToken.grantRead(executionRole);
     props.secretKey.grantRead(executionRole);
+    props.ldapServiceUser.grantRead(executionRole);
+    props.adminUserPassword.grantRead(executionRole);
+    props.adminUserToken.grantRead(executionRole);
+
+    // Grant explicit KMS permissions for secrets decryption
+    props.kmsKey.grantDecrypt(executionRole);
 
     // Create task role
     const taskRole = new iam.Role(this, 'WorkerTaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
+
+    // Add EFS permissions for task role
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'elasticfilesystem:ClientMount',
+        'elasticfilesystem:ClientWrite',
+        'elasticfilesystem:ClientRootAccess'
+      ],
+      resources: [
+        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:file-system/${props.efsId}`,
+        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:access-point/${props.efsMediaAccessPointId}`,
+        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:access-point/${props.efsCustomTemplatesAccessPointId}`
+      ]
+    }));
 
     // Grant read access to S3 configuration bucket for environment files
     if (props.envFileS3Key) {
@@ -195,9 +279,13 @@ export class AuthentikWorker extends Construct {
     });
 
     // Determine Docker image - Always use ECR (workers use the same image as server)
-    const dockerImage = props.ecrRepositoryArn 
-      ? `${props.ecrRepositoryArn}:auth-infra-server-${props.gitSha}`
-      : 'placeholder-for-local-ecr'; // Fallback for backwards compatibility
+    if (!props.ecrRepositoryArn) {
+      throw new Error('ECR repository ARN is required for Authentik Worker deployment');
+    }
+    
+    // Convert ECR ARN to proper repository URI
+    const ecrRepositoryUri = this.convertEcrArnToRepositoryUri(props.ecrRepositoryArn);
+    const dockerImage = `${ecrRepositoryUri}:auth-infra-server-${props.gitSha}`;
 
     // Prepare container definition options for worker
     let containerDefinitionOptions: ecs.ContainerDefinitionOptions = {
@@ -206,17 +294,33 @@ export class AuthentikWorker extends Construct {
         streamPrefix: 'authentik-worker',
         logGroup
       }),
-      command: ['ak', 'worker'], // Worker command
+      command: ['worker'], // Worker command
       environment: {
-        AUTHENTIK_REDIS__HOST: props.redisHostname,
         AUTHENTIK_POSTGRESQL__HOST: props.dbHostname,
-        AUTHENTIK_POSTGRESQL__NAME: 'authentik',
         AUTHENTIK_POSTGRESQL__USER: 'authentik',
+        AUTHENTIK_REDIS__HOST: props.redisHostname,
+        AUTHENTIK_REDIS__TLS: 'True',
+        AUTHENTIK_REDIS__TLS_REQS: 'required',
+        // Add essential bootstrap configuration for worker
+        AUTHENTIK_BOOTSTRAP_EMAIL: props.adminUserEmail,
+        AUTHENTIK_BOOTSTRAP_LDAP_BASEDN: props.ldapBaseDn,
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__PASSWORD: ecs.Secret.fromSecretsManager(props.dbSecret, 'password'),
         AUTHENTIK_REDIS__PASSWORD: ecs.Secret.fromSecretsManager(props.redisAuthToken),
         AUTHENTIK_SECRET_KEY: ecs.Secret.fromSecretsManager(props.secretKey),
+        AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME: ecs.Secret.fromSecretsManager(props.ldapServiceUser, 'username'),
+        AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD: ecs.Secret.fromSecretsManager(props.ldapServiceUser, 'password'),
+        AUTHENTIK_BOOTSTRAP_PASSWORD: ecs.Secret.fromSecretsManager(props.adminUserPassword, 'password'),
+        AUTHENTIK_BOOTSTRAP_TOKEN: ecs.Secret.fromSecretsManager(props.adminUserToken)
+      },
+      // Add basic health check for worker (workers don't expose HTTP endpoints)
+      healthCheck: {
+        command: ['CMD', 'ak', 'healthceck'],
+        interval: Duration.seconds(30),
+        timeout: Duration.seconds(10),
+        retries: 3,
+        startPeriod: Duration.seconds(60)
       },
       essential: true
     };
@@ -254,7 +358,8 @@ export class AuthentikWorker extends Construct {
       securityGroups: [props.ecsSecurityGroup],
       enableExecuteCommand: props.enableExecute,
       assignPublicIp: false,
-      circuitBreaker: { rollback: true }
+      // Disable circuit breaker temporarily to get better error information
+      // circuitBreaker: { rollback: true }
     });
 
     // Add auto scaling for workers

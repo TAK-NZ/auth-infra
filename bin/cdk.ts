@@ -2,6 +2,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { AuthInfraStack } from '../lib/auth-infra-stack';
 import { createStackConfig } from '../lib/stack-config';
+import { getGitSha, validateEnvType, validateRequiredParams } from '../lib/utils';
 
 const app = new cdk.App();
 
@@ -11,22 +12,15 @@ const customStackName = app.node.tryGetContext('stackName');
 const envType = app.node.tryGetContext('envType') || 'dev-test';
 const authentikAdminUserEmail = app.node.tryGetContext('authentikAdminUserEmail');
 
-// Validate envType
-if (envType !== 'prod' && envType !== 'dev-test') {
-  throw new Error(`Invalid envType: ${envType}. Must be 'prod' or 'dev-test'`);
-}
+// Calculate Git SHA for ECR image tagging
+const gitSha = app.node.tryGetContext('gitSha') || getGitSha();
 
-// Validate required parameters
-if (!customStackName) {
-  throw new Error('stackName is required. Use --context stackName=YourStackName\n' +
-    'This parameter is mandatory as it determines the correct CloudFormation export names\n' +
-    'for importing VPC and other resources from the base infrastructure stack.\n' +
-    'Examples: --context stackName=Demo (for TAK-Demo-BaseInfra exports)');
-}
-
-if (!authentikAdminUserEmail || authentikAdminUserEmail.trim() === '') {
-  throw new Error('authentikAdminUserEmail is required. Use --context authentikAdminUserEmail=user@example.com');
-}
+// Validate parameters
+validateEnvType(envType);
+validateRequiredParams({
+  stackName: customStackName,
+  authentikAdminUserEmail
+});
 
 // Read optional context overrides
 const overrides = {
@@ -51,11 +45,14 @@ const overrides = {
 };
 
 // Create the stack name early so we can use it in configuration
-const environmentName = customStackName || 'Dev';
-const stackName = `TAK-${environmentName}-AuthInfra`; // Always use TAK prefix
+const stackName = `TAK-${customStackName}-AuthInfra`; // Always use TAK prefix
+
+// Set calculated values in CDK context for the stack to use
+app.node.setContext('calculatedGitSha', gitSha);
+app.node.setContext('validatedAuthentikAdminUserEmail', authentikAdminUserEmail);
 
 // Create configuration
-const config = createStackConfig(
+const configResult = createStackConfig(
   envType as 'prod' | 'dev-test',
   customStackName,
   Object.keys(overrides).length > 0 ? overrides : undefined,
@@ -65,14 +62,14 @@ const config = createStackConfig(
 
 // Create the stack with environment configuration for AWS API calls only
 const stack = new AuthInfraStack(app, stackName, {
-  stackConfig: config,
+  configResult: configResult,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION || 'ap-southeast-2',
   },
   tags: {
     Project: ProjectName || 'TAK',
-    'Environment Name': environmentName,
+    Environment: customStackName,
     Component: 'AuthInfra',
     ManagedBy: 'CDK',    
   }

@@ -75,7 +75,7 @@ export class Database extends Construct {
     // Create the master secret
     this.masterSecret = new secretsmanager.Secret(this, 'DBMasterSecret', {
       description: `${id}: PostgreSQL Master Password`,
-      secretName: `${props.stackName}/Database/secret`,
+      secretName: `${props.stackName}/Database/Master-Password`,
       encryptionKey: props.kmsKey,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'authentik' }),

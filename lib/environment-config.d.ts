@@ -32,6 +32,7 @@ export interface AuthInfraEnvironmentConfig {
     efs: {
         throughputMode: 'bursting' | 'provisioned';
         provisionedThroughput?: number;
+        removalPolicy: cdk.RemovalPolicy;
     };
     general: {
         removalPolicy: cdk.RemovalPolicy;

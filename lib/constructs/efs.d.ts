@@ -3,6 +3,7 @@
  */
 import { Construct } from 'constructs';
 import { aws_efs as efs, aws_ec2 as ec2, aws_kms as kms } from 'aws-cdk-lib';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
  * Properties for the EFS construct
  */
@@ -11,6 +12,10 @@ export interface EfsProps {
      * Environment name (e.g. 'prod', 'dev', etc.)
      */
     environment: string;
+    /**
+     * Environment configuration
+     */
+    config: AuthInfraEnvironmentConfig;
     /**
      * VPC for deployment
      */
