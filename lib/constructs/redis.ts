@@ -6,11 +6,11 @@ import {
   aws_elasticache as elasticache,
   aws_ec2 as ec2,
   aws_secretsmanager as secretsmanager,
-  aws_kms as kms,
-  CfnOutput
+  aws_kms as kms
 } from 'aws-cdk-lib';
 
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig } from '../construct-configs';
 
 /**
  * Properties for the Redis construct
@@ -32,14 +32,9 @@ export interface RedisProps {
   config: AuthInfraEnvironmentConfig;
 
   /**
-   * VPC for deployment
+   * Infrastructure configuration (VPC, KMS, security groups)
    */
-  vpc: ec2.IVpc;
-
-  /**
-   * KMS key for encryption
-   */
-  kmsKey: kms.IKey;
+  infrastructure: InfrastructureConfig;
 
   /**
    * Security groups for Redis access
@@ -73,7 +68,7 @@ export class Redis extends Construct {
     this.authToken = new secretsmanager.Secret(this, 'RedisAuthToken', {
       description: `${id}: Auth Token`,
       secretName: `${props.stackName}/Redis/Auth-Token`,
-      encryptionKey: props.kmsKey,
+      encryptionKey: props.infrastructure.kmsKey,
       generateSecretString: {
         excludePunctuation: true,
         passwordLength: 64
@@ -83,13 +78,13 @@ export class Redis extends Construct {
     // Create subnet group
     const subnetGroup = new elasticache.CfnSubnetGroup(this, 'RedisSubnetGroup', {
       description: `${id}-redis-subnets`,
-      subnetIds: props.vpc.privateSubnets.map(subnet => subnet.subnetId)
+      subnetIds: props.infrastructure.vpc.privateSubnets.map(subnet => subnet.subnetId)
     });
 
     // Create security group
-    const securityGroup = new ec2.SecurityGroup(this, 'RedisSecurityGroup', {
-      vpc: props.vpc,
-      description: `${id} Redis Security Group`,
+    const securityGroup = new ec2.SecurityGroup(this, '-SecurityGroup', {
+      vpc: props.infrastructure.vpc,
+      description: `${id} Security Group`,
       allowAllOutbound: false
     });
 
@@ -110,7 +105,7 @@ export class Redis extends Construct {
       transitEncryptionEnabled: true,
       transitEncryptionMode: 'required',
       authToken: this.authToken.secretValue.unsafeUnwrap(),
-      kmsKeyId: props.kmsKey.keyArn,
+      kmsKeyId: props.infrastructure.kmsKey.keyArn,
       cacheNodeType: props.config.redis.nodeType,
       cacheSubnetGroupName: subnetGroup.ref,
       engine: 'valkey',
@@ -125,16 +120,5 @@ export class Redis extends Construct {
 
     // Store the hostname
     this.hostname = this.replicationGroup.attrPrimaryEndPointAddress;
-
-    // Create outputs
-    new CfnOutput(this, 'RedisEndpoint', {
-      value: this.hostname,
-      description: 'Redis cluster endpoint'
-    });
-
-    new CfnOutput(this, 'RedisAuthTokenArn', {
-      value: this.authToken.secretArn,
-      description: 'Redis auth token secret ARN'
-    });
   }
 }

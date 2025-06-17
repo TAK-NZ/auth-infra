@@ -21,6 +21,7 @@ import {
   Fn
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig, DeploymentConfig, TokenConfig, AuthentikApplicationConfig } from '../construct-configs';
 
 /**
  * Properties for the LDAP Token Retriever construct
@@ -37,44 +38,24 @@ export interface LdapTokenRetrieverProps {
   config: AuthInfraEnvironmentConfig;
 
   /**
-   * KMS key for encryption
+   * Infrastructure configuration (KMS key)
    */
-  kmsKey: kms.IKey;
+  infrastructure: InfrastructureConfig;
 
   /**
-   * Authentik host URL
+   * Deployment configuration (Git SHA)
    */
-  authentikHost: string;
+  deployment: DeploymentConfig;
 
   /**
-   * Name of the LDAP outpost in Authentik
+   * Token configuration (secrets, services, outpost name)
    */
-  outpostName?: string;
+  token: TokenConfig;
 
   /**
-   * Admin token secret for accessing Authentik API
+   * Application configuration (Authentik host)
    */
-  adminTokenSecret: secretsmanager.ISecret;
-
-  /**
-   * LDAP token secret to update
-   */
-  ldapTokenSecret: secretsmanager.ISecret;
-
-  /**
-   * Git SHA for versioning
-   */
-  gitSha: string;
-
-  /**
-   * Authentik server ECS service (to ensure it's running before token retrieval)
-   */
-  authentikServerService: ecs.FargateService;
-
-  /**
-   * Authentik worker ECS service (to ensure it's running before token retrieval)
-   */
-  authentikWorkerService: ecs.FargateService;
+  application: AuthentikApplicationConfig;
 }
 
 /**
@@ -119,8 +100,8 @@ export class LdapTokenRetriever extends Construct {
                 'secretsmanager:GetSecretValue'
               ],
               resources: [
-                props.adminTokenSecret.secretArn,
-                props.ldapTokenSecret.secretArn,
+                props.token.adminTokenSecret.secretArn,
+                props.token.ldapTokenSecret.secretArn,
                 // Legacy secret patterns for backward compatibility
                 `arn:aws:secretsmanager:${Stack.of(this).region}:${Stack.of(this).account}:secret:coe-auth-*`,
                 `arn:aws:secretsmanager:${Stack.of(this).region}:${Stack.of(this).account}:secret:${props.environment}/authentik-admin-token*`,
@@ -138,7 +119,7 @@ export class LdapTokenRetriever extends Construct {
                 'kms:GenerateDataKeyWithoutPlaintext',
                 'kms:DescribeKey'
               ],
-              resources: [props.kmsKey.keyArn]
+              resources: [props.infrastructure.kmsKey.keyArn]
             })
           ]
         })
@@ -376,21 +357,21 @@ exports.handler = async (event, context) => {
       serviceToken: this.lambdaFunction.functionArn,
       properties: {
         Environment: props.environment,
-        AuthentikHost: props.authentikHost,
-        OutpostName: props.outpostName || 'LDAP',
-        AdminSecretName: props.adminTokenSecret.secretName,
-        LDAPSecretName: props.ldapTokenSecret.secretName,
+        AuthentikHost: props.application.authentikHost,
+        OutpostName: props.token.outpostName || 'LDAP',
+        AdminSecretName: props.token.adminTokenSecret.secretName,
+        LDAPSecretName: props.token.ldapTokenSecret.secretName,
         // Add a timestamp to force updates on every deployment
-        UpdateTimestamp: props.gitSha
+        UpdateTimestamp: props.deployment.gitSha
       }
     });
 
     // Add dependency to ensure the custom resource runs after the secrets are created
-    this.customResource.node.addDependency(props.adminTokenSecret);
-    this.customResource.node.addDependency(props.ldapTokenSecret);
+    this.customResource.node.addDependency(props.token.adminTokenSecret);
+    this.customResource.node.addDependency(props.token.ldapTokenSecret);
     
     // Add dependency to ensure the custom resource runs after ECS services are deployed
-    this.customResource.node.addDependency(props.authentikServerService);
-    this.customResource.node.addDependency(props.authentikWorkerService);
+    this.customResource.node.addDependency(props.token.authentikServerService);
+    this.customResource.node.addDependency(props.token.authentikWorkerService);
   }
 }

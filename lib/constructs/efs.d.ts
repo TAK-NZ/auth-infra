@@ -2,8 +2,9 @@
  * EFS Construct - CDK implementation of the Elastic File System
  */
 import { Construct } from 'constructs';
-import { aws_efs as efs, aws_ec2 as ec2, aws_kms as kms } from 'aws-cdk-lib';
+import { aws_efs as efs, aws_ec2 as ec2 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig } from '../construct-configs';
 /**
  * Properties for the EFS construct
  */
@@ -17,17 +18,13 @@ export interface EfsProps {
      */
     config: AuthInfraEnvironmentConfig;
     /**
-     * VPC for deployment
+     * Infrastructure configuration (VPC, KMS)
      */
-    vpc: ec2.IVpc;
+    infrastructure: InfrastructureConfig;
     /**
      * VPC CIDR block for security group rules
      */
     vpcCidrBlock: string;
-    /**
-     * KMS key for encryption
-     */
-    kmsKey: kms.IKey;
     /**
      * Security groups for EFS access
      */

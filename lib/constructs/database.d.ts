@@ -2,8 +2,9 @@
  * Database Construct - CDK implementation of the PostgreSQL database
  */
 import { Construct } from 'constructs';
-import { aws_rds as rds, aws_ec2 as ec2, aws_secretsmanager as secretsmanager, aws_kms as kms } from 'aws-cdk-lib';
+import { aws_rds as rds, aws_ec2 as ec2, aws_secretsmanager as secretsmanager } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig } from '../construct-configs';
 /**
  * Properties for the Database construct
  */
@@ -21,13 +22,9 @@ export interface DatabaseProps {
      */
     config: AuthInfraEnvironmentConfig;
     /**
-     * VPC for deployment
+     * Infrastructure configuration (VPC, KMS, security groups)
      */
-    vpc: ec2.IVpc;
-    /**
-     * KMS key for encryption
-     */
-    kmsKey: kms.IKey;
+    infrastructure: InfrastructureConfig;
     /**
      * Security groups for database access
      */

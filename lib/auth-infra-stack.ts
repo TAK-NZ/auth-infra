@@ -20,6 +20,18 @@ import { Route53 } from './constructs/route53';
 import { Route53Authentik } from './constructs/route53-authentik';
 import { EcrImageValidator } from './constructs/ecr-image-validator';
 
+// Configuration imports
+import type {
+  InfrastructureConfig,
+  SecretsConfig,
+  StorageConfig,
+  DeploymentConfig,
+  AuthentikApplicationConfig,
+  NetworkConfig,
+  ValidationConfig,
+  TokenConfig
+} from './construct-configs';
+
 // Utility imports
 import { registerOutputs } from './outputs';
 import { createBaseImportValue, BASE_EXPORT_NAMES } from './cloudformation-imports';
@@ -134,8 +146,29 @@ export class AuthInfraStack extends cdk.Stack {
     // =================
 
     // Security Groups
-    const ecsSecurityGroup = this.createEcsSecurityGroup(vpc);
-    const dbSecurityGroup = this.createDbSecurityGroup(vpc, ecsSecurityGroup);
+    const authentikSecurityGroup = this.createAuthentikSecurityGroup(vpc, stackNameComponent);
+    const ldapSecurityGroup = this.createLdapSecurityGroup(vpc, stackNameComponent);
+    const dbSecurityGroup = this.createDbSecurityGroup(vpc, authentikSecurityGroup);
+
+    // =================
+    // BUILD CONFIGURATION OBJECTS
+    // =================
+
+    // Build shared infrastructure config for Authentik services
+    const authentikInfrastructureConfig: InfrastructureConfig = {
+      vpc,
+      ecsSecurityGroup: authentikSecurityGroup,
+      ecsCluster,
+      kmsKey
+    };
+
+    // Build shared infrastructure config for LDAP services
+    const ldapInfrastructureConfig: InfrastructureConfig = {
+      vpc,
+      ecsSecurityGroup: ldapSecurityGroup,
+      ecsCluster,
+      kmsKey
+    };
 
     // =================
     // CORE INFRASTRUCTURE
@@ -145,7 +178,7 @@ export class AuthInfraStack extends cdk.Stack {
     const secretsManager = new SecretsManager(this, 'SecretsManager', {
       environment: stackNameComponent,
       stackName: resolvedStackName,
-      kmsKey
+      infrastructure: authentikInfrastructureConfig
     });
 
     // Database
@@ -153,8 +186,7 @@ export class AuthInfraStack extends cdk.Stack {
       environment: stackNameComponent,
       stackName: resolvedStackName,
       config: environmentConfig,
-      vpc,
-      kmsKey,
+      infrastructure: authentikInfrastructureConfig,
       securityGroups: [dbSecurityGroup]
     });
 
@@ -163,23 +195,21 @@ export class AuthInfraStack extends cdk.Stack {
       environment: stackNameComponent,
       stackName: resolvedStackName,
       config: environmentConfig,
-      vpc,
-      kmsKey,
-      securityGroups: [ecsSecurityGroup]
+      infrastructure: authentikInfrastructureConfig,
+      securityGroups: [authentikSecurityGroup]
     });
 
     // EFS
     const efs = new Efs(this, 'EFS', {
       environment: stackNameComponent,
       config: environmentConfig,
-      vpc,
+      infrastructure: authentikInfrastructureConfig,
       vpcCidrBlock: Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4)),
-      kmsKey,
-      allowAccessFrom: [ecsSecurityGroup]
+      allowAccessFrom: [authentikSecurityGroup]
     });
 
     // =================
-    // IMAGE VALIDATION
+    // IMAGE VALIDATION SETUP
     // =================
 
     // Validate required ECR images exist before deployment
@@ -187,12 +217,86 @@ export class AuthInfraStack extends cdk.Stack {
       `auth-infra-server-${gitSha}`,
       `auth-infra-ldap-${gitSha}`
     ];
-    
-    const ecrValidator = new EcrImageValidator(this, 'EcrImageValidator', {
+
+    // =================
+    // BUILD CONFIGURATION OBJECTS
+    // =================
+
+    // Build shared config objects
+    const secretsConfig: SecretsConfig = {
+      database: database.masterSecret,
+      redisAuthToken: redis.authToken,
+      authentik: {
+        secretKey: secretsManager.secretKey,
+        adminUserPassword: secretsManager.adminUserPassword,
+        adminUserToken: secretsManager.adminUserToken,
+        ldapToken: secretsManager.ldapToken,
+        ldapServiceUser: secretsManager.ldapServiceUser
+      }
+    };
+
+    const storageConfig: StorageConfig = {
+      s3: {
+        configBucket: s3ConfBucket,
+        envFileUri: envFileS3Uri,
+        envFileKey: envFileS3Key
+      },
+      efs: {
+        fileSystemId: efs.fileSystem.fileSystemId,
+        mediaAccessPointId: efs.mediaAccessPoint.accessPointId,
+        customTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId
+      }
+    };
+
+    const deploymentConfig: DeploymentConfig = {
+      gitSha: gitSha,
       ecrRepositoryArn: ecrRepository,
-      requiredImageTags: requiredImageTags,
+      enableExecute: enableExecute,
+      useConfigFile: useAuthentikConfigFile
+    };
+
+    const applicationConfig: AuthentikApplicationConfig = {
+      adminUserEmail: authentikAdminUserEmail,
+      ldapBaseDn: ldapBaseDn,
+      database: {
+        hostname: database.hostname
+      },
+      redis: {
+        hostname: redis.hostname
+      },
+      authentikHost: `https://${hostnameAuthentik}.${hostedZoneName}`
+    };
+
+    // Build network config for DNS and load balancers
+    const authentikNetworkConfig: NetworkConfig = {
+      hostedZoneId: hostedZoneId,
+      hostedZoneName: hostedZoneName,
+      sslCertificateArn: sslCertificateArn,
+      hostname: hostnameAuthentik
+    };
+
+    const ldapNetworkConfig: NetworkConfig = {
+      hostedZoneId: hostedZoneId,
+      hostedZoneName: hostedZoneName,
+      sslCertificateArn: sslCertificateArn,
+      hostname: hostnameLdap
+    };
+
+    // Build validation config for ECR images
+    const validationConfig: ValidationConfig = {
+      requiredImageTags: requiredImageTags
+    };
+
+    // =================
+    // IMAGE VALIDATION
+    // =================
+
+    // Create ECR validator using config objects
+    const ecrValidator = new EcrImageValidator(this, 'EcrImageValidator', {
       environment: stackNameComponent,
-      config: environmentConfig
+      config: environmentConfig,
+      deployment: deploymentConfig,
+      validation: validationConfig
     });
 
     // =================
@@ -203,71 +307,35 @@ export class AuthInfraStack extends cdk.Stack {
     const authentikELB = new Elb(this, 'AuthentikELB', {
       environment: stackNameComponent,
       config: environmentConfig,
-      vpc,
-      sslCertificateArn: sslCertificateArn
+      infrastructure: authentikInfrastructureConfig,
+      network: authentikNetworkConfig
     });
 
     // Authentik Server
     const authentikServer = new AuthentikServer(this, 'AuthentikServer', {
       environment: stackNameComponent,
       config: environmentConfig,
-      vpc,
-      ecsSecurityGroup,
-      ecsCluster,
-      s3ConfBucket,
-      envFileS3Uri: envFileS3Uri,
-      envFileS3Key: envFileS3Key,
-      adminUserEmail: authentikAdminUserEmail,
-      ldapBaseDn: ldapBaseDn,
-      useAuthentikConfigFile: useAuthentikConfigFile,
-      ecrRepositoryArn: ecrRepository,
-      gitSha: gitSha,
-      enableExecute: enableExecute,
-      dbSecret: database.masterSecret,
-      dbHostname: database.hostname,
-      redisAuthToken: redis.authToken,
-      redisHostname: redis.hostname,
-      secretKey: secretsManager.secretKey,
-      adminUserPassword: secretsManager.adminUserPassword,
-      adminUserToken: secretsManager.adminUserToken,
-      ldapToken: secretsManager.ldapToken,
-      kmsKey,
-      efsId: efs.fileSystem.fileSystemId,
-      efsMediaAccessPointId: efs.mediaAccessPoint.accessPointId,
-      efsCustomTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId
+      infrastructure: authentikInfrastructureConfig,
+      secrets: secretsConfig,
+      storage: storageConfig,
+      deployment: deploymentConfig,
+      application: applicationConfig
     });
 
     // Ensure Authentik Server waits for ECR image validation
     authentikServer.node.addDependency(ecrValidator);
 
-    // Authentik Worker
+    // Authentik Worker  
+    // Update authentication host for worker after Route53 setup
+    const authentikWorkerConfig = { ...applicationConfig };
     const authentikWorker = new AuthentikWorker(this, 'AuthentikWorker', {
       environment: stackNameComponent,
       config: environmentConfig,
-      vpc,
-      ecsSecurityGroup,
-      ecsCluster,
-      s3ConfBucket,
-      envFileS3Key: envFileS3Key,
-      useAuthentikConfigFile: useAuthentikConfigFile,
-      adminUserEmail: authentikAdminUserEmail,
-      ldapBaseDn: ldapBaseDn,
-      ldapServiceUser: secretsManager.ldapServiceUser,
-      ecrRepositoryArn: ecrRepository,
-      gitSha: gitSha,
-      enableExecute: enableExecute,
-      dbSecret: database.masterSecret,
-      dbHostname: database.hostname,
-      redisAuthToken: redis.authToken,
-      redisHostname: redis.hostname,
-      secretKey: secretsManager.secretKey,
-      adminUserPassword: secretsManager.adminUserPassword,
-      adminUserToken: secretsManager.adminUserToken,
-      kmsKey,
-      efsId: efs.fileSystem.fileSystemId,
-      efsMediaAccessPointId: efs.mediaAccessPoint.accessPointId,
-      efsCustomTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId,
-      authentikHost: `https://${hostnameAuthentik}.${hostedZoneName}`
+      infrastructure: authentikInfrastructureConfig,
+      secrets: secretsConfig,
+      storage: storageConfig,
+      deployment: deploymentConfig,
+      application: authentikWorkerConfig
     });
 
     // Ensure Authentik Worker waits for ECR image validation
@@ -284,9 +352,7 @@ export class AuthInfraStack extends cdk.Stack {
     const route53Authentik = new Route53Authentik(this, 'Route53Authentik', {
       environment: stackNameComponent,
       config: environmentConfig,
-      hostedZoneId: hostedZoneId,
-      hostedZoneName: hostedZoneName,
-      hostnameAuthentik: hostnameAuthentik,
+      network: authentikNetworkConfig,
       authentikLoadBalancer: authentikELB.loadBalancer
     });
 
@@ -294,35 +360,40 @@ export class AuthInfraStack extends cdk.Stack {
     // LDAP CONFIGURATION
     // =================
 
+    // Build token config for LDAP token retrieval
+    const tokenConfig: TokenConfig = {
+      outpostName: 'LDAP',
+      adminTokenSecret: secretsManager.adminUserToken,
+      ldapTokenSecret: secretsManager.ldapToken,
+      authentikServerService: authentikServer.ecsService,
+      authentikWorkerService: authentikWorker.ecsService
+    };
+
+    // Update application config with proper Authentik URL
+    const ldapApplicationConfig: AuthentikApplicationConfig = {
+      ...applicationConfig,
+      authentikHost: route53Authentik.getAuthentikUrl()
+    };
+
     // LDAP Token Retriever
     const ldapTokenRetriever = new LdapTokenRetriever(this, 'LdapTokenRetriever', {
       environment: stackNameComponent,
       config: environmentConfig,
-      kmsKey,
-      // Use proper FQDN that matches TLS certificate, not ELB DNS name
-      authentikHost: route53Authentik.getAuthentikUrl(),
-      outpostName: 'LDAP',
-      adminTokenSecret: secretsManager.adminUserToken,
-      ldapTokenSecret: secretsManager.ldapToken,
-      gitSha: gitSha,
-      authentikServerService: authentikServer.ecsService,
-      authentikWorkerService: authentikWorker.ecsService
+      infrastructure: authentikInfrastructureConfig,
+      deployment: deploymentConfig,
+      token: tokenConfig,
+      application: ldapApplicationConfig
     });
 
     // LDAP
     const ldap = new Ldap(this, 'LDAP', {
       environment: stackNameComponent,
       config: environmentConfig,
-      vpc,
-      ecsSecurityGroup,
-      ecsCluster,
-      s3ConfBucket,
-      sslCertificateArn: sslCertificateArn,
-      authentikHost: route53Authentik.authentikFqdn,
-      ecrRepositoryArn: ecrRepository,
-      gitSha: gitSha,
-      enableExecute: enableExecute,
-      kmsKey,
+      infrastructure: ldapInfrastructureConfig,
+      storage: storageConfig,
+      deployment: deploymentConfig,
+      network: ldapNetworkConfig,
+      application: ldapApplicationConfig,
       ldapToken: secretsManager.ldapToken
     });
 
@@ -343,9 +414,7 @@ export class AuthInfraStack extends cdk.Stack {
     const route53 = new Route53(this, 'Route53', {
       environment: stackNameComponent,
       config: environmentConfig,
-      hostedZoneId: hostedZoneId,
-      hostedZoneName: hostedZoneName,
-      hostnameLdap: hostnameLdap,
+      network: ldapNetworkConfig,
       ldapLoadBalancer: ldap.loadBalancer
     });
 
@@ -374,6 +443,8 @@ export class AuthInfraStack extends cdk.Stack {
       authentikAlbDns: authentikELB.loadBalancer.loadBalancerDnsName,
       authentikUrl: `https://${authentikELB.dnsName}`,
       ldapNlbDns: ldap.loadBalancer.loadBalancerDnsName,
+      ldapEndpoint: `ldap://${ldap.dnsName}:389`,
+      ldapsEndpoint: `ldaps://${ldap.dnsName}:636`,
       ldapTokenRetrieverLambdaArn: ldapTokenRetriever.lambdaFunction.functionArn
     });
   }
@@ -383,7 +454,73 @@ export class AuthInfraStack extends cdk.Stack {
   // =================
 
   /**
-   * Create security group for ECS tasks
+   * Create security group for Authentik ECS tasks (Server/Worker)
+   * @param vpc The VPC to create the security group in
+   * @param stackNameComponent The stack name component for imports
+   * @returns The created security group
+   */
+  private createAuthentikSecurityGroup(vpc: ec2.IVpc, stackNameComponent: string): ec2.SecurityGroup {
+    const authentikSecurityGroup = new ec2.SecurityGroup(this, 'AuthentikSecurityGroup', {
+      vpc,
+      description: 'Security group for Authentik ECS tasks (Server/Worker)',
+      allowAllOutbound: true
+    });
+
+    // Allow HTTP/HTTPS traffic to Authentik tasks
+    authentikSecurityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(80),
+      'Allow HTTP traffic'
+    );
+
+    authentikSecurityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      'Allow HTTPS traffic'
+    );
+
+    // Allow Authentik application traffic (port 9000) from VPC CIDR
+    authentikSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
+      ec2.Port.tcp(9000),
+      'Allow Authentik traffic from VPC'
+    );
+
+    return authentikSecurityGroup;
+  }
+
+  /**
+   * Create security group for LDAP ECS tasks
+   * @param vpc The VPC to create the security group in
+   * @param stackNameComponent The stack name component for imports
+   * @returns The created security group
+   */
+  private createLdapSecurityGroup(vpc: ec2.IVpc, stackNameComponent: string): ec2.SecurityGroup {
+    const ldapSecurityGroup = new ec2.SecurityGroup(this, 'LdapSecurityGroup', {
+      vpc,
+      description: 'Security group for LDAP ECS tasks',
+      allowAllOutbound: true
+    });
+
+    // Allow LDAP traffic (port 3389) from VPC CIDR
+    ldapSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
+      ec2.Port.tcp(3389),
+      'Allow LDAP traffic from VPC'
+    );
+
+    // Allow LDAPS traffic (port 6636) from VPC CIDR
+    ldapSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
+      ec2.Port.tcp(6636),
+      'Allow LDAPS traffic from VPC'
+    );
+
+    return ldapSecurityGroup;
+  }
+
+  /**
+   * Create security group for ECS tasks (Legacy - keeping for backward compatibility)
    * @param vpc The VPC to create the security group in
    * @returns The created security group
    */

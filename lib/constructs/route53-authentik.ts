@@ -12,6 +12,7 @@ import {
   aws_elasticloadbalancingv2 as elbv2
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { NetworkConfig } from '../construct-configs';
 
 /**
  * Properties for the Route53 Authentik construct
@@ -28,19 +29,9 @@ export interface Route53AuthentikProps {
   config: AuthInfraEnvironmentConfig;
 
   /**
-   * Hosted Zone ID imported from base infrastructure
+   * Network configuration (DNS zones, hostname, load balancer)
    */
-  hostedZoneId: string;
-
-  /**
-   * Hosted Zone Name imported from base infrastructure
-   */
-  hostedZoneName: string;
-
-  /**
-   * Hostname for Authentik service (creates A/AAAA alias records)
-   */
-  hostnameAuthentik: string;
+  network: NetworkConfig;
 
   /**
    * Authentik Application Load Balancer for A/AAAA alias records
@@ -77,17 +68,17 @@ export class Route53Authentik extends Construct {
 
     // Import the hosted zone from base infrastructure
     this.hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, 'HostedZone', {
-      hostedZoneId: props.hostedZoneId,
-      zoneName: props.hostedZoneName
+      hostedZoneId: props.network.hostedZoneId,
+      zoneName: props.network.hostedZoneName
     });
 
     // Calculate full domain name
-    this.authentikFqdn = `${props.hostnameAuthentik}.${props.hostedZoneName}`;
+    this.authentikFqdn = `${props.network.hostname}.${props.network.hostedZoneName}`;
 
     // Create A record alias for Authentik (IPv4)
     this.authentikARecord = new route53.ARecord(this, 'AuthentikARecord', {
       zone: this.hostedZone,
-      recordName: props.hostnameAuthentik,
+      recordName: props.network.hostname,
       target: route53.RecordTarget.fromAlias(
         new targets.LoadBalancerTarget(props.authentikLoadBalancer)
       ),
@@ -97,7 +88,7 @@ export class Route53Authentik extends Construct {
     // Create AAAA record alias for Authentik (IPv6)
     this.authentikAAAARecord = new route53.AaaaRecord(this, 'AuthentikAAAARecord', {
       zone: this.hostedZone,
-      recordName: props.hostnameAuthentik,
+      recordName: props.network.hostname,
       target: route53.RecordTarget.fromAlias(
         new targets.LoadBalancerTarget(props.authentikLoadBalancer)
       ),

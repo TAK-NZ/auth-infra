@@ -5,10 +5,10 @@ import { Construct } from 'constructs';
 import {
   aws_ec2 as ec2,
   aws_elasticloadbalancingv2 as elbv2,
-  Duration,
-  CfnOutput
+  Duration
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig, NetworkConfig } from '../construct-configs';
 
 /**
  * Properties for the ELB construct
@@ -25,14 +25,14 @@ export interface ElbProps {
   config: AuthInfraEnvironmentConfig;
 
   /**
-   * VPC for deployment
+   * Infrastructure configuration (VPC, security groups, etc.)
    */
-  vpc: ec2.IVpc;
+  infrastructure: InfrastructureConfig;
 
   /**
-   * SSL certificate ARN for HTTPS
+   * Network configuration (SSL certs, hostnames, etc.)
    */
-  sslCertificateArn: string;
+  network: NetworkConfig;
 }
 
 /**
@@ -59,7 +59,7 @@ export class Elb extends Construct {
 
     // Create load balancer with dualstack IP addressing
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'ALB', {
-      vpc: props.vpc,
+      vpc: props.infrastructure.vpc,
       internetFacing: true,
       ipAddressType: elbv2.IpAddressType.DUAL_STACK
     });
@@ -79,23 +79,12 @@ export class Elb extends Construct {
     // Create HTTPS listener
     this.httpsListener = this.loadBalancer.addListener('HttpsListener', {
       port: 443,
-      certificates: [{ certificateArn: props.sslCertificateArn }],
+      certificates: [{ certificateArn: props.network.sslCertificateArn }],
       open: true
     });
 
     // Store the DNS name
     this.dnsName = this.loadBalancer.loadBalancerDnsName;
-
-    // Export outputs
-    new CfnOutput(this, 'LoadBalancerDnsName', {
-      value: this.dnsName,
-      description: 'The DNS name of the load balancer'
-    });
-
-    new CfnOutput(this, 'AuthentikURL', {
-      value: `https://${this.dnsName}/`,
-      description: 'The URL of the Authentik service'
-    });
   }
 
   /**

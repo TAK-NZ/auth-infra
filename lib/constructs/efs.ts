@@ -7,10 +7,10 @@ import {
   aws_ec2 as ec2,
   aws_kms as kms,
   aws_iam as iam,
-  CfnOutput,
   RemovalPolicy
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig } from '../construct-configs';
 
 /**
  * Properties for the EFS construct
@@ -27,19 +27,14 @@ export interface EfsProps {
   config: AuthInfraEnvironmentConfig;
 
   /**
-   * VPC for deployment
+   * Infrastructure configuration (VPC, KMS)
    */
-  vpc: ec2.IVpc;
+  infrastructure: InfrastructureConfig;
 
   /**
    * VPC CIDR block for security group rules
    */
   vpcCidrBlock: string;
-
-  /**
-   * KMS key for encryption
-   */
-  kmsKey: kms.IKey;
 
   /**
    * Security groups for EFS access
@@ -71,7 +66,7 @@ export class Efs extends Construct {
 
     // Create security group for EFS
     const efsSecurityGroup = new ec2.SecurityGroup(this, 'EFSMountTargetSecurityGroup', {
-      vpc: props.vpc,
+      vpc: props.infrastructure.vpc,
       description: 'EFS to Auth ECS Service',
       allowAllOutbound: false
     });
@@ -101,9 +96,9 @@ export class Efs extends Construct {
 
     // Build EFS configuration object with file system policy
     const efsConfig: any = {
-      vpc: props.vpc,
+      vpc: props.infrastructure.vpc,
       encrypted: true,
-      kmsKey: props.kmsKey,
+      kmsKey: props.infrastructure.kmsKey,
       performanceMode: efs.PerformanceMode.GENERAL_PURPOSE,
       throughputMode: throughputMode,
       securityGroup: efsSecurityGroup,
@@ -167,22 +162,6 @@ export class Efs extends Construct {
         ownerGid: '1000',
         permissions: '755'
       }
-    });
-
-    // Create outputs
-    new CfnOutput(this, 'EFSFileSystemId', {
-      value: this.fileSystem.fileSystemId,
-      description: 'EFS file system ID'
-    });
-
-    new CfnOutput(this, 'EFSMediaAccessPointId', {
-      value: this.mediaAccessPoint.accessPointId,
-      description: 'EFS media access point ID'
-    });
-
-    new CfnOutput(this, 'EFSCustomTemplatesAccessPointId', {
-      value: this.customTemplatesAccessPoint.accessPointId,
-      description: 'EFS custom templates access point ID'
     });
   }
 }

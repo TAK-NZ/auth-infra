@@ -10,6 +10,13 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { AuthentikServer } from '../lib/constructs/authentik-server';
 import { AuthentikWorker } from '../lib/constructs/authentik-worker';
 import { DEV_TEST_CONFIG } from '../lib/environment-config';
+import type {
+  InfrastructureConfig,
+  SecretsConfig,
+  StorageConfig,
+  DeploymentConfig,
+  AuthentikApplicationConfig
+} from '../lib/construct-configs';
 
 describe('EFS IAM Permissions', () => {
   let app: App;
@@ -56,35 +63,71 @@ describe('EFS IAM Permissions', () => {
     kmsKey = kms.Key.fromKeyArn(stack, 'TestKey', 'arn:aws:kms:us-west-2:123456789012:key/12345678-1234-1234-1234-123456789012');
   });
 
+  // Helper function to create test config objects
+  function createTestConfigs(mockSecrets: any, mockS3Bucket: s3.IBucket) {
+    const infrastructureConfig: InfrastructureConfig = {
+      vpc,
+      ecsSecurityGroup: securityGroup,
+      ecsCluster: cluster,
+      kmsKey
+    };
+
+    const secretsConfig: SecretsConfig = {
+      database: mockSecrets.dbSecret,
+      redisAuthToken: mockSecrets.redisSecret,
+      authentik: {
+        secretKey: mockSecrets.secretKey,
+        adminUserPassword: mockSecrets.adminPassword,
+        adminUserToken: mockSecrets.adminToken,
+        ldapToken: mockSecrets.ldapToken
+      }
+    };
+
+    const storageConfig: StorageConfig = {
+      s3: {
+        configBucket: mockS3Bucket
+      },
+      efs: {
+        fileSystemId: 'fs-12345',
+        mediaAccessPointId: 'fsap-media-12345',
+        customTemplatesAccessPointId: 'fsap-templates-12345'
+      }
+    };
+
+    const deploymentConfig: DeploymentConfig = {
+      gitSha: 'test-sha',
+      ecrRepositoryArn: 'arn:aws:ecr:us-west-2:123456789012:repository/test-repo',
+      enableExecute: false,
+      useConfigFile: false
+    };
+
+    const applicationConfig: AuthentikApplicationConfig = {
+      adminUserEmail: 'admin@example.com',
+      ldapBaseDn: 'DC=example,DC=com',
+      database: {
+        hostname: 'test-db.example.com'
+      },
+      redis: {
+        hostname: 'test-redis.example.com'
+      }
+    };
+
+    return { infrastructureConfig, secretsConfig, storageConfig, deploymentConfig, applicationConfig };
+  }
+
   test('AuthentikServer should have EFS permissions in task role', () => {
     const mockSecrets = createMockSecrets(stack);
     const mockS3Bucket = s3.Bucket.fromBucketArn(stack, 'TestBucket', 'arn:aws:s3:::test-bucket');
+    const configs = createTestConfigs(mockSecrets, mockS3Bucket);
 
     const server = new AuthentikServer(stack, 'TestAuthentikServer', {
       environment: 'test',
       config: DEV_TEST_CONFIG,
-      vpc,
-      ecsSecurityGroup: securityGroup,
-      ecsCluster: cluster,
-      s3ConfBucket: mockS3Bucket,
-      adminUserEmail: 'admin@example.com',
-      ldapBaseDn: 'DC=example,DC=com',
-      useAuthentikConfigFile: false,
-      gitSha: 'test-sha',
-      enableExecute: false,
-      dbSecret: mockSecrets.dbSecret,
-      dbHostname: 'test-db.example.com',
-      redisAuthToken: mockSecrets.redisSecret,
-      redisHostname: 'test-redis.example.com',
-      secretKey: mockSecrets.secretKey,
-      adminUserPassword: mockSecrets.adminPassword,
-      adminUserToken: mockSecrets.adminToken,
-      ldapToken: mockSecrets.ldapToken,
-      kmsKey,
-      efsId: 'fs-12345',
-      efsMediaAccessPointId: 'fsap-media-12345',
-      efsCustomTemplatesAccessPointId: 'fsap-templates-12345',
-      ecrRepositoryArn: 'arn:aws:ecr:us-west-2:123456789012:repository/test-repo'
+      infrastructure: configs.infrastructureConfig,
+      secrets: configs.secretsConfig,
+      storage: configs.storageConfig,
+      deployment: configs.deploymentConfig,
+      application: configs.applicationConfig
     });
 
     // Check that task definition was created
@@ -97,33 +140,28 @@ describe('EFS IAM Permissions', () => {
   test('AuthentikWorker should have EFS permissions in task role', () => {
     const mockSecrets = createMockSecrets(stack);
     const mockS3Bucket = s3.Bucket.fromBucketArn(stack, 'TestWorkerBucket', 'arn:aws:s3:::test-worker-bucket');
+    const configs = createTestConfigs(mockSecrets, mockS3Bucket);
+    
+    // Add authentik host to worker config
+    const workerApplicationConfig = {
+      ...configs.applicationConfig,
+      authentikHost: 'https://account.example.com'
+    };
 
     const worker = new AuthentikWorker(stack, 'TestAuthentikWorker', {
       environment: 'test',
       config: DEV_TEST_CONFIG,
-      vpc,
-      ecsSecurityGroup: securityGroup,
-      ecsCluster: cluster,
-      s3ConfBucket: mockS3Bucket,
-      adminUserEmail: 'admin@example.com',
-      ldapBaseDn: 'DC=example,DC=com',
-      ldapServiceUser: mockSecrets.ldapServiceUser,
-      useAuthentikConfigFile: false,
-      gitSha: 'test-sha',
-      enableExecute: false,
-      dbSecret: mockSecrets.dbSecret,
-      dbHostname: 'test-db.example.com',
-      redisAuthToken: mockSecrets.redisSecret,
-      redisHostname: 'test-redis.example.com',
-      secretKey: mockSecrets.secretKey,
-      adminUserPassword: mockSecrets.adminPassword,
-      adminUserToken: mockSecrets.adminToken,
-      kmsKey,
-      efsId: 'fs-12345',
-      efsMediaAccessPointId: 'fsap-media-12345',
-      efsCustomTemplatesAccessPointId: 'fsap-templates-12345',
-      ecrRepositoryArn: 'arn:aws:ecr:us-west-2:123456789012:repository/test-repo',
-      authentikHost: 'https://account.example.com'
+      infrastructure: configs.infrastructureConfig,
+      secrets: {
+        ...configs.secretsConfig,
+        authentik: {
+          ...configs.secretsConfig.authentik,
+          ldapServiceUser: mockSecrets.ldapServiceUser
+        }
+      },
+      storage: configs.storageConfig,
+      deployment: configs.deploymentConfig,
+      application: workerApplicationConfig
     });
 
     // Check that task definition was created

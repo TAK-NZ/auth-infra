@@ -10,14 +10,19 @@ import {
   aws_secretsmanager as secretsmanager,
   aws_s3 as s3,
   aws_iam as iam,
-  aws_kms as kms,
   Duration,
-  CfnOutput,
   Fn,
   Token
 } from 'aws-cdk-lib';
 
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { 
+  InfrastructureConfig, 
+  StorageConfig, 
+  DeploymentConfig, 
+  NetworkConfig,
+  AuthentikApplicationConfig
+} from '../construct-configs';
 
 /**
  * Properties for the LDAP construct
@@ -34,59 +39,34 @@ export interface LdapProps {
   config: AuthInfraEnvironmentConfig;
 
   /**
-   * VPC for deployment
+   * Infrastructure configuration (VPC, security groups, ECS cluster, KMS)
    */
-  vpc: ec2.IVpc;
+  infrastructure: InfrastructureConfig;
 
   /**
-   * Security group for ECS tasks
+   * Storage configuration (S3 bucket)
    */
-  ecsSecurityGroup: ec2.SecurityGroup;
+  storage: StorageConfig;
 
   /**
-   * ECS cluster
+   * Deployment configuration (ECR repository, Git SHA, enable execute)
    */
-  ecsCluster: ecs.ICluster;
+  deployment: DeploymentConfig;
 
   /**
-   * S3 configuration bucket for environment files
+   * Network configuration (SSL certificate)
    */
-  s3ConfBucket: s3.IBucket;
+  network: NetworkConfig;
 
   /**
-   * SSL certificate ARN for LDAPS
+   * Application configuration (Authentik host)
    */
-  sslCertificateArn: string;
-
-  /**
-   * Authentik host URL
-   */
-  authentikHost: string;
-
-  /**
-   * ECR repository ARN for ECR images
-   */
-  ecrRepositoryArn?: string;
-
-  /**
-   * Git SHA for Docker image tagging
-   */
-  gitSha: string;
-
-  /**
-   * Allow SSH exec into container
-   */
-  enableExecute: boolean;
+  application: AuthentikApplicationConfig;
 
   /**
    * LDAP token secret from Authentik
    */
   ldapToken: secretsmanager.ISecret;
-
-  /**
-   * KMS key for secrets encryption
-   */
-  kmsKey: kms.IKey;
 }
 
 /**
@@ -154,7 +134,7 @@ export class Ldap extends Construct {
 
     // Create security group for NLB
     const nlbSecurityGroup = new ec2.SecurityGroup(this, 'NLBSecurityGroup', {
-      vpc: props.vpc,
+      vpc: props.infrastructure.vpc,
       description: 'Allow 389 and 636 Access to NLB',
       allowAllOutbound: false
     });
@@ -174,7 +154,7 @@ export class Ldap extends Construct {
 
     // Create network load balancer
     this.loadBalancer = new elbv2.NetworkLoadBalancer(this, 'NLB', {
-      vpc: props.vpc,
+      vpc: props.infrastructure.vpc,
       internetFacing: false,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
@@ -190,7 +170,7 @@ export class Ldap extends Construct {
     const ldapsListener = this.loadBalancer.addListener('LdapsListener', {
       port: 636,
       protocol: elbv2.Protocol.TLS,
-      certificates: [{ certificateArn: props.sslCertificateArn }]
+      certificates: [{ certificateArn: props.network.sslCertificateArn }]
     });
 
     // Create task execution role
@@ -205,7 +185,7 @@ export class Ldap extends Construct {
     props.ldapToken.grantRead(executionRole);
 
     // Grant explicit KMS permissions for secrets decryption
-    props.kmsKey.grantDecrypt(executionRole);
+    props.infrastructure.kmsKey.grantDecrypt(executionRole);
 
     // Create task role
     const taskRole = new iam.Role(this, 'TaskRole', {
@@ -221,13 +201,13 @@ export class Ldap extends Construct {
     });
 
     // Determine Docker image - ECR repository is required
-    if (!props.ecrRepositoryArn) {
+    if (!props.deployment.ecrRepositoryArn) {
       throw new Error('ecrRepositoryArn is required for Authentik LDAP deployment');
     }
     
     // Convert ECR ARN to proper repository URI  
-    const ecrRepositoryUri = this.convertEcrArnToRepositoryUri(props.ecrRepositoryArn);
-    const dockerImage = `${ecrRepositoryUri}:auth-infra-ldap-${props.gitSha}`;
+    const ecrRepositoryUri = this.convertEcrArnToRepositoryUri(props.deployment.ecrRepositoryArn);
+    const dockerImage = `${ecrRepositoryUri}:auth-infra-ldap-${props.deployment.gitSha}`;
 
     // Create container definition
     const container = this.taskDefinition.addContainer('AuthentikLdap', {
@@ -237,7 +217,7 @@ export class Ldap extends Construct {
         logGroup
       }),
       environment: {
-        AUTHENTIK_HOST: `https://${props.authentikHost}/`,
+        AUTHENTIK_HOST: `https://${props.application.authentikHost}/`,
         AUTHENTIK_INSECURE: 'false'
       },
       secrets: {
@@ -262,18 +242,18 @@ export class Ldap extends Construct {
 
     // Create ECS service
     this.ecsService = new ecs.FargateService(this, 'Service', {
-      cluster: props.ecsCluster,
+      cluster: props.infrastructure.ecsCluster,
       taskDefinition: this.taskDefinition,
       desiredCount: props.config.ecs.desiredCount,
-      securityGroups: [props.ecsSecurityGroup],
-      enableExecuteCommand: props.enableExecute,
+      securityGroups: [props.infrastructure.ecsSecurityGroup],
+      enableExecuteCommand: props.deployment.enableExecute,
       assignPublicIp: false,
       circuitBreaker: { rollback: true }
     });
 
     // Create target groups for LDAP and LDAPS
     const ldapTargetGroup = new elbv2.NetworkTargetGroup(this, 'LdapTargetGroup', {
-      vpc: props.vpc,
+      vpc: props.infrastructure.vpc,
       targetType: elbv2.TargetType.IP,
       port: 3389,
       protocol: elbv2.Protocol.TCP,
@@ -285,7 +265,7 @@ export class Ldap extends Construct {
     });
 
     const ldapsTargetGroup = new elbv2.NetworkTargetGroup(this, 'LdapsTargetGroup', {
-      vpc: props.vpc,
+      vpc: props.infrastructure.vpc,
       targetType: elbv2.TargetType.IP,
       port: 6636,
       protocol: elbv2.Protocol.TCP,
@@ -311,21 +291,5 @@ export class Ldap extends Construct {
 
     // Store the DNS name for output
     this.dnsName = this.loadBalancer.loadBalancerDnsName;
-
-    // Export outputs
-    new CfnOutput(this, 'LoadBalancerDnsName', {
-      value: this.dnsName,
-      description: 'The DNS name of the LDAP load balancer'
-    });
-
-    new CfnOutput(this, 'LdapEndpoint', {
-      value: `ldap://${this.dnsName}:389`,
-      description: 'The LDAP endpoint URL'
-    });
-
-    new CfnOutput(this, 'LdapsEndpoint', {
-      value: `ldaps://${this.dnsName}:636`,
-      description: 'The LDAPS endpoint URL'  
-    });
   }
 }

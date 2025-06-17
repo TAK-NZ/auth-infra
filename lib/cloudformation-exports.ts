@@ -20,6 +20,8 @@ export const AUTH_EXPORT_NAMES = {
   AUTHENTIK_ALB_DNS: 'Authentik-ALB-DNS',
   AUTHENTIK_URL: 'Authentik-URL',
   LDAP_NLB_DNS: 'LDAP-NLB-DNS',
+  LDAP_ENDPOINT: 'LDAP-Endpoint',
+  LDAPS_ENDPOINT: 'LDAPS-Endpoint',
   LDAP_TOKEN_RETRIEVER_LAMBDA_ARN: 'LDAP-TokenRetriever-Lambda-ARN'
 } as const;
 

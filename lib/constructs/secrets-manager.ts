@@ -5,9 +5,10 @@ import { Construct } from 'constructs';
 import {
   aws_secretsmanager as secretsmanager,
   aws_kms as kms,
-  CfnOutput,
   SecretValue
 } from 'aws-cdk-lib';
+
+import type { InfrastructureConfig } from '../construct-configs';
 
 /**
  * Properties for the SecretsManager construct
@@ -24,9 +25,9 @@ export interface SecretsManagerProps {
   stackName: string;
 
   /**
-   * KMS key for encryption
+   * Infrastructure configuration (KMS key)
    */
-  kmsKey: kms.IKey;
+  infrastructure: InfrastructureConfig;
 }
 
 /**
@@ -65,7 +66,7 @@ export class SecretsManager extends Construct {
     this.secretKey = new secretsmanager.Secret(this, 'AuthentikSecretKey', {
       description: `Authentik: Secret Key`,
       secretName: `${props.stackName}/Authentik/Secret-Key`,
-      encryptionKey: props.kmsKey,
+      encryptionKey: props.infrastructure.kmsKey,
       generateSecretString: {
         excludePunctuation: true,
         passwordLength: 64
@@ -76,7 +77,7 @@ export class SecretsManager extends Construct {
     this.adminUserPassword = new secretsmanager.Secret(this, 'AuthentikAdminUserPassword', {
       description: `Authentik: Admin Password`,
       secretName: `${props.stackName}/Authentik/Admin-Password`,
-      encryptionKey: props.kmsKey,
+      encryptionKey: props.infrastructure.kmsKey,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'akadmin' }),
         generateStringKey: 'password',
@@ -89,7 +90,7 @@ export class SecretsManager extends Construct {
     this.adminUserToken = new secretsmanager.Secret(this, 'AuthentikAdminUserToken', {
       description: `Authentik: Admin API Token`,
       secretName: `${props.stackName}/Authentik/Admin-API-Token`,
-      encryptionKey: props.kmsKey,
+      encryptionKey: props.infrastructure.kmsKey,
       generateSecretString: {
         excludePunctuation: true,
         passwordLength: 64
@@ -100,7 +101,7 @@ export class SecretsManager extends Construct {
     this.ldapServiceUser = new secretsmanager.Secret(this, 'AuthentikLDAPServiceUser', {
       description: `Authentik: LDAP Service User`,
       secretName: `${props.stackName}/Authentik/LDAP-Service-User`,
-      encryptionKey: props.kmsKey,
+      encryptionKey: props.infrastructure.kmsKey,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'ldapservice' }),
         generateStringKey: 'password',
@@ -113,34 +114,8 @@ export class SecretsManager extends Construct {
     this.ldapToken = new secretsmanager.Secret(this, 'AuthentikLDAPToken', {
       description: `Authentik: LDAP Outpost Token`,
       secretName: `${props.stackName}/Authentik/LDAP-Token`,
-      encryptionKey: props.kmsKey,
+      encryptionKey: props.infrastructure.kmsKey,
       secretStringValue: SecretValue.unsafePlainText('replace-me') // Will be updated manually later
-    });
-
-    // Create outputs
-    new CfnOutput(this, 'AuthentikSecretKeyArn', {
-      value: this.secretKey.secretArn,
-      description: 'Authentik secret key ARN'
-    });
-
-    new CfnOutput(this, 'AuthentikAdminUserPasswordArn', {
-      value: this.adminUserPassword.secretArn,
-      description: 'Authentik admin user password ARN'
-    });
-
-    new CfnOutput(this, 'AuthentikAdminUserTokenArn', {
-      value: this.adminUserToken.secretArn,
-      description: 'Authentik admin user token ARN'
-    });
-
-    new CfnOutput(this, 'AuthentikLDAPServiceUserArn', {
-      value: this.ldapServiceUser.secretArn,
-      description: 'Authentik LDAP service user ARN'
-    });
-
-    new CfnOutput(this, 'AuthentikLDAPTokenArn', {
-      value: this.ldapToken.secretArn,
-      description: 'Authentik LDAP token ARN'
     });
   }
 }

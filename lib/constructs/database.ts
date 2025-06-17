@@ -10,10 +10,10 @@ import {
   aws_kms as kms,
   aws_logs as logs,
   Duration,
-  RemovalPolicy,
-  CfnOutput
+  RemovalPolicy
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig } from '../construct-configs';
 
 /**
  * Properties for the Database construct
@@ -35,14 +35,9 @@ export interface DatabaseProps {
   config: AuthInfraEnvironmentConfig;
 
   /**
-   * VPC for deployment
+   * Infrastructure configuration (VPC, KMS, security groups)
    */
-  vpc: ec2.IVpc;
-
-  /**
-   * KMS key for encryption
-   */
-  kmsKey: kms.IKey;
+  infrastructure: InfrastructureConfig;
 
   /**
    * Security groups for database access
@@ -76,7 +71,7 @@ export class Database extends Construct {
     this.masterSecret = new secretsmanager.Secret(this, 'DBMasterSecret', {
       description: `${id}: PostgreSQL Master Password`,
       secretName: `${props.stackName}/Database/Master-Password`,
-      encryptionKey: props.kmsKey,
+      encryptionKey: props.infrastructure.kmsKey,
       generateSecretString: {
         secretStringTemplate: JSON.stringify({ username: 'authentik' }),
         generateStringKey: 'password',
@@ -97,7 +92,7 @@ export class Database extends Construct {
     // Create subnet group
     const subnetGroup = new rds.SubnetGroup(this, 'DBSubnetGroup', {
       description: `${id} database subnet group`,
-      vpc: props.vpc,
+      vpc: props.infrastructure.vpc,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
       }
@@ -139,13 +134,13 @@ export class Database extends Construct {
           ) : [],
         parameterGroup,
         subnetGroup,
-        vpc: props.vpc,
+        vpc: props.infrastructure.vpc,
         vpcSubnets: {
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
         },
         securityGroups: props.securityGroups,
         storageEncrypted: true,
-        storageEncryptionKey: props.kmsKey,
+        storageEncryptionKey: props.infrastructure.kmsKey,
         backup: {
           retention: Duration.days(props.config.database.backupRetentionDays)
         },
@@ -190,13 +185,13 @@ export class Database extends Construct {
           ) : [],
         parameterGroup,
         subnetGroup,
-        vpc: props.vpc,
+        vpc: props.infrastructure.vpc,
         vpcSubnets: {
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
         },
         securityGroups: props.securityGroups,
         storageEncrypted: true,
-        storageEncryptionKey: props.kmsKey,
+        storageEncryptionKey: props.infrastructure.kmsKey,
         backup: {
           retention: Duration.days(props.config.database.backupRetentionDays)
         },
@@ -211,16 +206,5 @@ export class Database extends Construct {
 
     // Store the hostname
     this.hostname = this.cluster.clusterEndpoint.hostname;
-
-    // Create outputs
-    new CfnOutput(this, 'DatabaseEndpoint', {
-      value: this.hostname,
-      description: 'Database cluster endpoint'
-    });
-
-    new CfnOutput(this, 'DatabaseSecretArn', {
-      value: this.masterSecret.secretArn,
-      description: 'Database master secret ARN'
-    });
   }
 }

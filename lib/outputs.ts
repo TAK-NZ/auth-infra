@@ -21,6 +21,8 @@ export interface OutputParams {
   authentikAlbDns: string;
   authentikUrl: string;
   ldapNlbDns: string;
+  ldapEndpoint: string;
+  ldapsEndpoint: string;
   ldapTokenRetrieverLambdaArn: string;
 }
 
@@ -43,6 +45,8 @@ export function registerOutputs({
   authentikAlbDns,
   authentikUrl,
   ldapNlbDns,
+  ldapEndpoint,
+  ldapsEndpoint,
   ldapTokenRetrieverLambdaArn
 }: OutputParams) {
   
@@ -147,6 +151,22 @@ export function registerOutputs({
     description: 'LDAP Network Load Balancer DNS name',
     value: ldapNlbDns,
     exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAP_NLB_DNS), {
+      StackName: stackName,
+    }),
+  });
+
+  new cdk.CfnOutput(stack, 'LdapEndpointOutput', {
+    description: 'LDAP endpoint URL',
+    value: ldapEndpoint,
+    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAP_ENDPOINT), {
+      StackName: stackName,
+    }),
+  });
+
+  new cdk.CfnOutput(stack, 'LdapsEndpointOutput', {
+    description: 'LDAPS endpoint URL',
+    value: ldapsEndpoint,
+    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAPS_ENDPOINT), {
       StackName: stackName,
     }),
   });

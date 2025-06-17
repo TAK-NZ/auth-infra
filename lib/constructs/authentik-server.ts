@@ -17,6 +17,13 @@ import {
   Stack
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { 
+  InfrastructureConfig,
+  SecretsConfig, 
+  StorageConfig,
+  DeploymentConfig,
+  AuthentikApplicationConfig 
+} from '../construct-configs';
 
 /**
  * Properties for the Authentik Server construct
@@ -33,124 +40,29 @@ export interface AuthentikServerProps {
   config: AuthInfraEnvironmentConfig;
 
   /**
-   * VPC for deployment
+   * Infrastructure configuration
    */
-  vpc: ec2.IVpc;
+  infrastructure: InfrastructureConfig;
 
   /**
-   * Security group for ECS tasks
+   * Secrets configuration
    */
-  ecsSecurityGroup: ec2.SecurityGroup;
+  secrets: SecretsConfig;
 
   /**
-   * ECS cluster
+   * Storage configuration
    */
-  ecsCluster: ecs.ICluster;
+  storage: StorageConfig;
 
   /**
-   * S3 configuration bucket for environment files
+   * Deployment configuration
    */
-  s3ConfBucket: s3.IBucket;
+  deployment: DeploymentConfig;
 
   /**
-   * S3 URI for the environment file (optional)
+   * Application configuration
    */
-  envFileS3Uri?: string;
-
-  /**
-   * S3 key for the environment file (optional)
-   */
-  envFileS3Key?: string;
-
-  /**
-   * Authentik admin user email
-   */
-  adminUserEmail: string;
-
-  /**
-   * LDAP base DN
-   */
-  ldapBaseDn: string;
-
-  /**
-   * Use authentik config file from S3 (default: false)
-   */
-  useAuthentikConfigFile: boolean;
-
-  /**
-   * ECR repository ARN for ECR images
-   */
-  ecrRepositoryArn?: string;
-
-  /**
-   * Git SHA for Docker image tagging
-   */
-  gitSha: string;
-
-  /**
-   * Allow SSH exec into container
-   */
-  enableExecute: boolean;
-
-  /**
-   * Database secret
-   */
-  dbSecret: secretsmanager.ISecret;
-
-  /**
-   * Database hostname
-   */
-  dbHostname: string;
-
-  /**
-   * Redis auth token
-   */
-  redisAuthToken: secretsmanager.ISecret;
-
-  /**
-   * Redis hostname
-   */
-  redisHostname: string;
-
-  /**
-   * Authentik secret key
-   */
-  secretKey: secretsmanager.ISecret;
-
-  /**
-   * Admin user password
-   */
-  adminUserPassword: secretsmanager.ISecret;
-
-  /**
-   * Admin user token
-   */
-  adminUserToken: secretsmanager.ISecret;
-
-  /**
-   * LDAP token
-   */
-  ldapToken: secretsmanager.ISecret;
-
-  /**
-   * KMS key for secrets encryption
-   */
-  kmsKey: kms.IKey;
-
-  /**
-   * EFS file system ID
-   */
-  efsId: string;
-
-  /**
-   * EFS media access point ID
-   */
-  efsMediaAccessPointId: string;
-
-  /**
-   * EFS custom templates access point ID
-   */
-  efsCustomTemplatesAccessPointId: string;
+  application: AuthentikApplicationConfig;
 }
 
 /**
@@ -208,7 +120,7 @@ export class AuthentikServer extends Construct {
 
     // Create config bucket if using config file
     let configBucket;
-    if (props.useAuthentikConfigFile) {
+    if (props.deployment.useConfigFile) {
       configBucket = new s3.Bucket(this, 'ConfigBucket', {
         bucketName: `${id}-config`.toLowerCase(),
         removalPolicy: props.config.general.removalPolicy,
@@ -226,18 +138,18 @@ export class AuthentikServer extends Construct {
     });
 
     // Add permissions to access secrets
-    props.dbSecret.grantRead(executionRole);
-    props.redisAuthToken.grantRead(executionRole);
-    props.secretKey.grantRead(executionRole);
-    props.adminUserPassword.grantRead(executionRole);
-    props.adminUserToken.grantRead(executionRole);
+    props.secrets.database.grantRead(executionRole);
+    props.secrets.redisAuthToken.grantRead(executionRole);
+    props.secrets.authentik.secretKey.grantRead(executionRole);
+    props.secrets.authentik.adminUserPassword.grantRead(executionRole);
+    props.secrets.authentik.adminUserToken.grantRead(executionRole);
 
     // Grant explicit KMS permissions for secrets decryption
-    props.kmsKey.grantDecrypt(executionRole);
+    props.infrastructure.kmsKey.grantDecrypt(executionRole);
 
     // Grant S3 access to execution role for environment files (needed during task initialization)
-    if (props.envFileS3Key) {
-      props.s3ConfBucket.grantRead(executionRole);
+    if (props.storage.s3.envFileKey) {
+      props.storage.s3.configBucket.grantRead(executionRole);
     }
 
     // Create task role
@@ -256,20 +168,20 @@ export class AuthentikServer extends Construct {
         'elasticfilesystem:DescribeFileSystems'
       ],
       resources: [
-        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:file-system/${props.efsId}`,
-        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:access-point/${props.efsMediaAccessPointId}`,
-        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:access-point/${props.efsCustomTemplatesAccessPointId}`
+        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:file-system/${props.storage.efs.fileSystemId}`,
+        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:access-point/${props.storage.efs.mediaAccessPointId}`,
+        `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:access-point/${props.storage.efs.customTemplatesAccessPointId}`
       ]
     }));
 
     // Add task permissions
-    if (props.useAuthentikConfigFile && configBucket) {
+    if (props.deployment.useConfigFile && configBucket) {
       configBucket.grantRead(taskRole);
     }
 
     // Grant read access to S3 configuration bucket for environment files
-    if (props.envFileS3Key) {
-      props.s3ConfBucket.grantRead(taskRole);
+    if (props.storage.s3.envFileKey) {
+      props.storage.s3.configBucket.grantRead(taskRole);
     }
 
     // Create task definition
@@ -284,10 +196,10 @@ export class AuthentikServer extends Construct {
     this.taskDefinition.addVolume({
       name: 'media',
       efsVolumeConfiguration: {
-        fileSystemId: props.efsId,
+        fileSystemId: props.storage.efs.fileSystemId,
         transitEncryption: 'ENABLED',
         authorizationConfig: {
-          accessPointId: props.efsMediaAccessPointId,
+          accessPointId: props.storage.efs.mediaAccessPointId,
           iam: 'ENABLED'
         }
       }
@@ -296,23 +208,23 @@ export class AuthentikServer extends Construct {
     this.taskDefinition.addVolume({
       name: 'custom-templates',
       efsVolumeConfiguration: {
-        fileSystemId: props.efsId,
+        fileSystemId: props.storage.efs.fileSystemId,
         transitEncryption: 'ENABLED',
         authorizationConfig: {
-          accessPointId: props.efsCustomTemplatesAccessPointId,
+          accessPointId: props.storage.efs.customTemplatesAccessPointId,
           iam: 'ENABLED'
         }
       }
     });
 
     // Determine Docker image - ECR repository is required
-    if (!props.ecrRepositoryArn) {
+    if (!props.deployment.ecrRepositoryArn) {
       throw new Error('ecrRepositoryArn is required for Authentik Server deployment');
     }
     
     // Convert ECR ARN to proper repository URI
-    const ecrRepositoryUri = this.convertEcrArnToRepositoryUri(props.ecrRepositoryArn);
-    const dockerImage = `${ecrRepositoryUri}:auth-infra-server-${props.gitSha}`;
+    const ecrRepositoryUri = this.convertEcrArnToRepositoryUri(props.deployment.ecrRepositoryArn);
+    const dockerImage = `${ecrRepositoryUri}:auth-infra-server-${props.deployment.gitSha}`;
 
     // Prepare container definition options
     let containerDefinitionOptions: ecs.ContainerDefinitionOptions = {
@@ -323,16 +235,16 @@ export class AuthentikServer extends Construct {
       }),
       command: ['server'], // Server command
       environment: {
-        AUTHENTIK_POSTGRESQL__HOST: props.dbHostname,
+        AUTHENTIK_POSTGRESQL__HOST: props.application.database.hostname,
         AUTHENTIK_POSTGRESQL__USER: 'authentik',
-        AUTHENTIK_REDIS__HOST: props.redisHostname,
+        AUTHENTIK_REDIS__HOST: props.application.redis.hostname,
         AUTHENTIK_REDIS__TLS: 'True',
         AUTHENTIK_REDIS__TLS_REQS: 'required',
       },
       secrets: {
-        AUTHENTIK_POSTGRESQL__PASSWORD: ecs.Secret.fromSecretsManager(props.dbSecret, 'password'),
-        AUTHENTIK_REDIS__PASSWORD: ecs.Secret.fromSecretsManager(props.redisAuthToken),
-        AUTHENTIK_SECRET_KEY: ecs.Secret.fromSecretsManager(props.secretKey),
+        AUTHENTIK_POSTGRESQL__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.database, 'password'),
+        AUTHENTIK_REDIS__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.redisAuthToken),
+        AUTHENTIK_SECRET_KEY: ecs.Secret.fromSecretsManager(props.secrets.authentik.secretKey),
       },
       healthCheck: {
         command: ['CMD', 'ak', 'healthcheck'],
@@ -344,12 +256,12 @@ export class AuthentikServer extends Construct {
       essential: true
     };
 
-    // Add environment files if S3 key is provided and useAuthentikConfigFile is enabled
-    if (props.envFileS3Key && props.useAuthentikConfigFile) {
+    // Add environment files if S3 key is provided and useConfigFile is enabled
+    if (props.storage.s3.envFileKey && props.deployment.useConfigFile) {
       containerDefinitionOptions = {
         ...containerDefinitionOptions,
         environmentFiles: [
-          ecs.EnvironmentFile.fromBucket(props.s3ConfBucket, props.envFileS3Key)
+          ecs.EnvironmentFile.fromBucket(props.storage.s3.configBucket, props.storage.s3.envFileKey)
         ]
       };
     }
@@ -378,12 +290,12 @@ export class AuthentikServer extends Construct {
 
     // Create ECS service
     this.ecsService = new ecs.FargateService(this, 'Service', {
-      cluster: props.ecsCluster,
+      cluster: props.infrastructure.ecsCluster,
       taskDefinition: this.taskDefinition,
       healthCheckGracePeriod: Duration.seconds(300),
       desiredCount: props.config.ecs.desiredCount,
-      securityGroups: [props.ecsSecurityGroup],
-      enableExecuteCommand: props.enableExecute,
+      securityGroups: [props.infrastructure.ecsSecurityGroup],
+      enableExecuteCommand: props.deployment.enableExecute,
       assignPublicIp: false,
       // Disable circuit breaker temporarily to get better error information
       // circuitBreaker: { rollback: true }

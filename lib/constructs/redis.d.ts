@@ -2,8 +2,9 @@
  * Redis Construct - CDK implementation of the Redis/Valkey cache
  */
 import { Construct } from 'constructs';
-import { aws_elasticache as elasticache, aws_ec2 as ec2, aws_secretsmanager as secretsmanager, aws_kms as kms } from 'aws-cdk-lib';
+import { aws_elasticache as elasticache, aws_ec2 as ec2, aws_secretsmanager as secretsmanager } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig } from '../construct-configs';
 /**
  * Properties for the Redis construct
  */
@@ -21,13 +22,9 @@ export interface RedisProps {
      */
     config: AuthInfraEnvironmentConfig;
     /**
-     * VPC for deployment
+     * Infrastructure configuration (VPC, KMS, security groups)
      */
-    vpc: ec2.IVpc;
-    /**
-     * KMS key for encryption
-     */
-    kmsKey: kms.IKey;
+    infrastructure: InfrastructureConfig;
     /**
      * Security groups for Redis access
      */

@@ -2,7 +2,8 @@
  * SecretsManager Construct - CDK implementation of secrets for Authentik
  */
 import { Construct } from 'constructs';
-import { aws_secretsmanager as secretsmanager, aws_kms as kms } from 'aws-cdk-lib';
+import { aws_secretsmanager as secretsmanager } from 'aws-cdk-lib';
+import type { InfrastructureConfig } from '../construct-configs';
 /**
  * Properties for the SecretsManager construct
  */
@@ -16,9 +17,9 @@ export interface SecretsManagerProps {
      */
     stackName: string;
     /**
-     * KMS key for encryption
+     * Infrastructure configuration (KMS key)
      */
-    kmsKey: kms.IKey;
+    infrastructure: InfrastructureConfig;
 }
 /**
  * CDK construct for managing Authentik secrets

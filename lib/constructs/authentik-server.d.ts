@@ -2,8 +2,9 @@
  * Authentik Server Construct - Server container and ECS service configuration
  */
 import { Construct } from 'constructs';
-import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager, aws_s3 as s3, aws_kms as kms } from 'aws-cdk-lib';
+import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig, SecretsConfig, StorageConfig, DeploymentConfig, AuthentikApplicationConfig } from '../construct-configs';
 /**
  * Properties for the Authentik Server construct
  */
@@ -17,101 +18,25 @@ export interface AuthentikServerProps {
      */
     config: AuthInfraEnvironmentConfig;
     /**
-     * VPC for deployment
+     * Infrastructure configuration
      */
-    vpc: ec2.IVpc;
+    infrastructure: InfrastructureConfig;
     /**
-     * Security group for ECS tasks
+     * Secrets configuration
      */
-    ecsSecurityGroup: ec2.SecurityGroup;
+    secrets: SecretsConfig;
     /**
-     * ECS cluster
+     * Storage configuration
      */
-    ecsCluster: ecs.ICluster;
+    storage: StorageConfig;
     /**
-     * S3 configuration bucket for environment files
+     * Deployment configuration
      */
-    s3ConfBucket: s3.IBucket;
+    deployment: DeploymentConfig;
     /**
-     * S3 URI for the environment file (optional)
+     * Application configuration
      */
-    envFileS3Uri?: string;
-    /**
-     * S3 key for the environment file (optional)
-     */
-    envFileS3Key?: string;
-    /**
-     * Authentik admin user email
-     */
-    adminUserEmail: string;
-    /**
-     * LDAP base DN
-     */
-    ldapBaseDn: string;
-    /**
-     * Use authentik config file from S3 (default: false)
-     */
-    useAuthentikConfigFile: boolean;
-    /**
-     * ECR repository ARN for ECR images
-     */
-    ecrRepositoryArn?: string;
-    /**
-     * Git SHA for Docker image tagging
-     */
-    gitSha: string;
-    /**
-     * Allow SSH exec into container
-     */
-    enableExecute: boolean;
-    /**
-     * Database secret
-     */
-    dbSecret: secretsmanager.ISecret;
-    /**
-     * Database hostname
-     */
-    dbHostname: string;
-    /**
-     * Redis auth token
-     */
-    redisAuthToken: secretsmanager.ISecret;
-    /**
-     * Redis hostname
-     */
-    redisHostname: string;
-    /**
-     * Authentik secret key
-     */
-    secretKey: secretsmanager.ISecret;
-    /**
-     * Admin user password
-     */
-    adminUserPassword: secretsmanager.ISecret;
-    /**
-     * Admin user token
-     */
-    adminUserToken: secretsmanager.ISecret;
-    /**
-     * LDAP token
-     */
-    ldapToken: secretsmanager.ISecret;
-    /**
-     * KMS key for secrets encryption
-     */
-    kmsKey: kms.IKey;
-    /**
-     * EFS file system ID
-     */
-    efsId: string;
-    /**
-     * EFS media access point ID
-     */
-    efsMediaAccessPointId: string;
-    /**
-     * EFS custom templates access point ID
-     */
-    efsCustomTemplatesAccessPointId: string;
+    application: AuthentikApplicationConfig;
 }
 /**
  * CDK construct for the Authentik server container and ECS service

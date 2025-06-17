@@ -1,0 +1,4955 @@
+{
+ "Description": "TAK Authentication Layer - Authentik, LDAP Outpost",
+ "Resources": {
+  "ECSSecurityGroupA14DBE7D": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for ECS tasks",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow HTTP traffic",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow HTTPS traffic",
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow Authentik traffic",
+      "FromPort": 9000,
+      "IpProtocol": "tcp",
+      "ToPort": 9000
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-VPC-ID"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/ECSSecurityGroup/Resource"
+   }
+  },
+  "ECSSecurityGroupfromTAKDemoAuthInfraAuthentikELBALBSecurityGroupFB6F6CF09000FE435158": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Load balancer to target",
+    "FromPort": 9000,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ECSSecurityGroupA14DBE7D",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AuthentikELBALBSecurityGroup6E7316BD",
+      "GroupId"
+     ]
+    },
+    "ToPort": 9000
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/ECSSecurityGroup/from TAKDemoAuthInfraAuthentikELBALBSecurityGroupFB6F6CF0:9000"
+   }
+  },
+  "DBSecurityGroupE3B245A3": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for database",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "Description": "Allow PostgreSQL access from ECS tasks",
+      "FromPort": 5432,
+      "IpProtocol": "tcp",
+      "SourceSecurityGroupId": {
+       "Fn::GetAtt": [
+        "ECSSecurityGroupA14DBE7D",
+        "GroupId"
+       ]
+      },
+      "ToPort": 5432
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-VPC-ID"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/DBSecurityGroup/Resource"
+   }
+  },
+  "SecretsManagerAuthentikSecretKey0C8A38C9": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Authentik: Secret Key",
+    "GenerateSecretString": {
+     "ExcludePunctuation": true,
+     "PasswordLength": 64
+    },
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "Name": "TAK-Demo-AuthInfra/Authentik/Secret-Key",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/SecretsManager/AuthentikSecretKey/Resource"
+   }
+  },
+  "SecretsManagerAuthentikAdminUserPassword3A38D3BB": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Authentik: Admin Password",
+    "GenerateSecretString": {
+     "ExcludePunctuation": true,
+     "GenerateStringKey": "password",
+     "PasswordLength": 32,
+     "SecretStringTemplate": "{\"username\":\"akadmin\"}"
+    },
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "Name": "TAK-Demo-AuthInfra/Authentik/Admin-Password",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/SecretsManager/AuthentikAdminUserPassword/Resource"
+   }
+  },
+  "SecretsManagerAuthentikAdminUserToken3137C5E0": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Authentik: Admin API Token",
+    "GenerateSecretString": {
+     "ExcludePunctuation": true,
+     "PasswordLength": 64
+    },
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "Name": "TAK-Demo-AuthInfra/Authentik/Admin-API-Token",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/SecretsManager/AuthentikAdminUserToken/Resource"
+   }
+  },
+  "SecretsManagerAuthentikLDAPServiceUser8290CA7A": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Authentik: LDAP Service User",
+    "GenerateSecretString": {
+     "ExcludePunctuation": true,
+     "GenerateStringKey": "password",
+     "PasswordLength": 32,
+     "SecretStringTemplate": "{\"username\":\"ldapservice\"}"
+    },
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "Name": "TAK-Demo-AuthInfra/Authentik/LDAP-Service-User",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/SecretsManager/AuthentikLDAPServiceUser/Resource"
+   }
+  },
+  "SecretsManagerAuthentikLDAPToken690C2508": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Authentik: LDAP Outpost Token",
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "Name": "TAK-Demo-AuthInfra/Authentik/LDAP-Token",
+    "SecretString": "replace-me",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/SecretsManager/AuthentikLDAPToken/Resource"
+   }
+  },
+  "DatabaseDBMasterSecret1B2A26AA": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Database: PostgreSQL Master Password",
+    "GenerateSecretString": {
+     "ExcludePunctuation": true,
+     "GenerateStringKey": "password",
+     "PasswordLength": 64,
+     "SecretStringTemplate": "{\"username\":\"authentik\"}"
+    },
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "Name": "TAK-Demo-AuthInfra/Database/Master-Password",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Database/DBMasterSecret/Resource"
+   }
+  },
+  "DatabaseDBMasterSecretAttachmentE4C92C59": {
+   "Type": "AWS::SecretsManager::SecretTargetAttachment",
+   "Properties": {
+    "SecretId": {
+     "Ref": "DatabaseDBMasterSecret1B2A26AA"
+    },
+    "TargetId": {
+     "Ref": "DatabaseDBCluster27FBE994"
+    },
+    "TargetType": "AWS::RDS::DBCluster"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Database/DBMasterSecret/Attachment/Resource"
+   }
+  },
+  "DatabaseDBMonitoringRole495448DE": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "monitoring.rds.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+       ]
+      ]
+     }
+    ],
+    "Path": "/",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Database/DBMonitoringRole/Resource"
+   }
+  },
+  "DatabaseDBSubnetGroupD90D34CC": {
+   "Type": "AWS::RDS::DBSubnetGroup",
+   "Properties": {
+    "DBSubnetGroupDescription": "Database database subnet group",
+    "SubnetIds": [
+     {
+      "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateA"
+     },
+     {
+      "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateB"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Database/DBSubnetGroup/Default"
+   }
+  },
+  "DatabaseDBParameterGroup7E4DF99E": {
+   "Type": "AWS::RDS::DBClusterParameterGroup",
+   "Properties": {
+    "Description": "Database cluster parameter group",
+    "Family": "aurora-postgresql17",
+    "Parameters": {
+     "shared_preload_libraries": "pg_stat_statements",
+     "log_statement": "all",
+     "log_min_duration_statement": "1000",
+     "log_connections": "1",
+     "log_disconnections": "1"
+    },
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Database/DBParameterGroup/Resource"
+   }
+  },
+  "DatabaseDBCluster27FBE994": {
+   "Type": "AWS::RDS::DBCluster",
+   "Properties": {
+    "BackupRetentionPeriod": 1,
+    "CopyTagsToSnapshot": true,
+    "DBClusterParameterGroupName": {
+     "Ref": "DatabaseDBParameterGroup7E4DF99E"
+    },
+    "DBSubnetGroupName": {
+     "Ref": "DatabaseDBSubnetGroupD90D34CC"
+    },
+    "DatabaseName": "authentik",
+    "DeletionProtection": false,
+    "EnableCloudwatchLogsExports": [
+     "postgresql"
+    ],
+    "Engine": "aurora-postgresql",
+    "EngineVersion": "17.4",
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "MasterUserPassword": {
+     "Fn::Join": [
+      "",
+      [
+       "{{resolve:secretsmanager:",
+       {
+        "Ref": "DatabaseDBMasterSecret1B2A26AA"
+       },
+       ":SecretString:password::}}"
+      ]
+     ]
+    },
+    "MasterUsername": {
+     "Fn::Join": [
+      "",
+      [
+       "{{resolve:secretsmanager:",
+       {
+        "Ref": "DatabaseDBMasterSecret1B2A26AA"
+       },
+       ":SecretString:username::}}"
+      ]
+     ]
+    },
+    "Port": 5432,
+    "ServerlessV2ScalingConfiguration": {
+     "MaxCapacity": 4,
+     "MinCapacity": 0.5
+    },
+    "StorageEncrypted": true,
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "VpcSecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "DBSecurityGroupE3B245A3",
+       "GroupId"
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Database/DBCluster/Resource"
+   }
+  },
+  "DatabaseDBClusterLogRetentionpostgresql74EC9066": {
+   "Type": "Custom::LogRetention",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A",
+      "Arn"
+     ]
+    },
+    "LogGroupName": {
+     "Fn::Join": [
+      "",
+      [
+       "/aws/rds/cluster/",
+       {
+        "Ref": "DatabaseDBCluster27FBE994"
+       },
+       "/postgresql"
+      ]
+     ]
+    },
+    "RetentionInDays": 30
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Database/DBCluster/LogRetentionpostgresql/Resource"
+   }
+  },
+  "DatabaseDBClusterwriter35875992": {
+   "Type": "AWS::RDS::DBInstance",
+   "Properties": {
+    "DBClusterIdentifier": {
+     "Ref": "DatabaseDBCluster27FBE994"
+    },
+    "DBInstanceClass": "db.serverless",
+    "Engine": "aurora-postgresql",
+    "PromotionTier": 0,
+    "PubliclyAccessible": false,
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Database/DBCluster/writer/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "logs:DeleteRetentionPolicy",
+        "logs:PutRetentionPolicy"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB",
+    "Roles": [
+     {
+      "Ref": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Handler": "index.handler",
+    "Runtime": "nodejs22.x",
+    "Timeout": 900,
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-814704514736-ap-southeast-2",
+     "S3Key": "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d.zip"
+    },
+    "Role": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB",
+      "Arn"
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB",
+    "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Resource",
+    "aws:asset:path": "asset.2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "RedisRedisAuthTokenAC379C8C": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Redis: Auth Token",
+    "GenerateSecretString": {
+     "ExcludePunctuation": true,
+     "PasswordLength": 64
+    },
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "Name": "TAK-Demo-AuthInfra/Redis/Auth-Token",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Redis/RedisAuthToken/Resource"
+   }
+  },
+  "RedisRedisSubnetGroupE7D796E2": {
+   "Type": "AWS::ElastiCache::SubnetGroup",
+   "Properties": {
+    "Description": "Redis-redis-subnets",
+    "SubnetIds": [
+     {
+      "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateA"
+     },
+     {
+      "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateB"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Redis/RedisSubnetGroup"
+   }
+  },
+  "RedisRedisSecurityGroup23991694": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Redis Redis Security Group",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "Description": "Allow Redis access from ECS tasks",
+      "FromPort": 6379,
+      "IpProtocol": "tcp",
+      "SourceSecurityGroupId": {
+       "Fn::GetAtt": [
+        "ECSSecurityGroupA14DBE7D",
+        "GroupId"
+       ]
+      },
+      "ToPort": 6379
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-VPC-ID"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Redis/RedisSecurityGroup/Resource"
+   }
+  },
+  "Redis04B3B4F3": {
+   "Type": "AWS::ElastiCache::ReplicationGroup",
+   "Properties": {
+    "AtRestEncryptionEnabled": true,
+    "AuthToken": {
+     "Fn::Join": [
+      "",
+      [
+       "{{resolve:secretsmanager:",
+       {
+        "Ref": "RedisRedisAuthTokenAC379C8C"
+       },
+       ":SecretString:::}}"
+      ]
+     ]
+    },
+    "AutoMinorVersionUpgrade": true,
+    "AutomaticFailoverEnabled": false,
+    "CacheNodeType": "cache.t4g.micro",
+    "CacheSubnetGroupName": {
+     "Ref": "RedisRedisSubnetGroupE7D796E2"
+    },
+    "Engine": "valkey",
+    "EngineVersion": "7.2",
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "NumCacheClusters": 1,
+    "ReplicationGroupDescription": "Valkey (Redis) cluster for Authentik",
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "RedisRedisSecurityGroup23991694",
+       "GroupId"
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TransitEncryptionEnabled": true,
+    "TransitEncryptionMode": "required"
+   },
+   "DependsOn": [
+    "RedisRedisSubnetGroupE7D796E2"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Redis/Redis"
+   }
+  },
+  "EFSEFSMountTargetSecurityGroup2BD329ED": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "EFS to Auth ECS Service",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "Description": "Allow NFS access from ECS tasks",
+      "FromPort": 2049,
+      "IpProtocol": "tcp",
+      "SourceSecurityGroupId": {
+       "Fn::GetAtt": [
+        "ECSSecurityGroupA14DBE7D",
+        "GroupId"
+       ]
+      },
+      "ToPort": 2049
+     },
+     {
+      "CidrIp": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-VpcIPv4CIDR"
+      },
+      "Description": "Allow NFS access from VPC",
+      "FromPort": 2049,
+      "IpProtocol": "tcp",
+      "ToPort": 2049
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-VPC-ID"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EFS/EFSMountTargetSecurityGroup/Resource"
+   }
+  },
+  "EFSDBAB55BC": {
+   "Type": "AWS::EFS::FileSystem",
+   "Properties": {
+    "Encrypted": true,
+    "FileSystemPolicy": {
+     "Statement": [
+      {
+       "Action": [
+        "elasticfilesystem:ClientMount",
+        "elasticfilesystem:ClientRootAccess",
+        "elasticfilesystem:ClientWrite"
+       ],
+       "Condition": {
+        "Bool": {
+         "elasticfilesystem:AccessedViaMountTarget": "true"
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       }
+      },
+      {
+       "Action": [
+        "elasticfilesystem:ClientRootAccess",
+        "elasticfilesystem:ClientWrite"
+       ],
+       "Condition": {
+        "Bool": {
+         "elasticfilesystem:AccessedViaMountTarget": "true"
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "FileSystemTags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     },
+     {
+      "Key": "Name",
+      "Value": "TAK-Demo-AuthInfra/EFS/EFS"
+     }
+    ],
+    "KmsKeyId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+    },
+    "PerformanceMode": "generalPurpose",
+    "ThroughputMode": "bursting"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EFS/EFS/Resource"
+   }
+  },
+  "EFSEfsMountTargetPrivateSubnet1DF7E64CF": {
+   "Type": "AWS::EFS::MountTarget",
+   "Properties": {
+    "FileSystemId": {
+     "Ref": "EFSDBAB55BC"
+    },
+    "SecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "EFSEFSMountTargetSecurityGroup2BD329ED",
+       "GroupId"
+      ]
+     }
+    ],
+    "SubnetId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EFS/EFS/EfsMountTarget-PrivateSubnet1"
+   }
+  },
+  "EFSEfsMountTargetPrivateSubnet2DE969CA5": {
+   "Type": "AWS::EFS::MountTarget",
+   "Properties": {
+    "FileSystemId": {
+     "Ref": "EFSDBAB55BC"
+    },
+    "SecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "EFSEFSMountTargetSecurityGroup2BD329ED",
+       "GroupId"
+      ]
+     }
+    ],
+    "SubnetId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateB"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EFS/EFS/EfsMountTarget-PrivateSubnet2"
+   }
+  },
+  "EFSEFSAccessPointMedia865844DD": {
+   "Type": "AWS::EFS::AccessPoint",
+   "Properties": {
+    "AccessPointTags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     },
+     {
+      "Key": "Name",
+      "Value": "TAK-Demo-AuthInfra/EFS/EFSAccessPointMedia"
+     }
+    ],
+    "FileSystemId": {
+     "Ref": "EFSDBAB55BC"
+    },
+    "PosixUser": {
+     "Gid": "1000",
+     "Uid": "1000"
+    },
+    "RootDirectory": {
+     "CreationInfo": {
+      "OwnerGid": "1000",
+      "OwnerUid": "1000",
+      "Permissions": "755"
+     },
+     "Path": "/media"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EFS/EFSAccessPointMedia/Resource"
+   }
+  },
+  "EFSEFSAccessPointCustomTemplatesC823127C": {
+   "Type": "AWS::EFS::AccessPoint",
+   "Properties": {
+    "AccessPointTags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     },
+     {
+      "Key": "Name",
+      "Value": "TAK-Demo-AuthInfra/EFS/EFSAccessPointCustomTemplates"
+     }
+    ],
+    "FileSystemId": {
+     "Ref": "EFSDBAB55BC"
+    },
+    "PosixUser": {
+     "Gid": "1000",
+     "Uid": "1000"
+    },
+    "RootDirectory": {
+     "CreationInfo": {
+      "OwnerGid": "1000",
+      "OwnerUid": "1000",
+      "Permissions": "755"
+     },
+     "Path": "/custom-templates"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EFS/EFSAccessPointCustomTemplates/Resource"
+   }
+  },
+  "EcrImageValidatorCustomResourceRoleAEB8A72D": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Policies": [
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "ecr:DescribeImages",
+          "ecr:GetAuthorizationToken",
+          "ecr:ListImages"
+         ],
+         "Effect": "Allow",
+         "Resource": {
+          "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+         }
+        },
+        {
+         "Action": "ecr:GetAuthorizationToken",
+         "Effect": "Allow",
+         "Resource": "*"
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "ECRAccess"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EcrImageValidator/CustomResourceRole/Resource"
+   }
+  },
+  "EcrImageValidatorLogGroup392194FF": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/ecr-image-validator-Demo",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EcrImageValidator/LogGroup/Resource"
+   }
+  },
+  "EcrImageValidatorValidatorFunction03EF9A98": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "ZipFile": "\nimport json\nimport boto3\nimport urllib3\n\ndef handler(event, context):\n    print(f\"Event: {json.dumps(event)}\")\n    \n    ecr_client = boto3.client('ecr')\n    ecr_repository_arn = event['ResourceProperties']['EcrRepositoryArn']\n    required_tags = event['ResourceProperties']['RequiredTags']\n    \n    try:\n        if event['RequestType'] in ['Create', 'Update']:\n            print(f\"ECR Repository ARN: {ecr_repository_arn}\")\n            print(f\"Required tags: {required_tags}\")\n            \n            # Extract repository name from ARN at runtime\n            # ECR ARN format: arn:aws:ecr:region:account:repository/repository-name\n            if not ecr_repository_arn.startswith('arn:aws:ecr:') or 'repository/' not in ecr_repository_arn:\n                error_msg = f\"Invalid ECR repository ARN: {ecr_repository_arn}\"\n                print(f\"ERROR: {error_msg}\")\n                send_response(event, context, \"FAILED\", {\"Error\": error_msg})\n                return\n                \n            repository_name = ecr_repository_arn.split('/')[-1]\n            if not repository_name:\n                error_msg = f\"Could not extract repository name from ARN: {ecr_repository_arn}\"\n                print(f\"ERROR: {error_msg}\")\n                send_response(event, context, \"FAILED\", {\"Error\": error_msg})\n                return\n            \n            print(f\"Extracted repository name: {repository_name}\")\n            print(f\"Validating images in repository: {repository_name}\")\n            \n            # List all images in the repository\n            response = ecr_client.describe_images(repositoryName=repository_name)\n            \n            # Extract all available tags\n            available_tags = set()\n            for image in response.get('imageDetails', []):\n                for tag in image.get('imageTags', []):\n                    available_tags.add(tag)\n            \n            print(f\"Available tags: {list(available_tags)}\")\n            \n            # Check if all required tags are present\n            missing_tags = []\n            for required_tag in required_tags:\n                if required_tag not in available_tags:\n                    missing_tags.append(required_tag)\n            \n            if missing_tags:\n                error_msg = f\"Missing required ECR images in repository '{repository_name}': {missing_tags}. Available tags: {list(available_tags)}\"\n                print(f\"ERROR: {error_msg}\")\n                send_response(event, context, \"FAILED\", {\"Error\": error_msg})\n                return\n            \n            print(\"All required ECR images are available\")\n            send_response(event, context, \"SUCCESS\", {\"Message\": \"All required images validated successfully\"})\n            \n        elif event['RequestType'] == 'Delete':\n            print(\"Delete request - no validation needed\")\n            send_response(event, context, \"SUCCESS\", {\"Message\": \"Delete completed\"})\n            \n    except Exception as e:\n        error_msg = f\"Error validating ECR images: {str(e)}\"\n        print(f\"ERROR: {error_msg}\")\n        send_response(event, context, \"FAILED\", {\"Error\": error_msg})\n\ndef send_response(event, context, response_status, response_data):\n    response_url = event['ResponseURL']\n    \n    response_body = {\n        'Status': response_status,\n        'Reason': f'See the details in CloudWatch Log Stream: {context.log_stream_name}',\n        'PhysicalResourceId': context.log_stream_name,\n        'StackId': event['StackId'],\n        'RequestId': event['RequestId'],\n        'LogicalResourceId': event['LogicalResourceId'],\n        'Data': response_data\n    }\n    \n    json_response_body = json.dumps(response_body)\n    \n    headers = {\n        'content-type': '',\n        'content-length': str(len(json_response_body))\n    }\n    \n    http = urllib3.PoolManager()\n    try:\n        response = http.request('PUT', response_url, body=json_response_body, headers=headers)\n        print(f\"Status code: {response.status}\")\n    except Exception as e:\n        print(f\"send_response Error: {e}\")\n"
+    },
+    "Environment": {
+     "Variables": {
+      "LOG_LEVEL": "INFO"
+     }
+    },
+    "Handler": "index.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "EcrImageValidatorLogGroup392194FF"
+     }
+    },
+    "Role": {
+     "Fn::GetAtt": [
+      "EcrImageValidatorCustomResourceRoleAEB8A72D",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.11",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "Timeout": 300
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EcrImageValidator/ValidatorFunction/Resource"
+   }
+  },
+  "EcrImageValidatorProviderframeworkonEventServiceRole55E53571": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EcrImageValidator/Provider/framework-onEvent/ServiceRole/Resource"
+   }
+  },
+  "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "EcrImageValidatorValidatorFunction03EF9A98",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "EcrImageValidatorValidatorFunction03EF9A98",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "lambda:GetFunction",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "EcrImageValidatorValidatorFunction03EF9A98",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "Roles": [
+     {
+      "Ref": "EcrImageValidatorProviderframeworkonEventServiceRole55E53571"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EcrImageValidator/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "EcrImageValidatorProviderframeworkonEvent197008F7": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-814704514736-ap-southeast-2",
+     "S3Key": "bdc104ed9cab1b5b6421713c8155f0b753380595356f710400609664d3635eca.zip"
+    },
+    "Description": "AWS CDK resource provider framework - onEvent (TAK-Demo-AuthInfra/EcrImageValidator/Provider)",
+    "Environment": {
+     "Variables": {
+      "USER_ON_EVENT_FUNCTION_ARN": {
+       "Fn::GetAtt": [
+        "EcrImageValidatorValidatorFunction03EF9A98",
+        "Arn"
+       ]
+      }
+     }
+    },
+    "Handler": "framework.onEvent",
+    "Role": {
+     "Fn::GetAtt": [
+      "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "Timeout": 900
+   },
+   "DependsOn": [
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EcrImageValidator/Provider/framework-onEvent/Resource",
+    "aws:asset:path": "asset.bdc104ed9cab1b5b6421713c8155f0b753380595356f710400609664d3635eca",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "EcrImageValidatorImageValidation84101594": {
+   "Type": "AWS::CloudFormation::CustomResource",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "EcrImageValidatorProviderframeworkonEvent197008F7",
+      "Arn"
+     ]
+    },
+    "EcrRepositoryArn": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+    },
+    "RequiredTags": [
+     "auth-infra-server-3afd0ff270324ef49901108df31c4990fe138966",
+     "auth-infra-ldap-3afd0ff270324ef49901108df31c4990fe138966"
+    ],
+    "Timestamp": "2025-06-17T03:57:29.600Z"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/EcrImageValidator/ImageValidation/Default"
+   }
+  },
+  "AuthentikELBALB795C77FA": {
+   "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+   "Properties": {
+    "IpAddressType": "dualstack",
+    "LoadBalancerAttributes": [
+     {
+      "Key": "deletion_protection.enabled",
+      "Value": "false"
+     }
+    ],
+    "Scheme": "internet-facing",
+    "SecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "AuthentikELBALBSecurityGroup6E7316BD",
+       "GroupId"
+      ]
+     }
+    ],
+    "Subnets": [
+     {
+      "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPublicA"
+     },
+     {
+      "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPublicB"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "Type": "application"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikELB/ALB/Resource"
+   }
+  },
+  "AuthentikELBALBSecurityGroup6E7316BD": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Automatically created Security Group for ELB TAKDemoAuthInfraAuthentikELBALBA0BE8DAB",
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow from anyone on port 80",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     },
+     {
+      "CidrIpv6": "::/0",
+      "Description": "Allow from anyone on port 80",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     },
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow from anyone on port 443",
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     },
+     {
+      "CidrIpv6": "::/0",
+      "Description": "Allow from anyone on port 443",
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-VPC-ID"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikELB/ALB/SecurityGroup/Resource"
+   }
+  },
+  "AuthentikELBALBSecurityGrouptoTAKDemoAuthInfraECSSecurityGroup1CACD9619000A4E7B968": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "Load balancer to target",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "ECSSecurityGroupA14DBE7D",
+      "GroupId"
+     ]
+    },
+    "FromPort": 9000,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "AuthentikELBALBSecurityGroup6E7316BD",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": 9000
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikELB/ALB/SecurityGroup/to TAKDemoAuthInfraECSSecurityGroup1CACD961:9000"
+   }
+  },
+  "AuthentikELBALBHttpListener3CD02087": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "DefaultActions": [
+     {
+      "RedirectConfig": {
+       "Port": "443",
+       "Protocol": "HTTPS",
+       "StatusCode": "HTTP_302"
+      },
+      "Type": "redirect"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "AuthentikELBALB795C77FA"
+    },
+    "Port": 80,
+    "Protocol": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikELB/ALB/HttpListener/Resource"
+   }
+  },
+  "AuthentikELBALBHttpsListenerA3E45D9E": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "Certificates": [
+     {
+      "CertificateArn": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-AcmCert-ARN"
+      }
+     }
+    ],
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "AuthentikServerTargetGroup2D78069F"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "AuthentikELBALB795C77FA"
+    },
+    "Port": 443,
+    "Protocol": "HTTPS"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikELB/ALB/HttpsListener/Resource"
+   }
+  },
+  "AuthentikServerServerLogs74B503FB": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "AuthentikServer-server",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/ServerLogs/Resource"
+   }
+  },
+  "AuthentikServerTaskExecutionRole4B2763D5": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/TaskExecutionRole/Resource"
+   }
+  },
+  "AuthentikServerTaskExecutionRoleDefaultPolicyA31D2C97": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Ref": "DatabaseDBMasterSecret1B2A26AA"
+        },
+        {
+         "Ref": "RedisRedisAuthTokenAC379C8C"
+        },
+        {
+         "Ref": "SecretsManagerAuthentikAdminUserPassword3A38D3BB"
+        },
+        {
+         "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+        },
+        {
+         "Ref": "SecretsManagerAuthentikSecretKey0C8A38C9"
+        }
+       ]
+      },
+      {
+       "Action": "kms:Decrypt",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+       }
+      },
+      {
+       "Action": [
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "TAK-Demo-BaseInfra-S3ConfBucket-ARN"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "TAK-Demo-BaseInfra-S3ConfBucket-ARN"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "AuthentikServerServerLogs74B503FB",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "AuthentikServerTaskExecutionRoleDefaultPolicyA31D2C97",
+    "Roles": [
+     {
+      "Ref": "AuthentikServerTaskExecutionRole4B2763D5"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/TaskExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "AuthentikServerTaskRole8D82523E": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/TaskRole/Resource"
+   }
+  },
+  "AuthentikServerTaskRoleDefaultPolicy3082757F": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "elasticfilesystem:ClientMount",
+        "elasticfilesystem:ClientRootAccess",
+        "elasticfilesystem:ClientWrite",
+        "elasticfilesystem:DescribeFileSystems",
+        "elasticfilesystem:DescribeMountTargets"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:aws:elasticfilesystem:ap-southeast-2:814704514736:access-point/",
+           {
+            "Ref": "EFSEFSAccessPointCustomTemplatesC823127C"
+           }
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:aws:elasticfilesystem:ap-southeast-2:814704514736:access-point/",
+           {
+            "Ref": "EFSEFSAccessPointMedia865844DD"
+           }
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:aws:elasticfilesystem:ap-southeast-2:814704514736:file-system/",
+           {
+            "Ref": "EFSDBAB55BC"
+           }
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "TAK-Demo-BaseInfra-S3ConfBucket-ARN"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "TAK-Demo-BaseInfra-S3ConfBucket-ARN"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "AuthentikServerTaskRoleDefaultPolicy3082757F",
+    "Roles": [
+     {
+      "Ref": "AuthentikServerTaskRole8D82523E"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/TaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "AuthentikServerTaskDef53A507A1": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Command": [
+       "server"
+      ],
+      "Environment": [
+       {
+        "Name": "AUTHENTIK_POSTGRESQL__HOST",
+        "Value": {
+         "Fn::GetAtt": [
+          "DatabaseDBCluster27FBE994",
+          "Endpoint.Address"
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_POSTGRESQL__USER",
+        "Value": "authentik"
+       },
+       {
+        "Name": "AUTHENTIK_REDIS__HOST",
+        "Value": {
+         "Fn::GetAtt": [
+          "Redis04B3B4F3",
+          "PrimaryEndPoint.Address"
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_REDIS__TLS",
+        "Value": "True"
+       },
+       {
+        "Name": "AUTHENTIK_REDIS__TLS_REQS",
+        "Value": "required"
+       }
+      ],
+      "Essential": true,
+      "HealthCheck": {
+       "Command": [
+        "CMD",
+        "ak",
+        "healthcheck"
+       ],
+       "Interval": 30,
+       "Retries": 3,
+       "StartPeriod": 60,
+       "Timeout": 5
+      },
+      "Image": {
+       "Fn::Join": [
+        "",
+        [
+         {
+          "Fn::Sub": [
+           "${Account}.dkr.ecr.${Region}.amazonaws.com/${RepoName}",
+           {
+            "Account": {
+             "Fn::Select": [
+              4,
+              {
+               "Fn::Split": [
+                ":",
+                {
+                 "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+                }
+               ]
+              }
+             ]
+            },
+            "Region": {
+             "Fn::Select": [
+              3,
+              {
+               "Fn::Split": [
+                ":",
+                {
+                 "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+                }
+               ]
+              }
+             ]
+            },
+            "RepoName": {
+             "Fn::Select": [
+              1,
+              {
+               "Fn::Split": [
+                "/",
+                {
+                 "Fn::Select": [
+                  5,
+                  {
+                   "Fn::Split": [
+                    ":",
+                    {
+                     "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         ":auth-infra-server-3afd0ff270324ef49901108df31c4990fe138966"
+        ]
+       ]
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "AuthentikServerServerLogs74B503FB"
+        },
+        "awslogs-stream-prefix": "authentik-server",
+        "awslogs-region": "ap-southeast-2"
+       }
+      },
+      "MountPoints": [
+       {
+        "ContainerPath": "/media",
+        "ReadOnly": false,
+        "SourceVolume": "media"
+       },
+       {
+        "ContainerPath": "/templates",
+        "ReadOnly": false,
+        "SourceVolume": "custom-templates"
+       }
+      ],
+      "Name": "AuthentikServer",
+      "PortMappings": [
+       {
+        "ContainerPort": 9000,
+        "HostPort": 9000,
+        "Protocol": "tcp"
+       }
+      ],
+      "Secrets": [
+       {
+        "Name": "AUTHENTIK_POSTGRESQL__PASSWORD",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "DatabaseDBMasterSecret1B2A26AA"
+           },
+           ":password::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_REDIS__PASSWORD",
+        "ValueFrom": {
+         "Ref": "RedisRedisAuthTokenAC379C8C"
+        }
+       },
+       {
+        "Name": "AUTHENTIK_SECRET_KEY",
+        "ValueFrom": {
+         "Ref": "SecretsManagerAuthentikSecretKey0C8A38C9"
+        }
+       }
+      ]
+     }
+    ],
+    "Cpu": "512",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "AuthentikServerTaskExecutionRole4B2763D5",
+      "Arn"
+     ]
+    },
+    "Family": "TAKDemoAuthInfraAuthentikServerTaskDef56E5EBFA",
+    "Memory": "1024",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "AuthentikServerTaskRole8D82523E",
+      "Arn"
+     ]
+    },
+    "Volumes": [
+     {
+      "EFSVolumeConfiguration": {
+       "AuthorizationConfig": {
+        "AccessPointId": {
+         "Ref": "EFSEFSAccessPointMedia865844DD"
+        },
+        "IAM": "ENABLED"
+       },
+       "FilesystemId": {
+        "Ref": "EFSDBAB55BC"
+       },
+       "TransitEncryption": "ENABLED"
+      },
+      "Name": "media"
+     },
+     {
+      "EFSVolumeConfiguration": {
+       "AuthorizationConfig": {
+        "AccessPointId": {
+         "Ref": "EFSEFSAccessPointCustomTemplatesC823127C"
+        },
+        "IAM": "ENABLED"
+       },
+       "FilesystemId": {
+        "Ref": "EFSDBAB55BC"
+       },
+       "TransitEncryption": "ENABLED"
+      },
+      "Name": "custom-templates"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/TaskDef/Resource"
+   }
+  },
+  "AuthentikServerService3D748704": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "Cluster": {
+     "Fn::Select": [
+      1,
+      {
+       "Fn::Split": [
+        "/",
+        {
+         "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecs-ARN"
+        }
+       ]
+      }
+     ]
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 50
+    },
+    "DesiredCount": 1,
+    "EnableECSManagedTags": false,
+    "EnableExecuteCommand": false,
+    "HealthCheckGracePeriodSeconds": 300,
+    "LaunchType": "FARGATE",
+    "LoadBalancers": [
+     {
+      "ContainerName": "AuthentikServer",
+      "ContainerPort": 9000,
+      "TargetGroupArn": {
+       "Ref": "AuthentikServerTargetGroup2D78069F"
+      }
+     }
+    ],
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "DISABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "ECSSecurityGroupA14DBE7D",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateA"
+       },
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateB"
+       }
+      ]
+     }
+    },
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TaskDefinition": {
+     "Ref": "AuthentikServerTaskDef53A507A1"
+    }
+   },
+   "DependsOn": [
+    "AuthentikELBALBHttpsListenerA3E45D9E",
+    "AuthentikServerTaskRoleDefaultPolicy3082757F",
+    "AuthentikServerTaskRole8D82523E",
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/Service/Service"
+   }
+  },
+  "AuthentikServerServiceTaskCountTargetB025BF2D": {
+   "Type": "AWS::ApplicationAutoScaling::ScalableTarget",
+   "Properties": {
+    "MaxCapacity": 3,
+    "MinCapacity": 1,
+    "ResourceId": {
+     "Fn::Join": [
+      "",
+      [
+       "service/",
+       {
+        "Fn::Select": [
+         1,
+         {
+          "Fn::Split": [
+           "/",
+           {
+            "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecs-ARN"
+           }
+          ]
+         }
+        ]
+       },
+       "/",
+       {
+        "Fn::GetAtt": [
+         "AuthentikServerService3D748704",
+         "Name"
+        ]
+       }
+      ]
+     ]
+    },
+    "RoleARN": "arn:aws:iam::814704514736:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService",
+    "ScalableDimension": "ecs:service:DesiredCount",
+    "ServiceNamespace": "ecs"
+   },
+   "DependsOn": [
+    "AuthentikServerTaskRoleDefaultPolicy3082757F",
+    "AuthentikServerTaskRole8D82523E",
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/Service/TaskCount/Target/Resource"
+   }
+  },
+  "AuthentikServerServiceTaskCountTargetCpuScalingC10EF2F7": {
+   "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+   "Properties": {
+    "PolicyName": "TAKDemoAuthInfraAuthentikServerServiceTaskCountTargetCpuScaling215D9D3E",
+    "PolicyType": "TargetTrackingScaling",
+    "ScalingTargetId": {
+     "Ref": "AuthentikServerServiceTaskCountTargetB025BF2D"
+    },
+    "TargetTrackingScalingPolicyConfiguration": {
+     "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+     },
+     "ScaleInCooldown": 180,
+     "ScaleOutCooldown": 60,
+     "TargetValue": 70
+    }
+   },
+   "DependsOn": [
+    "AuthentikServerTaskRoleDefaultPolicy3082757F",
+    "AuthentikServerTaskRole8D82523E",
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/Service/TaskCount/Target/CpuScaling/Resource"
+   }
+  },
+  "AuthentikServerTargetGroup2D78069F": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 30,
+    "HealthCheckPath": "/-/health/live/",
+    "Matcher": {
+     "HttpCode": "200-299"
+    },
+    "Port": 9000,
+    "Protocol": "HTTP",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TargetGroupAttributes": [
+     {
+      "Key": "stickiness.enabled",
+      "Value": "false"
+     }
+    ],
+    "TargetType": "ip",
+    "VpcId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-VPC-ID"
+    }
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikServer/TargetGroup/Resource"
+   }
+  },
+  "AuthentikWorkerWorkerLogs4F6481FA": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "AuthentikWorker-worker",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikWorker/WorkerLogs/Resource"
+   }
+  },
+  "AuthentikWorkerWorkerTaskExecutionRoleDBD72B08": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskExecutionRole/Resource"
+   }
+  },
+  "AuthentikWorkerWorkerTaskExecutionRoleDefaultPolicy871BA571": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Ref": "DatabaseDBMasterSecret1B2A26AA"
+        },
+        {
+         "Ref": "RedisRedisAuthTokenAC379C8C"
+        },
+        {
+         "Ref": "SecretsManagerAuthentikAdminUserPassword3A38D3BB"
+        },
+        {
+         "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+        },
+        {
+         "Ref": "SecretsManagerAuthentikLDAPServiceUser8290CA7A"
+        },
+        {
+         "Ref": "SecretsManagerAuthentikSecretKey0C8A38C9"
+        }
+       ]
+      },
+      {
+       "Action": "kms:Decrypt",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+       }
+      },
+      {
+       "Action": [
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "TAK-Demo-BaseInfra-S3ConfBucket-ARN"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "TAK-Demo-BaseInfra-S3ConfBucket-ARN"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "AuthentikWorkerWorkerLogs4F6481FA",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "AuthentikWorkerWorkerTaskExecutionRoleDefaultPolicy871BA571",
+    "Roles": [
+     {
+      "Ref": "AuthentikWorkerWorkerTaskExecutionRoleDBD72B08"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "AuthentikWorkerWorkerTaskRole17674E05": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskRole/Resource"
+   }
+  },
+  "AuthentikWorkerWorkerTaskRoleDefaultPolicy1D0D1DC0": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "elasticfilesystem:ClientMount",
+        "elasticfilesystem:ClientRootAccess",
+        "elasticfilesystem:ClientWrite",
+        "elasticfilesystem:DescribeFileSystems",
+        "elasticfilesystem:DescribeMountTargets"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:aws:elasticfilesystem:ap-southeast-2:814704514736:access-point/",
+           {
+            "Ref": "EFSEFSAccessPointCustomTemplatesC823127C"
+           }
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:aws:elasticfilesystem:ap-southeast-2:814704514736:access-point/",
+           {
+            "Ref": "EFSEFSAccessPointMedia865844DD"
+           }
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:aws:elasticfilesystem:ap-southeast-2:814704514736:file-system/",
+           {
+            "Ref": "EFSDBAB55BC"
+           }
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "TAK-Demo-BaseInfra-S3ConfBucket-ARN"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "TAK-Demo-BaseInfra-S3ConfBucket-ARN"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "AuthentikWorkerWorkerTaskRoleDefaultPolicy1D0D1DC0",
+    "Roles": [
+     {
+      "Ref": "AuthentikWorkerWorkerTaskRole17674E05"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "AuthentikWorkerWorkerTaskDefBAB02C6B": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Command": [
+       "worker"
+      ],
+      "Environment": [
+       {
+        "Name": "AUTHENTIK_POSTGRESQL__HOST",
+        "Value": {
+         "Fn::GetAtt": [
+          "DatabaseDBCluster27FBE994",
+          "Endpoint.Address"
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_POSTGRESQL__USER",
+        "Value": "authentik"
+       },
+       {
+        "Name": "AUTHENTIK_REDIS__HOST",
+        "Value": {
+         "Fn::GetAtt": [
+          "Redis04B3B4F3",
+          "PrimaryEndPoint.Address"
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_REDIS__TLS",
+        "Value": "True"
+       },
+       {
+        "Name": "AUTHENTIK_REDIS__TLS_REQS",
+        "Value": "required"
+       },
+       {
+        "Name": "AUTHENTIK_BOOTSTRAP_EMAIL",
+        "Value": "admin@tak.nz"
+       },
+       {
+        "Name": "AUTHENTIK_BOOTSTRAP_LDAP_BASEDN",
+        "Value": "dc=example,dc=com"
+       },
+       {
+        "Name": "AUTHENTIK_BOOTSTRAP_LDAP_AUTHENTIK_HOST",
+        "Value": {
+         "Fn::Join": [
+          "",
+          [
+           "https://account.",
+           {
+            "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+           }
+          ]
+         ]
+        }
+       }
+      ],
+      "Essential": true,
+      "HealthCheck": {
+       "Command": [
+        "CMD",
+        "ak",
+        "healthcheck"
+       ],
+       "Interval": 30,
+       "Retries": 3,
+       "StartPeriod": 60,
+       "Timeout": 30
+      },
+      "Image": {
+       "Fn::Join": [
+        "",
+        [
+         {
+          "Fn::Sub": [
+           "${Account}.dkr.ecr.${Region}.amazonaws.com/${RepoName}",
+           {
+            "Account": {
+             "Fn::Select": [
+              4,
+              {
+               "Fn::Split": [
+                ":",
+                {
+                 "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+                }
+               ]
+              }
+             ]
+            },
+            "Region": {
+             "Fn::Select": [
+              3,
+              {
+               "Fn::Split": [
+                ":",
+                {
+                 "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+                }
+               ]
+              }
+             ]
+            },
+            "RepoName": {
+             "Fn::Select": [
+              1,
+              {
+               "Fn::Split": [
+                "/",
+                {
+                 "Fn::Select": [
+                  5,
+                  {
+                   "Fn::Split": [
+                    ":",
+                    {
+                     "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         ":auth-infra-server-3afd0ff270324ef49901108df31c4990fe138966"
+        ]
+       ]
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "AuthentikWorkerWorkerLogs4F6481FA"
+        },
+        "awslogs-stream-prefix": "authentik-worker",
+        "awslogs-region": "ap-southeast-2"
+       }
+      },
+      "MountPoints": [
+       {
+        "ContainerPath": "/media",
+        "ReadOnly": false,
+        "SourceVolume": "media"
+       },
+       {
+        "ContainerPath": "/templates",
+        "ReadOnly": false,
+        "SourceVolume": "custom-templates"
+       }
+      ],
+      "Name": "AuthentikWorker",
+      "Secrets": [
+       {
+        "Name": "AUTHENTIK_POSTGRESQL__PASSWORD",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "DatabaseDBMasterSecret1B2A26AA"
+           },
+           ":password::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_REDIS__PASSWORD",
+        "ValueFrom": {
+         "Ref": "RedisRedisAuthTokenAC379C8C"
+        }
+       },
+       {
+        "Name": "AUTHENTIK_SECRET_KEY",
+        "ValueFrom": {
+         "Ref": "SecretsManagerAuthentikSecretKey0C8A38C9"
+        }
+       },
+       {
+        "Name": "AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "SecretsManagerAuthentikLDAPServiceUser8290CA7A"
+           },
+           ":username::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "SecretsManagerAuthentikLDAPServiceUser8290CA7A"
+           },
+           ":password::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_BOOTSTRAP_PASSWORD",
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Ref": "SecretsManagerAuthentikAdminUserPassword3A38D3BB"
+           },
+           ":password::"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_BOOTSTRAP_TOKEN",
+        "ValueFrom": {
+         "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+        }
+       }
+      ]
+     }
+    ],
+    "Cpu": "512",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "AuthentikWorkerWorkerTaskExecutionRoleDBD72B08",
+      "Arn"
+     ]
+    },
+    "Family": "TAKDemoAuthInfraAuthentikWorkerWorkerTaskDef60DD808A",
+    "Memory": "1024",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "AuthentikWorkerWorkerTaskRole17674E05",
+      "Arn"
+     ]
+    },
+    "Volumes": [
+     {
+      "EFSVolumeConfiguration": {
+       "AuthorizationConfig": {
+        "AccessPointId": {
+         "Ref": "EFSEFSAccessPointMedia865844DD"
+        },
+        "IAM": "ENABLED"
+       },
+       "FilesystemId": {
+        "Ref": "EFSDBAB55BC"
+       },
+       "TransitEncryption": "ENABLED"
+      },
+      "Name": "media"
+     },
+     {
+      "EFSVolumeConfiguration": {
+       "AuthorizationConfig": {
+        "AccessPointId": {
+         "Ref": "EFSEFSAccessPointCustomTemplatesC823127C"
+        },
+        "IAM": "ENABLED"
+       },
+       "FilesystemId": {
+        "Ref": "EFSDBAB55BC"
+       },
+       "TransitEncryption": "ENABLED"
+      },
+      "Name": "custom-templates"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskDef/Resource"
+   }
+  },
+  "AuthentikWorkerWorkerService38766934": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "Cluster": {
+     "Fn::Select": [
+      1,
+      {
+       "Fn::Split": [
+        "/",
+        {
+         "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecs-ARN"
+        }
+       ]
+      }
+     ]
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 50
+    },
+    "DesiredCount": 1,
+    "EnableECSManagedTags": false,
+    "EnableExecuteCommand": false,
+    "LaunchType": "FARGATE",
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "DISABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "ECSSecurityGroupA14DBE7D",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateA"
+       },
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateB"
+       }
+      ]
+     }
+    },
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TaskDefinition": {
+     "Ref": "AuthentikWorkerWorkerTaskDefBAB02C6B"
+    }
+   },
+   "DependsOn": [
+    "AuthentikWorkerWorkerTaskRoleDefaultPolicy1D0D1DC0",
+    "AuthentikWorkerWorkerTaskRole17674E05",
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikWorker/WorkerService/Service"
+   }
+  },
+  "AuthentikWorkerWorkerServiceTaskCountTarget4D58E899": {
+   "Type": "AWS::ApplicationAutoScaling::ScalableTarget",
+   "Properties": {
+    "MaxCapacity": 2,
+    "MinCapacity": 1,
+    "ResourceId": {
+     "Fn::Join": [
+      "",
+      [
+       "service/",
+       {
+        "Fn::Select": [
+         1,
+         {
+          "Fn::Split": [
+           "/",
+           {
+            "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecs-ARN"
+           }
+          ]
+         }
+        ]
+       },
+       "/",
+       {
+        "Fn::GetAtt": [
+         "AuthentikWorkerWorkerService38766934",
+         "Name"
+        ]
+       }
+      ]
+     ]
+    },
+    "RoleARN": "arn:aws:iam::814704514736:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService",
+    "ScalableDimension": "ecs:service:DesiredCount",
+    "ServiceNamespace": "ecs"
+   },
+   "DependsOn": [
+    "AuthentikWorkerWorkerTaskRoleDefaultPolicy1D0D1DC0",
+    "AuthentikWorkerWorkerTaskRole17674E05",
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikWorker/WorkerService/TaskCount/Target/Resource"
+   }
+  },
+  "AuthentikWorkerWorkerServiceTaskCountTargetWorkerCpuScalingB277209C": {
+   "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+   "Properties": {
+    "PolicyName": "TAKDemoAuthInfraAuthentikWorkerWorkerServiceTaskCountTargetWorkerCpuScalingE7A0E427",
+    "PolicyType": "TargetTrackingScaling",
+    "ScalingTargetId": {
+     "Ref": "AuthentikWorkerWorkerServiceTaskCountTarget4D58E899"
+    },
+    "TargetTrackingScalingPolicyConfiguration": {
+     "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+     },
+     "ScaleInCooldown": 300,
+     "ScaleOutCooldown": 120,
+     "TargetValue": 80
+    }
+   },
+   "DependsOn": [
+    "AuthentikWorkerWorkerTaskRoleDefaultPolicy1D0D1DC0",
+    "AuthentikWorkerWorkerTaskRole17674E05",
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/AuthentikWorker/WorkerService/TaskCount/Target/WorkerCpuScaling/Resource"
+   }
+  },
+  "Route53AuthentikAuthentikARecord5357EE01": {
+   "Type": "AWS::Route53::RecordSet",
+   "Properties": {
+    "AliasTarget": {
+     "DNSName": {
+      "Fn::Join": [
+       "",
+       [
+        "dualstack.",
+        {
+         "Fn::GetAtt": [
+          "AuthentikELBALB795C77FA",
+          "DNSName"
+         ]
+        }
+       ]
+      ]
+     },
+     "HostedZoneId": {
+      "Fn::GetAtt": [
+       "AuthentikELBALB795C77FA",
+       "CanonicalHostedZoneID"
+      ]
+     }
+    },
+    "Comment": "Authentik IPv4 alias record for Demo environment",
+    "HostedZoneId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-ID"
+    },
+    "Name": {
+     "Fn::Join": [
+      "",
+      [
+       "account.",
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+       },
+       "."
+      ]
+     ]
+    },
+    "Type": "A"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Route53Authentik/AuthentikARecord/Resource"
+   }
+  },
+  "Route53AuthentikAuthentikAAAARecord3BA24FB8": {
+   "Type": "AWS::Route53::RecordSet",
+   "Properties": {
+    "AliasTarget": {
+     "DNSName": {
+      "Fn::Join": [
+       "",
+       [
+        "dualstack.",
+        {
+         "Fn::GetAtt": [
+          "AuthentikELBALB795C77FA",
+          "DNSName"
+         ]
+        }
+       ]
+      ]
+     },
+     "HostedZoneId": {
+      "Fn::GetAtt": [
+       "AuthentikELBALB795C77FA",
+       "CanonicalHostedZoneID"
+      ]
+     }
+    },
+    "Comment": "Authentik IPv6 alias record for Demo environment",
+    "HostedZoneId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-ID"
+    },
+    "Name": {
+     "Fn::Join": [
+      "",
+      [
+       "account.",
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+       },
+       "."
+      ]
+     ]
+    },
+    "Type": "AAAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Route53Authentik/AuthentikAAAARecord/Resource"
+   }
+  },
+  "LdapTokenRetrieverLogGroup67698D40": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/TAK-Demo-AuthInfra-update-ldap-token",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LdapTokenRetriever/LogGroup/Resource"
+   }
+  },
+  "LdapTokenRetrieverLambdaRoleD2B26E17": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Policies": [
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret"
+         ],
+         "Effect": "Allow",
+         "Resource": [
+          "arn:aws:secretsmanager:ap-southeast-2:814704514736:secret:Demo/authentik-admin-token*",
+          "arn:aws:secretsmanager:ap-southeast-2:814704514736:secret:Demo/authentik-ldap-token*",
+          "arn:aws:secretsmanager:ap-southeast-2:814704514736:secret:coe-auth-*",
+          {
+           "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+          },
+          {
+           "Ref": "SecretsManagerAuthentikLDAPToken690C2508"
+          }
+         ]
+        },
+        {
+         "Action": [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext",
+          "kms:ReEncryptFrom",
+          "kms:ReEncryptTo"
+         ],
+         "Effect": "Allow",
+         "Resource": {
+          "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+         }
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "SecretsManagerAccess"
+     }
+    ],
+    "RoleName": "TAK-Demo-AuthInfra-update-ldap-token-lambda-role",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LdapTokenRetriever/LambdaRole/Resource"
+   }
+  },
+  "LdapTokenRetrieverFunctionA345F996": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "ZipFile": "\nconst { SecretsManagerClient, GetSecretValueCommand, PutSecretValueCommand } = require('@aws-sdk/client-secrets-manager');\nconst https = require('https');\nconst http = require('http');\nconst { URL } = require('url');\n\nconst secretsManager = new SecretsManagerClient({});\n\n// Helper function to send CloudFormation response\nasync function sendResponse(event, context, responseStatus, responseData = {}, physicalResourceId = null) {\n    const responseBody = JSON.stringify({\n        Status: responseStatus,\n        Reason: `See the details in CloudWatch Log Stream: ${context.logStreamName}`,\n        PhysicalResourceId: physicalResourceId || context.logStreamName,\n        StackId: event.StackId,\n        RequestId: event.RequestId,\n        LogicalResourceId: event.LogicalResourceId,\n        Data: responseData\n    });\n\n    const parsedUrl = new URL(event.ResponseURL);\n    const options = {\n        hostname: parsedUrl.hostname,\n        port: 443,\n        path: parsedUrl.pathname + parsedUrl.search,\n        method: 'PUT',\n        headers: {\n            'content-type': '',\n            'content-length': responseBody.length\n        }\n    };\n\n    return new Promise((resolve, reject) => {\n        const request = https.request(options, (response) => {\n            console.log(`Status code: ${response.statusCode}`);\n            resolve();\n        });\n        \n        request.on('error', (error) => {\n            console.log(`send(..) failed executing https.request(..):`, error);\n            reject(error);\n        });\n        \n        request.write(responseBody);\n        request.end();\n    });\n}\n\n// Helper function to fetch JSON data\nasync function fetchJson(url, options) {\n    return new Promise((resolve, reject) => {\n        const urlObj = new URL(url);\n        const lib = urlObj.protocol === 'https:' ? https : http;\n        \n        const req = lib.request(url, {\n            method: options.method || 'GET',\n            headers: options.headers || {}\n        }, (res) => {\n            let data = '';\n            res.on('data', chunk => data += chunk);\n            res.on('end', () => {\n                if (res.statusCode >= 200 && res.statusCode < 300) {\n                    try {\n                        resolve(JSON.parse(data));\n                    } catch (e) {\n                        reject(new Error(`Invalid JSON response: ${e.message}`));\n                    }\n                } else {\n                    reject(new Error(`HTTP error! status: ${res.statusCode}`));\n                }\n            });\n        });\n        \n        req.on('error', reject);\n        req.end();\n    });\n}\n\nasync function getAdminToken(adminSecretName) {\n    console.log('Getting admin token from secret:', adminSecretName);\n    \n    const command = new GetSecretValueCommand({\n        SecretId: adminSecretName\n    });\n    \n    const response = await secretsManager.send(command);\n    return response.SecretString;\n}\n\nasync function retrieveToken(authentikHost, authentikApiToken, outpostName) {\n    outpostName = outpostName || 'LDAP';\n    \n    try {\n        // Fetch outpost instances from API\n        const outpostInstancesUrl = new URL('/api/v3/outposts/instances/', authentikHost);\n        outpostInstancesUrl.searchParams.append('name__iexact', outpostName);\n\n        console.log('Fetching outpost instances from:', outpostInstancesUrl.toString());\n        \n        const outpostInstances = await fetchJson(outpostInstancesUrl.toString(), {\n            method: 'GET',\n            headers: {\n                'Accept': 'application/json',\n                'Authorization': `Bearer ${authentikApiToken}`\n            }\n        });\n\n        // Check if we found the outpost\n        const results = outpostInstances.results || [];\n        if (results.length === 0) {\n            throw new Error(`Outpost with name ${outpostName} not found, aborting...`);\n        }\n\n        // Extract the token identifier\n        const outpost = results.find((item) => item.name === outpostName);\n        if (!outpost || !outpost.token_identifier) {\n            throw new Error(`Token identifier for outpost ${outpostName} not found, aborting...`);\n        }\n\n        const tokenIdentifier = outpost.token_identifier;\n        console.log('Found token identifier:', tokenIdentifier);\n\n        // Fetch the token\n        const viewKeyUrl = new URL(`/api/v3/core/tokens/${tokenIdentifier}/view_key/`, authentikHost);\n\n        const viewKeyResult = await fetchJson(viewKeyUrl.toString(), {\n            method: 'GET',\n            headers: {\n                'Accept': 'application/json',\n                'Authorization': `Bearer ${authentikApiToken}`\n            }\n        });\n\n        const outpostToken = viewKeyResult.key;\n        if (!outpostToken) {\n            throw new Error(`Token for outpost ${outpostName} not found, aborting...`);\n        }\n\n        return outpostToken;\n    } catch (error) {\n        console.error(`Error retrieving token: ${error.message}`);\n        throw error;\n    }\n}\n\nasync function putLDAPSecret(secretName, secretValue) {\n    console.log('Updating LDAP token secret:', secretName);\n    \n    const command = new PutSecretValueCommand({\n        SecretId: secretName,\n        SecretString: secretValue\n    });\n    \n    try {\n        await secretsManager.send(command);\n        console.log('LDAP token secret updated successfully');\n    } catch (error) {\n        console.error('Error updating secret:', error);\n        throw error;\n    }\n}\n\nexports.handler = async (event, context) => {\n    console.log('Event:', JSON.stringify(event, null, 2));\n    \n    const { RequestType, ResourceProperties } = event;\n    const { \n        Environment, \n        AuthentikHost, \n        OutpostName,\n        AdminSecretName,\n        LDAPSecretName\n    } = ResourceProperties;\n    \n    try {\n        if (RequestType === 'Create' || RequestType === 'Update') {\n            console.log('Processing LDAP token retrieval...');\n            console.log('Environment:', Environment);\n            console.log('Authentik URL:', AuthentikHost);\n            console.log('Outpost Name:', OutpostName);\n            console.log('Admin Secret Name:', AdminSecretName);\n            console.log('LDAP Secret Name:', LDAPSecretName);\n            \n            // Get the admin token from AWS Secrets Manager\n            const adminToken = await getAdminToken(AdminSecretName);\n            \n            // Retrieve the LDAP token from Authentik\n            const ldapToken = await retrieveToken(AuthentikHost, adminToken, OutpostName);\n            \n            // Store the LDAP token back in AWS Secrets Manager\n            await putLDAPSecret(LDAPSecretName, ldapToken);\n            \n            await sendResponse(event, context, 'SUCCESS', {\n                Message: 'LDAP token retrieved and updated successfully',\n                LDAPToken: ldapToken.substring(0, 10) + '...' // Log only first 10 chars for security\n            });\n        } else if (RequestType === 'Delete') {\n            console.log('Delete request - no action needed for LDAP token retrieval');\n            await sendResponse(event, context, 'SUCCESS', {\n                Message: 'Delete completed'\n            });\n        }\n    } catch (error) {\n        console.error('Error:', error);\n        await sendResponse(event, context, 'FAILED', {\n            Message: error.message\n        });\n    }\n};\n      "
+    },
+    "Environment": {
+     "Variables": {
+      "NODE_OPTIONS": "--enable-source-maps"
+     }
+    },
+    "FunctionName": "TAK-Demo-AuthInfra-update-ldap-token",
+    "Handler": "index.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "LdapTokenRetrieverLogGroup67698D40"
+     }
+    },
+    "Role": {
+     "Fn::GetAtt": [
+      "LdapTokenRetrieverLambdaRoleD2B26E17",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "Timeout": 300
+   },
+   "DependsOn": [
+    "LdapTokenRetrieverLambdaRoleD2B26E17"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LdapTokenRetriever/Function/Resource"
+   }
+  },
+  "LdapTokenRetrieverEED318C3": {
+   "Type": "AWS::CloudFormation::CustomResource",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "LdapTokenRetrieverFunctionA345F996",
+      "Arn"
+     ]
+    },
+    "Environment": "Demo",
+    "AuthentikHost": {
+     "Fn::Join": [
+      "",
+      [
+       "https://account.",
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+       }
+      ]
+     ]
+    },
+    "OutpostName": "LDAP",
+    "AdminSecretName": {
+     "Fn::Join": [
+      "-",
+      [
+       {
+        "Fn::Select": [
+         0,
+         {
+          "Fn::Split": [
+           "-",
+           {
+            "Fn::Select": [
+             6,
+             {
+              "Fn::Split": [
+               ":",
+               {
+                "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Fn::Select": [
+         1,
+         {
+          "Fn::Split": [
+           "-",
+           {
+            "Fn::Select": [
+             6,
+             {
+              "Fn::Split": [
+               ":",
+               {
+                "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Fn::Select": [
+         2,
+         {
+          "Fn::Split": [
+           "-",
+           {
+            "Fn::Select": [
+             6,
+             {
+              "Fn::Split": [
+               ":",
+               {
+                "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Fn::Select": [
+         3,
+         {
+          "Fn::Split": [
+           "-",
+           {
+            "Fn::Select": [
+             6,
+             {
+              "Fn::Split": [
+               ":",
+               {
+                "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Fn::Select": [
+         4,
+         {
+          "Fn::Split": [
+           "-",
+           {
+            "Fn::Select": [
+             6,
+             {
+              "Fn::Split": [
+               ":",
+               {
+                "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     ]
+    },
+    "LDAPSecretName": {
+     "Fn::Join": [
+      "-",
+      [
+       {
+        "Fn::Select": [
+         0,
+         {
+          "Fn::Split": [
+           "-",
+           {
+            "Fn::Select": [
+             6,
+             {
+              "Fn::Split": [
+               ":",
+               {
+                "Ref": "SecretsManagerAuthentikLDAPToken690C2508"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Fn::Select": [
+         1,
+         {
+          "Fn::Split": [
+           "-",
+           {
+            "Fn::Select": [
+             6,
+             {
+              "Fn::Split": [
+               ":",
+               {
+                "Ref": "SecretsManagerAuthentikLDAPToken690C2508"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Fn::Select": [
+         2,
+         {
+          "Fn::Split": [
+           "-",
+           {
+            "Fn::Select": [
+             6,
+             {
+              "Fn::Split": [
+               ":",
+               {
+                "Ref": "SecretsManagerAuthentikLDAPToken690C2508"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Fn::Select": [
+         3,
+         {
+          "Fn::Split": [
+           "-",
+           {
+            "Fn::Select": [
+             6,
+             {
+              "Fn::Split": [
+               ":",
+               {
+                "Ref": "SecretsManagerAuthentikLDAPToken690C2508"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     ]
+    },
+    "UpdateTimestamp": "3afd0ff270324ef49901108df31c4990fe138966"
+   },
+   "DependsOn": [
+    "AuthentikServerService3D748704",
+    "AuthentikServerServiceTaskCountTargetCpuScalingC10EF2F7",
+    "AuthentikServerServiceTaskCountTargetB025BF2D",
+    "AuthentikWorkerWorkerService38766934",
+    "AuthentikWorkerWorkerServiceTaskCountTarget4D58E899",
+    "AuthentikWorkerWorkerServiceTaskCountTargetWorkerCpuScalingB277209C",
+    "Route53AuthentikAuthentikAAAARecord3BA24FB8",
+    "Route53AuthentikAuthentikARecord5357EE01",
+    "SecretsManagerAuthentikAdminUserToken3137C5E0",
+    "SecretsManagerAuthentikLDAPToken690C2508"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LdapTokenRetriever/Resource/Default"
+   }
+  },
+  "LDAPLogsA8A4E865": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "LDAP",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/Logs/Resource"
+   }
+  },
+  "LDAPNLBSecurityGroupD5B97BD0": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Allow 389 and 636 Access to NLB",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "10.0.0.0/8",
+      "Description": "Allow LDAP access",
+      "FromPort": 389,
+      "IpProtocol": "tcp",
+      "ToPort": 389
+     },
+     {
+      "CidrIp": "10.0.0.0/8",
+      "Description": "Allow LDAPS access",
+      "FromPort": 636,
+      "IpProtocol": "tcp",
+      "ToPort": 636
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "VpcId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-VPC-ID"
+    }
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/NLBSecurityGroup/Resource"
+   }
+  },
+  "LDAPNLBBE603900": {
+   "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+   "Properties": {
+    "LoadBalancerAttributes": [
+     {
+      "Key": "deletion_protection.enabled",
+      "Value": "false"
+     }
+    ],
+    "Scheme": "internal",
+    "Subnets": [
+     {
+      "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateA"
+     },
+     {
+      "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateB"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "Type": "network"
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/NLB/Resource"
+   }
+  },
+  "LDAPNLBLdapListener34DCA74F": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "LDAPLdapTargetGroup1919E1F7"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "LDAPNLBBE603900"
+    },
+    "Port": 389,
+    "Protocol": "TCP"
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/NLB/LdapListener/Resource"
+   }
+  },
+  "LDAPNLBLdapsListener1BD0C662": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "Certificates": [
+     {
+      "CertificateArn": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-AcmCert-ARN"
+      }
+     }
+    ],
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "LDAPLdapsTargetGroup555B6A6F"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "LDAPNLBBE603900"
+    },
+    "Port": 636,
+    "Protocol": "TLS"
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/NLB/LdapsListener/Resource"
+   }
+  },
+  "LDAPTaskExecutionRole6EF84A89": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/TaskExecutionRole/Resource"
+   }
+  },
+  "LDAPTaskExecutionRoleDefaultPolicyCF95384E": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "SecretsManagerAuthentikLDAPToken690C2508"
+       }
+      },
+      {
+       "Action": "kms:Decrypt",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-Kms-ARN"
+       }
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "LDAPLogsA8A4E865",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "LDAPTaskExecutionRoleDefaultPolicyCF95384E",
+    "Roles": [
+     {
+      "Ref": "LDAPTaskExecutionRole6EF84A89"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/TaskExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "LDAPTaskRoleB3995714": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ]
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/TaskRole/Resource"
+   }
+  },
+  "LDAPTaskDef6D68C93C": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Environment": [
+       {
+        "Name": "AUTHENTIK_HOST",
+        "Value": {
+         "Fn::Join": [
+          "",
+          [
+           "https://account.",
+           {
+            "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+           },
+           "/"
+          ]
+         ]
+        }
+       },
+       {
+        "Name": "AUTHENTIK_INSECURE",
+        "Value": "false"
+       }
+      ],
+      "Essential": true,
+      "Image": {
+       "Fn::Join": [
+        "",
+        [
+         {
+          "Fn::Sub": [
+           "${Account}.dkr.ecr.${Region}.amazonaws.com/${RepoName}",
+           {
+            "Account": {
+             "Fn::Select": [
+              4,
+              {
+               "Fn::Split": [
+                ":",
+                {
+                 "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+                }
+               ]
+              }
+             ]
+            },
+            "Region": {
+             "Fn::Select": [
+              3,
+              {
+               "Fn::Split": [
+                ":",
+                {
+                 "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+                }
+               ]
+              }
+             ]
+            },
+            "RepoName": {
+             "Fn::Select": [
+              1,
+              {
+               "Fn::Split": [
+                "/",
+                {
+                 "Fn::Select": [
+                  5,
+                  {
+                   "Fn::Split": [
+                    ":",
+                    {
+                     "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecr-ARN"
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         },
+         ":auth-infra-ldap-3afd0ff270324ef49901108df31c4990fe138966"
+        ]
+       ]
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "LDAPLogsA8A4E865"
+        },
+        "awslogs-stream-prefix": "authentik-ldap",
+        "awslogs-region": "ap-southeast-2"
+       }
+      },
+      "Name": "AuthentikLdap",
+      "PortMappings": [
+       {
+        "ContainerPort": 3389,
+        "HostPort": 3389,
+        "Protocol": "tcp"
+       },
+       {
+        "ContainerPort": 6636,
+        "HostPort": 6636,
+        "Protocol": "tcp"
+       }
+      ],
+      "Secrets": [
+       {
+        "Name": "AUTHENTIK_TOKEN",
+        "ValueFrom": {
+         "Ref": "SecretsManagerAuthentikLDAPToken690C2508"
+        }
+       }
+      ]
+     }
+    ],
+    "Cpu": "512",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "LDAPTaskExecutionRole6EF84A89",
+      "Arn"
+     ]
+    },
+    "Family": "TAKDemoAuthInfraLDAPTaskDefBAF99ACC",
+    "Memory": "1024",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "LDAPTaskRoleB3995714",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/TaskDef/Resource"
+   }
+  },
+  "LDAPService0EA4E847": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "Cluster": {
+     "Fn::Select": [
+      1,
+      {
+       "Fn::Split": [
+        "/",
+        {
+         "Fn::ImportValue": "TAK-Demo-BaseInfra-Ecs-ARN"
+        }
+       ]
+      }
+     ]
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "DeploymentCircuitBreaker": {
+      "Enable": true,
+      "Rollback": true
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 50
+    },
+    "DesiredCount": 1,
+    "EnableECSManagedTags": false,
+    "EnableExecuteCommand": false,
+    "HealthCheckGracePeriodSeconds": 60,
+    "LaunchType": "FARGATE",
+    "LoadBalancers": [
+     {
+      "ContainerName": "AuthentikLdap",
+      "ContainerPort": 3389,
+      "TargetGroupArn": {
+       "Ref": "LDAPLdapTargetGroup1919E1F7"
+      }
+     },
+     {
+      "ContainerName": "AuthentikLdap",
+      "ContainerPort": 3389,
+      "TargetGroupArn": {
+       "Ref": "LDAPLdapsTargetGroup555B6A6F"
+      }
+     }
+    ],
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "DISABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "ECSSecurityGroupA14DBE7D",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateA"
+       },
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-SubnetPrivateB"
+       }
+      ]
+     }
+    },
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TaskDefinition": {
+     "Ref": "LDAPTaskDef6D68C93C"
+    }
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LDAPNLBLdapListener34DCA74F",
+    "LDAPNLBLdapsListener1BD0C662",
+    "LDAPTaskRoleB3995714",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/Service/Service"
+   }
+  },
+  "LDAPLdapTargetGroup1919E1F7": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 30,
+    "HealthCheckPort": "3389",
+    "HealthCheckProtocol": "TCP",
+    "Port": 3389,
+    "Protocol": "TCP",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TargetType": "ip",
+    "VpcId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-VPC-ID"
+    }
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/LdapTargetGroup/Resource"
+   }
+  },
+  "LDAPLdapsTargetGroup555B6A6F": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 30,
+    "HealthCheckPort": "6636",
+    "HealthCheckProtocol": "TCP",
+    "Port": 6636,
+    "Protocol": "TCP",
+    "Tags": [
+     {
+      "Key": "DNS Zone",
+      "Value": {
+       "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+      }
+     },
+     {
+      "Key": "Environment Type",
+      "Value": "Dev-Test"
+     }
+    ],
+    "TargetType": "ip",
+    "VpcId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-VPC-ID"
+    }
+   },
+   "DependsOn": [
+    "EcrImageValidatorCustomResourceRoleAEB8A72D",
+    "EcrImageValidatorImageValidation84101594",
+    "EcrImageValidatorLogGroup392194FF",
+    "EcrImageValidatorProviderframeworkonEvent197008F7",
+    "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21",
+    "EcrImageValidatorProviderframeworkonEventServiceRole55E53571",
+    "EcrImageValidatorValidatorFunction03EF9A98",
+    "LdapTokenRetrieverFunctionA345F996",
+    "LdapTokenRetrieverLambdaRoleD2B26E17",
+    "LdapTokenRetrieverLogGroup67698D40",
+    "LdapTokenRetrieverEED318C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/LDAP/LdapsTargetGroup/Resource"
+   }
+  },
+  "Route53LdapARecordB233FD64": {
+   "Type": "AWS::Route53::RecordSet",
+   "Properties": {
+    "AliasTarget": {
+     "DNSName": {
+      "Fn::Join": [
+       "",
+       [
+        "dualstack.",
+        {
+         "Fn::GetAtt": [
+          "LDAPNLBBE603900",
+          "DNSName"
+         ]
+        }
+       ]
+      ]
+     },
+     "HostedZoneId": {
+      "Fn::GetAtt": [
+       "LDAPNLBBE603900",
+       "CanonicalHostedZoneID"
+      ]
+     }
+    },
+    "Comment": "LDAP IPv4 alias record for Demo environment",
+    "HostedZoneId": {
+     "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-ID"
+    },
+    "Name": {
+     "Fn::Join": [
+      "",
+      [
+       "ldap.",
+       {
+        "Fn::ImportValue": "TAK-Demo-BaseInfra-R53Zone-Name"
+       },
+       "."
+      ]
+     ]
+    },
+    "Type": "A"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/Route53/LdapARecord/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31U227bMAz9lr6rWuduH5DLOhTotsDue0DLrKtalgKRSlEY+vdBlp3YHbAnkucc0iRFuJDF3Z0sbuCdblXT3Rpdy6FiUJ0okVzwCgW803Gge7kNqkPeAqFAVcihQhW85o+f3oWT2L3Y/wOPtvVI9A/+Y4SjIFQemXqw0KIfy3vkSZ68bJ7Bt8gbZlCvPdqF4DMThYZeDqUzmESjPTij1UcKsxeFb0gOVagt8qXv/XYJHMBDj4x+we9MIEb/idoDQw2EE7uS5uDREoNVGIVxLcnhybUlMlrWzoon114+MftR0P0RiJBJbpIRaIBYK1CvKIc0/Lr3Ek9GK0gFpwL4QnJ40AarD2Lsk2gd/XLBTtsTG6WQ6OB03uwijMJAXzcgh4dg1dhwqjT7s5PuI85NGgdNDQas0rY9F3LYnC7dPTlotiOXl7OKlzpNjHbSzP6Cz41f5l+Gv5Hfne9WlWdsrjTFi7QoUKWNgW+B8Rmo2+OLtnoe+TPiLIO26BfYlFuhP2uF+USzWykwUJux7C7tPQq4zgKBHSkw2rZyuErHl0lF1kg2zx5Up21b5bzrha+AKLwLjN/v5bApUTnf5GNJXpXeHQByFGNi/gQ+Bc6a6T8wnl/F0GrbChWIXX/0E0ny4N1ZN+mZRmbOisK6BuUbfTkXhfz6Td7dvJHWtz5Y1j3KMtu/Ey44dIgEAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "TAK-Demo-AuthInfra/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "SecretsManagerAuthentikSecretKeyArnA94FDFB2": {
+   "Description": "Authentik secret key ARN",
+   "Value": {
+    "Ref": "SecretsManagerAuthentikSecretKey0C8A38C9"
+   }
+  },
+  "SecretsManagerAuthentikAdminUserPasswordArn52B5E4D8": {
+   "Description": "Authentik admin user password ARN",
+   "Value": {
+    "Ref": "SecretsManagerAuthentikAdminUserPassword3A38D3BB"
+   }
+  },
+  "SecretsManagerAuthentikAdminUserTokenArnED16C4A1": {
+   "Description": "Authentik admin user token ARN",
+   "Value": {
+    "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+   }
+  },
+  "SecretsManagerAuthentikLDAPServiceUserArnE649F9C2": {
+   "Description": "Authentik LDAP service user ARN",
+   "Value": {
+    "Ref": "SecretsManagerAuthentikLDAPServiceUser8290CA7A"
+   }
+  },
+  "SecretsManagerAuthentikLDAPTokenArn29B1D26F": {
+   "Description": "Authentik LDAP token ARN",
+   "Value": {
+    "Ref": "SecretsManagerAuthentikLDAPToken690C2508"
+   }
+  },
+  "DatabaseDatabaseEndpoint55DA5326": {
+   "Description": "Database cluster endpoint",
+   "Value": {
+    "Fn::GetAtt": [
+     "DatabaseDBCluster27FBE994",
+     "Endpoint.Address"
+    ]
+   }
+  },
+  "DatabaseDatabaseSecretArn884B6F93": {
+   "Description": "Database master secret ARN",
+   "Value": {
+    "Ref": "DatabaseDBMasterSecret1B2A26AA"
+   }
+  },
+  "RedisRedisEndpointCDC87E15": {
+   "Description": "Redis cluster endpoint",
+   "Value": {
+    "Fn::GetAtt": [
+     "Redis04B3B4F3",
+     "PrimaryEndPoint.Address"
+    ]
+   }
+  },
+  "RedisRedisAuthTokenArnEC2CA0EB": {
+   "Description": "Redis auth token secret ARN",
+   "Value": {
+    "Ref": "RedisRedisAuthTokenAC379C8C"
+   }
+  },
+  "EFSEFSFileSystemIdAFA0F4B8": {
+   "Description": "EFS file system ID",
+   "Value": {
+    "Ref": "EFSDBAB55BC"
+   }
+  },
+  "EFSEFSMediaAccessPointId5D0AFE58": {
+   "Description": "EFS media access point ID",
+   "Value": {
+    "Ref": "EFSEFSAccessPointMedia865844DD"
+   }
+  },
+  "EFSEFSCustomTemplatesAccessPointId63DF46C0": {
+   "Description": "EFS custom templates access point ID",
+   "Value": {
+    "Ref": "EFSEFSAccessPointCustomTemplatesC823127C"
+   }
+  },
+  "AuthentikELBLoadBalancerDnsName924DA4FA": {
+   "Description": "The DNS name of the load balancer",
+   "Value": {
+    "Fn::GetAtt": [
+     "AuthentikELBALB795C77FA",
+     "DNSName"
+    ]
+   }
+  },
+  "AuthentikELBAuthentikURL69FA0EE7": {
+   "Description": "The URL of the Authentik service",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "AuthentikELBALB795C77FA",
+        "DNSName"
+       ]
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "LDAPLoadBalancerDnsName94D80E5D": {
+   "Description": "The DNS name of the LDAP load balancer",
+   "Value": {
+    "Fn::GetAtt": [
+     "LDAPNLBBE603900",
+     "DNSName"
+    ]
+   }
+  },
+  "LDAPLdapEndpointE2999462": {
+   "Description": "The LDAP endpoint URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "ldap://",
+      {
+       "Fn::GetAtt": [
+        "LDAPNLBBE603900",
+        "DNSName"
+       ]
+      },
+      ":389"
+     ]
+    ]
+   }
+  },
+  "LDAPLdapsEndpointFC77A08A": {
+   "Description": "The LDAPS endpoint URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "ldaps://",
+      {
+       "Fn::GetAtt": [
+        "LDAPNLBBE603900",
+        "DNSName"
+       ]
+      },
+      ":636"
+     ]
+    ]
+   }
+  },
+  "DatabaseEndpointOutput": {
+   "Description": "RDS Aurora PostgreSQL cluster endpoint",
+   "Value": {
+    "Fn::GetAtt": [
+     "DatabaseDBCluster27FBE994",
+     "Endpoint.Address"
+    ]
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-Database-Endpoint",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "DatabaseSecretArnOutput": {
+   "Description": "RDS Aurora PostgreSQL master secret ARN",
+   "Value": {
+    "Ref": "DatabaseDBMasterSecret1B2A26AA"
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-Database-Secret-ARN",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "RedisEndpointOutput": {
+   "Description": "ElastiCache Redis cluster endpoint",
+   "Value": {
+    "Fn::GetAtt": [
+     "Redis04B3B4F3",
+     "PrimaryEndPoint.Address"
+    ]
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-Redis-Endpoint",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "RedisAuthTokenArnOutput": {
+   "Description": "ElastiCache Redis auth token secret ARN",
+   "Value": {
+    "Ref": "RedisRedisAuthTokenAC379C8C"
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-Redis-AuthToken-ARN",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "EfsIdOutput": {
+   "Description": "EFS file system ID",
+   "Value": {
+    "Ref": "EFSDBAB55BC"
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-EFS-ID",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "EfsMediaAccessPointOutput": {
+   "Description": "EFS media access point ID",
+   "Value": {
+    "Ref": "EFSEFSAccessPointMedia865844DD"
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-EFS-Media-AccessPoint",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "EfsTemplatesAccessPointOutput": {
+   "Description": "EFS templates access point ID",
+   "Value": {
+    "Ref": "EFSEFSAccessPointCustomTemplatesC823127C"
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-EFS-Templates-AccessPoint",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "AuthentikSecretKeyArnOutput": {
+   "Description": "Authentik secret key ARN",
+   "Value": {
+    "Ref": "SecretsManagerAuthentikSecretKey0C8A38C9"
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-Authentik-SecretKey-ARN",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "AuthentikAdminTokenArnOutput": {
+   "Description": "Authentik admin token ARN",
+   "Value": {
+    "Ref": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-Authentik-AdminToken-ARN",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "AuthentikLdapTokenArnOutput": {
+   "Description": "Authentik LDAP token ARN",
+   "Value": {
+    "Ref": "SecretsManagerAuthentikLDAPToken690C2508"
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-Authentik-LdapToken-ARN",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "AuthentikAlbDnsOutput": {
+   "Description": "Authentik Application Load Balancer DNS name",
+   "Value": {
+    "Fn::GetAtt": [
+     "AuthentikELBALB795C77FA",
+     "DNSName"
+    ]
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-Authentik-ALB-DNS",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "AuthentikUrlOutput": {
+   "Description": "Authentik application URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "AuthentikELBALB795C77FA",
+        "DNSName"
+       ]
+      }
+     ]
+    ]
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-Authentik-URL",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "LdapNlbDnsOutput": {
+   "Description": "LDAP Network Load Balancer DNS name",
+   "Value": {
+    "Fn::GetAtt": [
+     "LDAPNLBBE603900",
+     "DNSName"
+    ]
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-LDAP-NLB-DNS",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  },
+  "LdapTokenRetrieverLambdaArnOutput": {
+   "Description": "ARN of the Lambda function that retrieves and updates LDAP tokens",
+   "Value": {
+    "Fn::GetAtt": [
+     "LdapTokenRetrieverFunctionA345F996",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": {
+     "Fn::Sub": [
+      "${StackName}-LDAP-TokenRetriever-Lambda-ARN",
+      {
+       "StackName": "Demo"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

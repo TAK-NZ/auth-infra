@@ -7,21 +7,12 @@ import * as cr from 'aws-cdk-lib/custom-resources';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { DeploymentConfig, ValidationConfig } from '../construct-configs';
 
 /**
  * Properties for ECR Image Validator
  */
 export interface EcrImageValidatorProps {
-  /**
-   * ECR repository ARN
-   */
-  ecrRepositoryArn: string;
-
-  /**
-   * List of required image tags to validate
-   */
-  requiredImageTags: string[];
-
   /**
    * Environment name for logging
    */
@@ -31,6 +22,16 @@ export interface EcrImageValidatorProps {
    * Environment configuration
    */
   config: AuthInfraEnvironmentConfig;
+
+  /**
+   * Deployment configuration (ECR repository ARN)
+   */
+  deployment: DeploymentConfig;
+
+  /**
+   * Validation configuration (required image tags)
+   */
+  validation: ValidationConfig;
 }
 
 /**
@@ -42,21 +43,26 @@ export class EcrImageValidator extends Construct {
 
     // Extract repository name from ARN
     // ECR ARN format: arn:aws:ecr:region:account:repository/repository-name
-    // Note: At construct time, props.ecrRepositoryArn might be a CloudFormation token
+    // Note: At construct time, props.deployment.ecrRepositoryArn might be a CloudFormation token
     // so we'll defer the repository name extraction to the Lambda function
     
     // For validation during synthesis, check if it's a token or a real ARN
-    const isToken = cdk.Token.isUnresolved(props.ecrRepositoryArn);
+    const ecrRepositoryArn = props.deployment.ecrRepositoryArn;
+    if (!ecrRepositoryArn) {
+      throw new Error('ECR repository ARN is required for image validation');
+    }
+    
+    const isToken = cdk.Token.isUnresolved(ecrRepositoryArn);
     
     if (!isToken) {
       // Only validate format if it's not a CloudFormation token
-      if (!props.ecrRepositoryArn.startsWith('arn:aws:ecr:') || !props.ecrRepositoryArn.includes('repository/')) {
-        throw new Error(`Invalid ECR repository ARN: ${props.ecrRepositoryArn}`);
+      if (!ecrRepositoryArn.startsWith('arn:aws:ecr:') || !ecrRepositoryArn.includes('repository/')) {
+        throw new Error(`Invalid ECR repository ARN: ${ecrRepositoryArn}`);
       }
       
-      const repositoryName = props.ecrRepositoryArn.split('/').pop();
+      const repositoryName = ecrRepositoryArn.split('/').pop();
       if (!repositoryName) {
-        throw new Error(`Invalid ECR repository ARN: ${props.ecrRepositoryArn}`);
+        throw new Error(`Invalid ECR repository ARN: ${ecrRepositoryArn}`);
       }
     }
 
@@ -76,7 +82,7 @@ export class EcrImageValidator extends Construct {
                 'ecr:ListImages',
                 'ecr:GetAuthorizationToken'
               ],
-              resources: [props.ecrRepositoryArn]
+              resources: [ecrRepositoryArn]
             }),
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
@@ -213,8 +219,8 @@ def send_response(event, context, response_status, response_data):
     const customResource = new cdk.CustomResource(this, 'ImageValidation', {
       serviceToken: provider.serviceToken,
       properties: {
-        EcrRepositoryArn: props.ecrRepositoryArn,
-        RequiredTags: props.requiredImageTags,
+        EcrRepositoryArn: ecrRepositoryArn,
+        RequiredTags: props.validation.requiredImageTags,
         // Add a timestamp to force updates when tags change
         Timestamp: new Date().toISOString()
       }
@@ -222,6 +228,6 @@ def send_response(event, context, response_status, response_data):
 
     // Add metadata for troubleshooting
     customResource.node.addMetadata('Description', 'Validates that required ECR images exist before deployment');
-    customResource.node.addMetadata('RequiredTags', props.requiredImageTags.join(', '));
+    customResource.node.addMetadata('RequiredTags', props.validation.requiredImageTags.join(', '));
   }
 }

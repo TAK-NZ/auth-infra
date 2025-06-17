@@ -11,6 +11,7 @@ import {
   aws_elasticloadbalancingv2 as elbv2
 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { NetworkConfig } from '../construct-configs';
 
 /**
  * Properties for the Route53 LDAP construct
@@ -27,19 +28,9 @@ export interface Route53Props {
   config: AuthInfraEnvironmentConfig;
 
   /**
-   * Hosted Zone ID imported from base infrastructure
+   * Network configuration (DNS zones, hostname, load balancer)
    */
-  hostedZoneId: string;
-
-  /**
-   * Hosted Zone Name imported from base infrastructure
-   */
-  hostedZoneName: string;
-
-  /**
-   * Hostname for LDAP service (creates A alias record)
-   */
-  hostnameLdap: string;
+  network: NetworkConfig;
 
   /**
    * LDAP Network Load Balancer for A alias record
@@ -71,17 +62,17 @@ export class Route53 extends Construct {
 
     // Import the hosted zone from base infrastructure
     this.hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, 'HostedZone', {
-      hostedZoneId: props.hostedZoneId,
-      zoneName: props.hostedZoneName
+      hostedZoneId: props.network.hostedZoneId,
+      zoneName: props.network.hostedZoneName
     });
 
     // Calculate full domain name
-    this.ldapFqdn = `${props.hostnameLdap}.${props.hostedZoneName}`;
+    this.ldapFqdn = `${props.network.hostname}.${props.network.hostedZoneName}`;
 
     // Create A record alias for LDAP (IPv4 only for NLB)
     this.ldapARecord = new route53.ARecord(this, 'LdapARecord', {
       zone: this.hostedZone,
-      recordName: props.hostnameLdap,
+      recordName: props.network.hostname,
       target: route53.RecordTarget.fromAlias(
         new targets.LoadBalancerTarget(props.ldapLoadBalancer)
       ),
