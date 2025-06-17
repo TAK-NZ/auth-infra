@@ -247,7 +247,9 @@ export class AuthentikServer extends Construct {
       actions: [
         'elasticfilesystem:ClientMount',
         'elasticfilesystem:ClientWrite',
-        'elasticfilesystem:ClientRootAccess'
+        'elasticfilesystem:ClientRootAccess',
+        'elasticfilesystem:DescribeMountTargets',
+        'elasticfilesystem:DescribeFileSystems'
       ],
       resources: [
         `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:file-system/${props.efsId}`,
@@ -374,6 +376,7 @@ export class AuthentikServer extends Construct {
     this.ecsService = new ecs.FargateService(this, 'Service', {
       cluster: props.ecsCluster,
       taskDefinition: this.taskDefinition,
+      healthCheckGracePeriod: Duration.seconds(300),
       desiredCount: props.config.ecs.desiredCount,
       securityGroups: [props.ecsSecurityGroup],
       enableExecuteCommand: props.enableExecute,

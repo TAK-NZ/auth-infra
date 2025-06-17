@@ -108,6 +108,10 @@ export interface AuthentikWorkerProps {
      * KMS key for secrets encryption
      */
     kmsKey: kms.IKey;
+    /**
+     * Authentik service host URL (e.g., https://account.demo.tak.nz)
+     */
+    authentikHost: string;
 }
 /**
  * CDK construct for the Authentik worker container

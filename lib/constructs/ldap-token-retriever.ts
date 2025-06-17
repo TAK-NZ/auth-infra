@@ -96,14 +96,14 @@ export class LdapTokenRetriever extends Construct {
 
     // Create CloudWatch log group for the Lambda function
     const logGroup = new logs.LogGroup(this, 'LogGroup', {
-      logGroupName: `/aws/lambda/${props.environment}-update-ldap-token`,
+      logGroupName: `/aws/lambda/TAK-${props.environment}-AuthInfra-update-ldap-token`,
       retention: props.config.monitoring.logRetentionDays,
       removalPolicy: props.config.general.removalPolicy
     });
 
     // Create IAM role for the Lambda function
     const lambdaRole = new iam.Role(this, 'LambdaRole', {
-      roleName: `${props.environment}-update-ldap-token-lambda-role`,
+      roleName: `TAK-${props.environment}-AuthInfra-update-ldap-token-lambda-role`,
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
@@ -147,7 +147,7 @@ export class LdapTokenRetriever extends Construct {
 
     // Create the Lambda function
     this.lambdaFunction = new lambda.Function(this, 'Function', {
-      functionName: `${props.environment}-update-ldap-token`,
+      functionName: `TAK-${props.environment}-AuthInfra-update-ldap-token`,
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       role: lambdaRole,
@@ -157,10 +157,10 @@ export class LdapTokenRetriever extends Construct {
         NODE_OPTIONS: '--enable-source-maps'
       },
       code: lambda.Code.fromInline(`
-import { SecretsManagerClient, GetSecretValueCommand, PutSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import https from 'https';
-import http from 'http';
-import { URL } from 'url';
+const { SecretsManagerClient, GetSecretValueCommand, PutSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
+const https = require('https');
+const http = require('http');
+const { URL } = require('url');
 
 const secretsManager = new SecretsManagerClient({});
 
@@ -318,7 +318,7 @@ async function putLDAPSecret(secretName, secretValue) {
     }
 }
 
-export const handler = async (event, context) => {
+exports.handler = async (event, context) => {
     console.log('Event:', JSON.stringify(event, null, 2));
     
     const { RequestType, ResourceProperties } = event;

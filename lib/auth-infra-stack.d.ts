@@ -23,11 +23,4 @@ export declare class AuthInfraStack extends cdk.Stack {
      * @returns The created security group
      */
     private createDbSecurityGroup;
-    /**
-     * Create security group for Redis access
-     * @param vpc The VPC to create the security group in
-     * @param ecsSecurityGroup The ECS security group to allow access from
-     * @returns The created security group
-     */
-    private createRedisSecurityGroup;
 }

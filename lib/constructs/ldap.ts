@@ -238,18 +238,11 @@ export class Ldap extends Construct {
         logGroup
       }),
       environment: {
-        AUTHENTIK_HOST: props.authentikHost,
+        AUTHENTIK_HOST: `https://${props.authentikHost}/`,
         AUTHENTIK_INSECURE: 'false'
       },
       secrets: {
         AUTHENTIK_TOKEN: ecs.Secret.fromSecretsManager(props.ldapToken)
-      },
-      healthCheck: {
-        command: ['CMD-SHELL', 'netstat -an | grep ":389 " || exit 1'],
-        interval: Duration.seconds(30),
-        timeout: Duration.seconds(5),
-        retries: 3,
-        startPeriod: Duration.seconds(60)
       },
       essential: true
     });
@@ -257,13 +250,13 @@ export class Ldap extends Construct {
     // Add port mappings
     container.addPortMappings(
       {
-        containerPort: 389,
-        hostPort: 389,
+        containerPort: 3389,
+        hostPort: 3389,
         protocol: ecs.Protocol.TCP
       },
       {
-        containerPort: 636,
-        hostPort: 636,
+        containerPort: 6636,
+        hostPort: 6636,
         protocol: ecs.Protocol.TCP
       }
     );
@@ -283,10 +276,10 @@ export class Ldap extends Construct {
     const ldapTargetGroup = new elbv2.NetworkTargetGroup(this, 'LdapTargetGroup', {
       vpc: props.vpc,
       targetType: elbv2.TargetType.IP,
-      port: 389,
+      port: 3389,
       protocol: elbv2.Protocol.TCP,
       healthCheck: {
-        port: '389',
+        port: '3389',
         protocol: elbv2.Protocol.TCP,
         interval: Duration.seconds(30)
       }
@@ -295,10 +288,10 @@ export class Ldap extends Construct {
     const ldapsTargetGroup = new elbv2.NetworkTargetGroup(this, 'LdapsTargetGroup', {
       vpc: props.vpc,
       targetType: elbv2.TargetType.IP,
-      port: 636,
+      port: 6636,
       protocol: elbv2.Protocol.TCP,
       healthCheck: {
-        port: '636',
+        port: '6636',
         protocol: elbv2.Protocol.TCP,
         interval: Duration.seconds(30)
       }

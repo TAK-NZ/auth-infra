@@ -2,7 +2,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { AuthInfraStack } from '../lib/auth-infra-stack';
 import { createStackConfig } from '../lib/stack-config';
-import { getGitSha, validateEnvType, validateRequiredParams } from '../lib/utils';
+import { getGitSha, validateCdkContextParams } from '../lib/utils';
 
 const app = new cdk.App();
 
@@ -16,8 +16,8 @@ const authentikAdminUserEmail = app.node.tryGetContext('authentikAdminUserEmail'
 const gitSha = app.node.tryGetContext('gitSha') || getGitSha();
 
 // Validate parameters
-validateEnvType(envType);
-validateRequiredParams({
+validateCdkContextParams({
+  envType,
   stackName: customStackName,
   authentikAdminUserEmail
 });
@@ -51,7 +51,7 @@ const stackName = `TAK-${customStackName}-AuthInfra`; // Always use TAK prefix
 app.node.setContext('calculatedGitSha', gitSha);
 app.node.setContext('validatedAuthentikAdminUserEmail', authentikAdminUserEmail);
 
-// Create configuration
+// Create complete configuration
 const configResult = createStackConfig(
   envType as 'prod' | 'dev-test',
   customStackName,
@@ -60,7 +60,7 @@ const configResult = createStackConfig(
   'AuthInfra'
 );
 
-// Create the stack with environment configuration for AWS API calls only
+// Create the stack with environment configuration
 const stack = new AuthInfraStack(app, stackName, {
   configResult: configResult,
   env: {

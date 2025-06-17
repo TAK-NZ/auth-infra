@@ -1,11 +1,14 @@
 /**
- * Route53 Construct - DNS record management for Authentik and LDAP services
+ * Route53 LDAP Construct - DNS record management for LDAP service only
+ *
+ * This construct creates only the LDAP DNS records. Authentik DNS records
+ * are handled by the Route53Authentik construct.
  */
 import { Construct } from 'constructs';
 import { aws_route53 as route53, aws_elasticloadbalancingv2 as elbv2 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
- * Properties for the Route53 construct
+ * Properties for the Route53 LDAP construct
  */
 export interface Route53Props {
     /**
@@ -25,24 +28,16 @@ export interface Route53Props {
      */
     hostedZoneName: string;
     /**
-     * Hostname for Authentik service (creates A/AAAA alias records)
-     */
-    hostnameAuthentik: string;
-    /**
      * Hostname for LDAP service (creates A alias record)
      */
     hostnameLdap: string;
-    /**
-     * Authentik Application Load Balancer for A/AAAA alias records
-     */
-    authentikLoadBalancer: elbv2.ApplicationLoadBalancer;
     /**
      * LDAP Network Load Balancer for A alias record
      */
     ldapLoadBalancer: elbv2.NetworkLoadBalancer;
 }
 /**
- * CDK construct for Route53 DNS record management
+ * CDK construct for Route53 DNS record management - LDAP only
  */
 export declare class Route53 extends Construct {
     /**
@@ -50,30 +45,14 @@ export declare class Route53 extends Construct {
      */
     readonly hostedZone: route53.IHostedZone;
     /**
-     * Authentik A record
-     */
-    readonly authentikARecord: route53.ARecord;
-    /**
-     * Authentik AAAA record
-     */
-    readonly authentikAAAARecord: route53.AaaaRecord;
-    /**
      * LDAP A record
      */
     readonly ldapARecord: route53.ARecord;
-    /**
-     * Full DNS name for Authentik service
-     */
-    readonly authentikFqdn: string;
     /**
      * Full DNS name for LDAP service
      */
     readonly ldapFqdn: string;
     constructor(scope: Construct, id: string, props: Route53Props);
-    /**
-     * Get the Authentik service URL
-     */
-    getAuthentikUrl(): string;
     /**
      * Get the LDAP service hostname
      */

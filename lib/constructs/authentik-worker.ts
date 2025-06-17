@@ -146,6 +146,11 @@ export interface AuthentikWorkerProps {
    * KMS key for secrets encryption
    */
   kmsKey: kms.IKey;
+
+  /**
+   * Authentik service host URL (e.g., https://account.demo.tak.nz)
+   */
+  authentikHost: string;
 }
 
 /**
@@ -231,7 +236,9 @@ export class AuthentikWorker extends Construct {
       actions: [
         'elasticfilesystem:ClientMount',
         'elasticfilesystem:ClientWrite',
-        'elasticfilesystem:ClientRootAccess'
+        'elasticfilesystem:ClientRootAccess',
+        'elasticfilesystem:DescribeMountTargets',
+        'elasticfilesystem:DescribeFileSystems'
       ],
       resources: [
         `arn:aws:elasticfilesystem:${Stack.of(this).region}:${Stack.of(this).account}:file-system/${props.efsId}`,
@@ -304,6 +311,8 @@ export class AuthentikWorker extends Construct {
         // Add essential bootstrap configuration for worker
         AUTHENTIK_BOOTSTRAP_EMAIL: props.adminUserEmail,
         AUTHENTIK_BOOTSTRAP_LDAP_BASEDN: props.ldapBaseDn,
+        // Authentik service host URL for API communications from LDAP Outpost
+        AUTHENTIK_BOOTSTRAP_LDAP_AUTHENTIK_HOST: props.authentikHost,
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__PASSWORD: ecs.Secret.fromSecretsManager(props.dbSecret, 'password'),
@@ -316,9 +325,9 @@ export class AuthentikWorker extends Construct {
       },
       // Add basic health check for worker (workers don't expose HTTP endpoints)
       healthCheck: {
-        command: ['CMD', 'ak', 'healthceck'],
+        command: ['CMD', 'ak', 'healthcheck'],
         interval: Duration.seconds(30),
-        timeout: Duration.seconds(10),
+        timeout: Duration.seconds(30),
         retries: 3,
         startPeriod: Duration.seconds(60)
       },

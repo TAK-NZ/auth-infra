@@ -17,6 +17,7 @@ import { AuthentikWorker } from './constructs/authentik-worker';
 import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 import { Route53 } from './constructs/route53';
+import { Route53Authentik } from './constructs/route53-authentik';
 import { EcrImageValidator } from './constructs/ecr-image-validator';
 
 // Utility imports
@@ -38,7 +39,11 @@ export class AuthInfraStack extends cdk.Stack {
       description: 'TAK Authentication Layer - Authentik, LDAP Outpost',
     });
 
-    const { stackConfig, environmentConfig, computedValues } = props.configResult;
+    const { 
+      stackConfig, 
+      environmentConfig, 
+      computedValues 
+    } = props.configResult;
     
     // Extract configuration values
     const envType = stackConfig.envType;
@@ -55,12 +60,12 @@ export class AuthInfraStack extends cdk.Stack {
     const stackName = Fn.ref('AWS::StackName');
     const region = cdk.Stack.of(this).region;
 
-    // Context-based parameter resolution (pre-validated in cdk.ts)
+    // Context-based parameter resolution
     const gitSha = this.node.tryGetContext('calculatedGitSha') || 'development';
     const enableExecute = Boolean(this.node.tryGetContext('enableExecute') || false);
     const authentikAdminUserEmail = this.node.tryGetContext('validatedAuthentikAdminUserEmail') || '';
-    const authentikLdapBaseDn = this.node.tryGetContext('authentikLdapBaseDn') || 'DC=example,DC=com';
     const useAuthentikConfigFile = Boolean(this.node.tryGetContext('useAuthentikConfigFile') || false);
+    const ldapBaseDn = this.node.tryGetContext('ldapBaseDn') || 'dc=example,dc=com';
     const hostnameAuthentik = this.node.tryGetContext('hostnameAuthentik') || 'account';
     const hostnameLdap = this.node.tryGetContext('hostnameLdap') || 'ldap';
 
@@ -131,7 +136,6 @@ export class AuthInfraStack extends cdk.Stack {
     // Security Groups
     const ecsSecurityGroup = this.createEcsSecurityGroup(vpc);
     const dbSecurityGroup = this.createDbSecurityGroup(vpc, ecsSecurityGroup);
-    const redisSecurityGroup = this.createRedisSecurityGroup(vpc, ecsSecurityGroup);
 
     // =================
     // CORE INFRASTRUCTURE
@@ -161,7 +165,7 @@ export class AuthInfraStack extends cdk.Stack {
       config: environmentConfig,
       vpc,
       kmsKey,
-      securityGroups: [redisSecurityGroup]
+      securityGroups: [ecsSecurityGroup]
     });
 
     // EFS
@@ -213,7 +217,7 @@ export class AuthInfraStack extends cdk.Stack {
       envFileS3Uri: envFileS3Uri,
       envFileS3Key: envFileS3Key,
       adminUserEmail: authentikAdminUserEmail,
-      ldapBaseDn: authentikLdapBaseDn,
+      ldapBaseDn: ldapBaseDn,
       useAuthentikConfigFile: useAuthentikConfigFile,
       ecrRepositoryArn: ecrRepository,
       gitSha: gitSha,
@@ -246,7 +250,7 @@ export class AuthInfraStack extends cdk.Stack {
       envFileS3Key: envFileS3Key,
       useAuthentikConfigFile: useAuthentikConfigFile,
       adminUserEmail: authentikAdminUserEmail,
-      ldapBaseDn: authentikLdapBaseDn,
+      ldapBaseDn: ldapBaseDn,
       ldapServiceUser: secretsManager.ldapServiceUser,
       ecrRepositoryArn: ecrRepository,
       gitSha: gitSha,
@@ -261,7 +265,8 @@ export class AuthInfraStack extends cdk.Stack {
       kmsKey,
       efsId: efs.fileSystem.fileSystemId,
       efsMediaAccessPointId: efs.mediaAccessPoint.accessPointId,
-      efsCustomTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId
+      efsCustomTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId,
+      authentikHost: `https://${hostnameAuthentik}.${hostedZoneName}`
     });
 
     // Ensure Authentik Worker waits for ECR image validation
@@ -269,6 +274,20 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Connect Authentik Server to Load Balancer
     authentikServer.createTargetGroup(vpc, authentikELB.httpsListener);
+
+    // =================
+    // DNS SETUP (AUTHENTIK)
+    // =================
+
+    // Route53 Authentik DNS Records (needed before LDAP token retriever)
+    const route53Authentik = new Route53Authentik(this, 'Route53Authentik', {
+      environment: stackNameComponent,
+      config: environmentConfig,
+      hostedZoneId: hostedZoneId,
+      hostedZoneName: hostedZoneName,
+      hostnameAuthentik: hostnameAuthentik,
+      authentikLoadBalancer: authentikELB.loadBalancer
+    });
 
     // =================
     // LDAP CONFIGURATION
@@ -279,7 +298,8 @@ export class AuthInfraStack extends cdk.Stack {
       environment: stackNameComponent,
       config: environmentConfig,
       kmsKey,
-      authentikHost: `https://${authentikELB.dnsName}`,
+      // Use proper FQDN that matches TLS certificate, not ELB DNS name
+      authentikHost: route53Authentik.getAuthentikUrl(),
       outpostName: 'LDAP',
       adminTokenSecret: secretsManager.adminUserToken,
       ldapTokenSecret: secretsManager.ldapToken,
@@ -297,7 +317,7 @@ export class AuthInfraStack extends cdk.Stack {
       ecsCluster,
       s3ConfBucket,
       sslCertificateArn: sslCertificateArn,
-      authentikHost: authentikELB.dnsName,
+      authentikHost: route53Authentik.authentikFqdn,
       ecrRepositoryArn: ecrRepository,
       gitSha: gitSha,
       enableExecute: enableExecute,
@@ -314,21 +334,23 @@ export class AuthInfraStack extends cdk.Stack {
     // DNS AND ROUTING
     // =================
 
-    // Route53 DNS Records
+    // =================
+    // DNS SETUP (LDAP)
+    // =================
+
+    // Route53 LDAP DNS Records (after LDAP construct is created)
     const route53 = new Route53(this, 'Route53', {
       environment: stackNameComponent,
       config: environmentConfig,
       hostedZoneId: hostedZoneId,
       hostedZoneName: hostedZoneName,
-      hostnameAuthentik: hostnameAuthentik,
       hostnameLdap: hostnameLdap,
-      authentikLoadBalancer: authentikELB.loadBalancer,
       ldapLoadBalancer: ldap.loadBalancer
     });
 
     // Add dependency for LDAP token retriever to wait for Authentik DNS records
-    ldapTokenRetriever.customResource.node.addDependency(route53.authentikARecord);
-    ldapTokenRetriever.customResource.node.addDependency(route53.authentikAAAARecord);
+    ldapTokenRetriever.customResource.node.addDependency(route53Authentik.authentikARecord);
+    ldapTokenRetriever.customResource.node.addDependency(route53Authentik.authentikAAAARecord);
 
     // =================
     // STACK OUTPUTS
@@ -415,30 +437,6 @@ export class AuthInfraStack extends cdk.Stack {
 
     return dbSecurityGroup;
   }
-
-  /**
-   * Create security group for Redis access
-   * @param vpc The VPC to create the security group in
-   * @param ecsSecurityGroup The ECS security group to allow access from
-   * @returns The created security group
-   */
-  private createRedisSecurityGroup(vpc: ec2.IVpc, ecsSecurityGroup: ec2.SecurityGroup): ec2.SecurityGroup {
-    const redisSecurityGroup = new ec2.SecurityGroup(this, 'RedisSecurityGroup', {
-      vpc,
-      description: 'Security group for Redis',
-      allowAllOutbound: false
-    });
-
-    // Allow Redis access from ECS tasks
-    redisSecurityGroup.addIngressRule(
-      ec2.Peer.securityGroupId(ecsSecurityGroup.securityGroupId),
-      ec2.Port.tcp(6379),
-      'Allow Redis access from ECS tasks'
-    );
-
-    return redisSecurityGroup;
-  }
-
 }
 
 /**

@@ -122,7 +122,8 @@ describe('EFS IAM Permissions', () => {
       efsId: 'fs-12345',
       efsMediaAccessPointId: 'fsap-media-12345',
       efsCustomTemplatesAccessPointId: 'fsap-templates-12345',
-      ecrRepositoryArn: 'arn:aws:ecr:us-west-2:123456789012:repository/test-repo'
+      ecrRepositoryArn: 'arn:aws:ecr:us-west-2:123456789012:repository/test-repo',
+      authentikHost: 'https://account.example.com'
     });
 
     // Check that task definition was created

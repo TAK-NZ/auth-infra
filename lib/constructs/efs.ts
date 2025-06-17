@@ -6,6 +6,7 @@ import {
   aws_efs as efs,
   aws_ec2 as ec2,
   aws_kms as kms,
+  aws_iam as iam,
   CfnOutput,
   RemovalPolicy
 } from 'aws-cdk-lib';
@@ -98,7 +99,7 @@ export class Efs extends Construct {
       ? efs.ThroughputMode.PROVISIONED 
       : efs.ThroughputMode.BURSTING;
 
-    // Build EFS configuration object
+    // Build EFS configuration object with file system policy
     const efsConfig: any = {
       vpc: props.vpc,
       encrypted: true,
@@ -106,7 +107,28 @@ export class Efs extends Construct {
       performanceMode: efs.PerformanceMode.GENERAL_PURPOSE,
       throughputMode: throughputMode,
       securityGroup: efsSecurityGroup,
-      removalPolicy: efsRemovalPolicy
+      removalPolicy: efsRemovalPolicy,
+      fileSystemPolicy: iam.PolicyDocument.fromJson({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: {
+              AWS: '*'
+            },
+            Action: [
+              'elasticfilesystem:ClientMount',
+              'elasticfilesystem:ClientWrite',
+              'elasticfilesystem:ClientRootAccess'
+            ],
+            Condition: {
+              Bool: {
+                'elasticfilesystem:AccessedViaMountTarget': 'true'
+              }
+            }
+          }
+        ]
+      })
     };
 
     // Add provisioned throughput if specified
@@ -124,7 +146,12 @@ export class Efs extends Construct {
         uid: '1000',
         gid: '1000'
       },
-      path: '/media'
+      path: '/media',
+      createAcl: {
+        ownerUid: '1000',
+        ownerGid: '1000',
+        permissions: '755'
+      }
     });
 
     // Create access point for custom templates
@@ -134,7 +161,12 @@ export class Efs extends Construct {
         uid: '1000',
         gid: '1000'
       },
-      path: '/custom-templates'
+      path: '/custom-templates',
+      createAcl: {
+        ownerUid: '1000',
+        ownerGid: '1000',
+        permissions: '755'
+      }
     });
 
     // Create outputs

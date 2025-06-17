@@ -1,27 +1,11 @@
 /**
- * Utility functions for the TAK Auth Infrastructure CDK project
+ * Utility functions for CDK infrastructure
  */
 
-import { execSync } from 'child_process';
-
 /**
- * Get the current git SHA for tagging resources
- * @returns Current git SHA or 'development' if unable to determine
- */
-export function getGitSha(): string {
-  try {
-    // Get the full git SHA (not short version)
-    return execSync('git rev-parse HEAD').toString().trim();
-  } catch (error) {
-    console.warn('Unable to get git SHA, using "development"');
-    return 'development';
-  }
-}
-
-/**
- * Validate environment type
- * @param envType Environment type to validate
- * @throws Error if envType is invalid
+ * Validates environment type parameter
+ * @param envType - The environment type to validate
+ * @throws Error if envType is not valid
  */
 export function validateEnvType(envType: string): void {
   if (envType !== 'prod' && envType !== 'dev-test') {
@@ -30,23 +14,74 @@ export function validateEnvType(envType: string): void {
 }
 
 /**
- * Validate required CDK context parameters
- * @param params Object containing parameters to validate
+ * Validates required stack name parameter
+ * @param stackName - The stack name to validate
+ * @throws Error if stackName is missing or empty
  */
-export function validateRequiredParams(params: {
-  stackName?: string;
-  authentikAdminUserEmail?: string;
-}): void {
-  const { stackName, authentikAdminUserEmail } = params;
-
+export function validateStackName(stackName: string | undefined): void {
   if (!stackName) {
-    throw new Error('stackName is required. Use --context stackName=YourStackName\n' +
-      'This parameter is mandatory as it determines the correct CloudFormation export names\n' +
-      'for importing VPC and other resources from the base infrastructure stack.\n' +
-      'Examples: --context stackName=Demo (for TAK-Demo-BaseInfra exports)');
+    throw new Error('stackName is required. Use --context stackName=YourStackName');
   }
+}
 
+/**
+ * Validates required Authentik admin user email parameter
+ * @param authentikAdminUserEmail - The admin user email to validate
+ * @throws Error if authentikAdminUserEmail is missing or empty
+ */
+export function validateAuthentikAdminUserEmail(authentikAdminUserEmail: string | undefined): void {
   if (!authentikAdminUserEmail || authentikAdminUserEmail.trim() === '') {
     throw new Error('authentikAdminUserEmail is required. Use --context authentikAdminUserEmail=user@example.com');
   }
+}
+
+/**
+ * Validates optional ldapBaseDn parameter when used
+ * Note: This is a utility function for optional parameter validation within the stack
+ * @param ldapBaseDn - The LDAP base DN to validate
+ * @throws Error if ldapBaseDn is provided but empty
+ */
+export function validateLdapBaseDn(ldapBaseDn: string | undefined): void {
+  if (ldapBaseDn !== undefined && ldapBaseDn.trim() === '') {
+    throw new Error('ldapBaseDn cannot be empty when provided. Use --context ldapBaseDn=DC=example,DC=com');
+  }
+}
+
+/**
+ * Validates optional useAuthentikConfigFile parameter when used  
+ * Note: This is a utility function for optional parameter validation within the stack
+ * @param useAuthentikConfigFile - The useAuthentikConfigFile setting to validate
+ * @throws Error if useAuthentikConfigFile is provided but invalid
+ */
+export function validateUseAuthentikConfigFile(useAuthentikConfigFile: string | undefined): void {
+  if (useAuthentikConfigFile !== undefined && useAuthentikConfigFile !== 'true' && useAuthentikConfigFile !== 'false') {
+    throw new Error('useAuthentikConfigFile must be either "true" or "false" when provided. Use --context useAuthentikConfigFile=true or --context useAuthentikConfigFile=false');
+  }
+}
+
+/**
+ * Gets the current Git SHA for tagging resources
+ * @returns Git SHA string or 'unknown' if not available
+ */
+export function getGitSha(): string {
+  try {
+    const { execSync } = require('child_process');
+    return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  } catch (error) {
+    return 'unknown';
+  }
+}
+
+/**
+ * Validates all required CDK context parameters
+ * @param params - Object containing all parameters to validate
+ */
+export function validateCdkContextParams(params: {
+  envType: string;
+  stackName: string | undefined;
+  authentikAdminUserEmail: string | undefined;
+}): void {
+  validateEnvType(params.envType);
+  validateStackName(params.stackName);
+  validateAuthentikAdminUserEmail(params.authentikAdminUserEmail);
 }
