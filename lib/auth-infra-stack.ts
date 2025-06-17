@@ -126,7 +126,7 @@ export class AuthInfraStack extends cdk.Stack {
     cdk.Tags.of(this).add('DNS Zone', hostedZoneName);
 
     // S3 Environment File paths - assumes authentik-config.env already exists in S3
-    const envFileS3Key = `${stackNameComponent}/authentik-config.env`;
+    const envFileS3Key = `authentik-config.env`;
     const envFileS3Uri = `arn:aws:s3:::${s3ConfBucket.bucketName}/${envFileS3Key}`;
 
     // =================
@@ -191,7 +191,8 @@ export class AuthInfraStack extends cdk.Stack {
     const ecrValidator = new EcrImageValidator(this, 'EcrImageValidator', {
       ecrRepositoryArn: ecrRepository,
       requiredImageTags: requiredImageTags,
-      environment: stackNameComponent
+      environment: stackNameComponent,
+      config: environmentConfig
     });
 
     // =================

@@ -12,7 +12,6 @@ import {
   aws_iam as iam,
   aws_kms as kms,
   Duration,
-  RemovalPolicy,
   CfnOutput,
   Fn,
   Token
@@ -149,8 +148,8 @@ export class Ldap extends Construct {
     // Create the log group
     const logGroup = new logs.LogGroup(this, 'Logs', {
       logGroupName: id,
-      retention: logs.RetentionDays.ONE_WEEK,
-      removalPolicy: RemovalPolicy.DESTROY
+      retention: props.config.monitoring.logRetentionDays,
+      removalPolicy: props.config.general.removalPolicy
     });
 
     // Create security group for NLB

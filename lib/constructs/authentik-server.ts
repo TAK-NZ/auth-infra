@@ -12,7 +12,6 @@ import {
   aws_iam as iam,
   aws_kms as kms,
   Duration,
-  RemovalPolicy,
   Fn,
   Token,
   Stack
@@ -203,8 +202,8 @@ export class AuthentikServer extends Construct {
     // Create the log group
     const logGroup = new logs.LogGroup(this, 'ServerLogs', {
       logGroupName: `${id}-server`,
-      retention: logs.RetentionDays.ONE_WEEK,
-      removalPolicy: RemovalPolicy.DESTROY
+      retention: props.config.monitoring.logRetentionDays,
+      removalPolicy: props.config.general.removalPolicy
     });
 
     // Create config bucket if using config file
@@ -212,7 +211,7 @@ export class AuthentikServer extends Construct {
     if (props.useAuthentikConfigFile) {
       configBucket = new s3.Bucket(this, 'ConfigBucket', {
         bucketName: `${id}-config`.toLowerCase(),
-        removalPolicy: RemovalPolicy.RETAIN,
+        removalPolicy: props.config.general.removalPolicy,
         encryption: s3.BucketEncryption.S3_MANAGED,
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
       });
@@ -235,6 +234,11 @@ export class AuthentikServer extends Construct {
 
     // Grant explicit KMS permissions for secrets decryption
     props.kmsKey.grantDecrypt(executionRole);
+
+    // Grant S3 access to execution role for environment files (needed during task initialization)
+    if (props.envFileS3Key) {
+      props.s3ConfBucket.grantRead(executionRole);
+    }
 
     // Create task role
     const taskRole = new iam.Role(this, 'TaskRole', {

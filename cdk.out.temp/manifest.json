@@ -1,0 +1,963 @@
+{
+  "version": "44.0.0",
+  "artifacts": {
+    "TAK-Demo-AuthInfra.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "TAK-Demo-AuthInfra.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "TAK-Demo-AuthInfra": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://814704514736/ap-southeast-2",
+      "properties": {
+        "templateFile": "TAK-Demo-AuthInfra.template.json",
+        "terminationProtection": false,
+        "tags": {
+          "Component": "AuthInfra",
+          "DNS Zone": "${Token[TOKEN.57]}",
+          "Environment": "Demo",
+          "Environment Type": "Dev-Test",
+          "ManagedBy": "CDK",
+          "Project": "TAK-NZ"
+        },
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::814704514736:role/cdk-hnb659fds-deploy-role-814704514736-ap-southeast-2",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::814704514736:role/cdk-hnb659fds-cfn-exec-role-814704514736-ap-southeast-2",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-814704514736-ap-southeast-2/3b118c90c32d8fa89c4c654c4dfe990b4135bbe4eba19da729c359af602c3937.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "TAK-Demo-AuthInfra.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::814704514736:role/cdk-hnb659fds-lookup-role-814704514736-ap-southeast-2",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "TAK-Demo-AuthInfra.assets"
+      ],
+      "metadata": {
+        "/TAK-Demo-AuthInfra": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "Ignoring stack tags that contain deploy-time values (found: DNS Zone=<TOKEN>). Apply tags containing deploy-time values to resources only, avoid tagging stacks (for example using { excludeResourceTypes: ['aws:cdk:stack'] })."
+          },
+          {
+            "type": "aws:cdk:stack-tags",
+            "data": [
+              {
+                "Key": "Component",
+                "Value": "AuthInfra"
+              },
+              {
+                "Key": "Environment",
+                "Value": "Demo"
+              },
+              {
+                "Key": "Environment Type",
+                "Value": "Dev-Test"
+              },
+              {
+                "Key": "ManagedBy",
+                "Value": "CDK"
+              },
+              {
+                "Key": "Project",
+                "Value": "TAK-NZ"
+              }
+            ]
+          }
+        ],
+        "/TAK-Demo-AuthInfra/VPC/PublicSubnet1": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "No routeTableId was provided to the subnet at 'TAK-Demo-AuthInfra/VPC/PublicSubnet1'. Attempting to read its .routeTable.routeTableId will return null/undefined. (More info: https://github.com/aws/aws-cdk/pull/3171) [ack: @aws-cdk/aws-ec2:noSubnetRouteTableId]",
+            "trace": [
+              "Annotations.addMessage (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1608)",
+              "Annotations.addWarningV2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new ImportedSubnet (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:38615)",
+              "new ImportedSubnet (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "Subnet2.fromSubnetAttributes (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:24516)",
+              "/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2307",
+              "Array.map (<anonymous>)",
+              "ImportSubnetGroup.import (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2225)",
+              "new ImportedVpc (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:35213)",
+              "new ImportedVpc (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "Vpc2.fromVpcAttributes (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:9085)",
+              "new AuthInfraStack (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/auth-infra-stack.js:84:29)",
+              "Object.<anonymous> (/home/ubuntu/GitHub/TAK-NZ/auth-infra/bin/cdk.js:75:15)",
+              "Module._compile (node:internal/modules/cjs/loader:1554:14)",
+              "Object..js (node:internal/modules/cjs/loader:1706:10)",
+              "Module.load (node:internal/modules/cjs/loader:1289:32)",
+              "Function._load (node:internal/modules/cjs/loader:1108:12)",
+              "TracingChannel.traceSync (node:diagnostics_channel:322:14)",
+              "wrapModuleLoad (node:internal/modules/cjs/loader:220:24)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)",
+              "node:internal/main/run_main_module:36:49"
+            ]
+          }
+        ],
+        "/TAK-Demo-AuthInfra/VPC/PublicSubnet2": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "No routeTableId was provided to the subnet at 'TAK-Demo-AuthInfra/VPC/PublicSubnet2'. Attempting to read its .routeTable.routeTableId will return null/undefined. (More info: https://github.com/aws/aws-cdk/pull/3171) [ack: @aws-cdk/aws-ec2:noSubnetRouteTableId]",
+            "trace": [
+              "Annotations.addMessage (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1608)",
+              "Annotations.addWarningV2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new ImportedSubnet (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:38615)",
+              "new ImportedSubnet (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "Subnet2.fromSubnetAttributes (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:24516)",
+              "/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2307",
+              "Array.map (<anonymous>)",
+              "ImportSubnetGroup.import (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2225)",
+              "new ImportedVpc (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:35213)",
+              "new ImportedVpc (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "Vpc2.fromVpcAttributes (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:9085)",
+              "new AuthInfraStack (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/auth-infra-stack.js:84:29)",
+              "Object.<anonymous> (/home/ubuntu/GitHub/TAK-NZ/auth-infra/bin/cdk.js:75:15)",
+              "Module._compile (node:internal/modules/cjs/loader:1554:14)",
+              "Object..js (node:internal/modules/cjs/loader:1706:10)",
+              "Module.load (node:internal/modules/cjs/loader:1289:32)",
+              "Function._load (node:internal/modules/cjs/loader:1108:12)",
+              "TracingChannel.traceSync (node:diagnostics_channel:322:14)",
+              "wrapModuleLoad (node:internal/modules/cjs/loader:220:24)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)",
+              "node:internal/main/run_main_module:36:49"
+            ]
+          }
+        ],
+        "/TAK-Demo-AuthInfra/VPC/PrivateSubnet1": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "No routeTableId was provided to the subnet at 'TAK-Demo-AuthInfra/VPC/PrivateSubnet1'. Attempting to read its .routeTable.routeTableId will return null/undefined. (More info: https://github.com/aws/aws-cdk/pull/3171) [ack: @aws-cdk/aws-ec2:noSubnetRouteTableId]",
+            "trace": [
+              "Annotations.addMessage (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1608)",
+              "Annotations.addWarningV2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new ImportedSubnet (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:38615)",
+              "new ImportedSubnet (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "Subnet2.fromSubnetAttributes (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:24516)",
+              "/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2307",
+              "Array.map (<anonymous>)",
+              "ImportSubnetGroup.import (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2225)",
+              "new ImportedVpc (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:35251)",
+              "new ImportedVpc (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "Vpc2.fromVpcAttributes (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:9085)",
+              "new AuthInfraStack (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/auth-infra-stack.js:84:29)",
+              "Object.<anonymous> (/home/ubuntu/GitHub/TAK-NZ/auth-infra/bin/cdk.js:75:15)",
+              "Module._compile (node:internal/modules/cjs/loader:1554:14)",
+              "Object..js (node:internal/modules/cjs/loader:1706:10)",
+              "Module.load (node:internal/modules/cjs/loader:1289:32)",
+              "Function._load (node:internal/modules/cjs/loader:1108:12)",
+              "TracingChannel.traceSync (node:diagnostics_channel:322:14)",
+              "wrapModuleLoad (node:internal/modules/cjs/loader:220:24)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)",
+              "node:internal/main/run_main_module:36:49"
+            ]
+          }
+        ],
+        "/TAK-Demo-AuthInfra/VPC/PrivateSubnet2": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "No routeTableId was provided to the subnet at 'TAK-Demo-AuthInfra/VPC/PrivateSubnet2'. Attempting to read its .routeTable.routeTableId will return null/undefined. (More info: https://github.com/aws/aws-cdk/pull/3171) [ack: @aws-cdk/aws-ec2:noSubnetRouteTableId]",
+            "trace": [
+              "Annotations.addMessage (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1608)",
+              "Annotations.addWarningV2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new ImportedSubnet (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:38615)",
+              "new ImportedSubnet (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "Subnet2.fromSubnetAttributes (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:24516)",
+              "/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2307",
+              "Array.map (<anonymous>)",
+              "ImportSubnetGroup.import (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/util.js:1:2225)",
+              "new ImportedVpc (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:35251)",
+              "new ImportedVpc (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "Vpc2.fromVpcAttributes (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:9085)",
+              "new AuthInfraStack (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/auth-infra-stack.js:84:29)",
+              "Object.<anonymous> (/home/ubuntu/GitHub/TAK-NZ/auth-infra/bin/cdk.js:75:15)",
+              "Module._compile (node:internal/modules/cjs/loader:1554:14)",
+              "Object..js (node:internal/modules/cjs/loader:1706:10)",
+              "Module.load (node:internal/modules/cjs/loader:1289:32)",
+              "Function._load (node:internal/modules/cjs/loader:1108:12)",
+              "TracingChannel.traceSync (node:diagnostics_channel:322:14)",
+              "wrapModuleLoad (node:internal/modules/cjs/loader:220:24)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)",
+              "node:internal/main/run_main_module:36:49"
+            ]
+          }
+        ],
+        "/TAK-Demo-AuthInfra/ECSSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSSecurityGroupA14DBE7D"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/ECSSecurityGroup/from TAKDemoAuthInfraAuthentikELBALBSecurityGroupFB6F6CF0:9000": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSSecurityGroupfromTAKDemoAuthInfraAuthentikELBALBSecurityGroupFB6F6CF09000FE435158"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/DBSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DBSecurityGroupE3B245A3"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikSecretKey/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikSecretKey0C8A38C9"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikAdminUserPassword/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikAdminUserPassword3A38D3BB"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikAdminUserToken/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikAdminUserToken3137C5E0"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikLDAPServiceUser/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikLDAPServiceUser8290CA7A"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikLDAPToken/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikLDAPToken690C2508"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikSecretKeyArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikSecretKeyArnA94FDFB2"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikAdminUserPasswordArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikAdminUserPasswordArn52B5E4D8"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikAdminUserTokenArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikAdminUserTokenArnED16C4A1"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikLDAPServiceUserArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikLDAPServiceUserArnE649F9C2"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/SecretsManager/AuthentikLDAPTokenArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SecretsManagerAuthentikLDAPTokenArn29B1D26F"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DBMasterSecret/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDBMasterSecret1B2A26AA"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DBMasterSecret/Attachment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDBMasterSecretAttachmentE4C92C59"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DBMonitoringRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDBMonitoringRole495448DE"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DBSubnetGroup/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDBSubnetGroupD90D34CC"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DBParameterGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDBParameterGroup7E4DF99E"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DBCluster/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDBCluster27FBE994"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DBCluster/LogRetentionpostgresql/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDBClusterLogRetentionpostgresql74EC9066"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DBCluster/writer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDBClusterwriter35875992"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DatabaseEndpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDatabaseEndpoint55DA5326"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Database/DatabaseSecretArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseDatabaseSecretArn884B6F93"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Redis/RedisAuthToken/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisRedisAuthTokenAC379C8C"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Redis/RedisSubnetGroup": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisRedisSubnetGroupE7D796E2"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Redis/RedisSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisRedisSecurityGroup23991694"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Redis/Redis": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "Redis04B3B4F3"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Redis/RedisEndpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisRedisEndpointCDC87E15"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Redis/RedisAuthTokenArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisRedisAuthTokenArnEC2CA0EB"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EFS/EFSMountTargetSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EFSEFSMountTargetSecurityGroup2BD329ED"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EFS/EFS/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EFSDBAB55BC"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EFS/EFS/EfsMountTarget-PrivateSubnet1": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EFSEfsMountTargetPrivateSubnet1DF7E64CF"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EFS/EFS/EfsMountTarget-PrivateSubnet2": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EFSEfsMountTargetPrivateSubnet2DE969CA5"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EFS/EFSAccessPointMedia/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EFSEFSAccessPointMedia865844DD"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EFS/EFSAccessPointCustomTemplates/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EFSEFSAccessPointCustomTemplatesC823127C"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EFS/EFSFileSystemId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EFSEFSFileSystemIdAFA0F4B8"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EFS/EFSMediaAccessPointId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EFSEFSMediaAccessPointId5D0AFE58"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EFS/EFSCustomTemplatesAccessPointId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EFSEFSCustomTemplatesAccessPointId63DF46C0"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EcrImageValidator/CustomResourceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrImageValidatorCustomResourceRoleAEB8A72D"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EcrImageValidator/LogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrImageValidatorLogGroup392194FF"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EcrImageValidator/ValidatorFunction/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrImageValidatorValidatorFunction03EF9A98"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EcrImageValidator/Provider/framework-onEvent/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrImageValidatorProviderframeworkonEventServiceRole55E53571"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EcrImageValidator/Provider/framework-onEvent/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrImageValidatorProviderframeworkonEventServiceRoleDefaultPolicy78F30C21"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EcrImageValidator/Provider/framework-onEvent/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrImageValidatorProviderframeworkonEvent197008F7"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EcrImageValidator/ImageValidation": [
+          {
+            "type": "Description",
+            "data": "Validates that required ECR images exist before deployment"
+          },
+          {
+            "type": "RequiredTags",
+            "data": "auth-infra-server-95b765d2c87df76f969ae1c8b2ff375e55746592, auth-infra-ldap-95b765d2c87df76f969ae1c8b2ff375e55746592"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EcrImageValidator/ImageValidation/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcrImageValidatorImageValidation84101594"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikELB/ALB/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikELBALB795C77FA"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikELB/ALB/SecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikELBALBSecurityGroup6E7316BD"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikELB/ALB/SecurityGroup/to TAKDemoAuthInfraECSSecurityGroup1CACD961:9000": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikELBALBSecurityGrouptoTAKDemoAuthInfraECSSecurityGroup1CACD9619000A4E7B968"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikELB/ALB/HttpListener/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikELBALBHttpListener3CD02087"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikELB/ALB/HttpsListener/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikELBALBHttpsListenerA3E45D9E"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikELB/LoadBalancerDnsName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikELBLoadBalancerDnsName924DA4FA"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikELB/AuthentikURL": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikELBAuthentikURL69FA0EE7"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/ServerLogs/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerServerLogs74B503FB"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/TaskExecutionRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerTaskExecutionRole4B2763D5"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/TaskExecutionRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerTaskExecutionRoleDefaultPolicyA31D2C97"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/TaskRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerTaskRole8D82523E"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/TaskRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerTaskRoleDefaultPolicy3082757F"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/TaskDef/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerTaskDef53A507A1"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/Service": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "minHealthyPercent has not been configured so the default value of 50% is used. The number of running tasks will decrease below the desired count during deployments etc. See https://github.com/aws/aws-cdk/issues/31705 [ack: @aws-cdk/aws-ecs:minHealthyPercent]",
+            "trace": [
+              "Annotations.addMessage (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1608)",
+              "Annotations.addWarningV2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new BaseService (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ecs/lib/base/base-service.js:1:8201)",
+              "new FargateService2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ecs/lib/fargate/fargate-service.js:1:3888)",
+              "new FargateService2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "new AuthentikServer (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/constructs/authentik-server.js:197:27)",
+              "new AuthInfraStack (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/auth-infra-stack.js:190:33)",
+              "Object.<anonymous> (/home/ubuntu/GitHub/TAK-NZ/auth-infra/bin/cdk.js:75:15)",
+              "Module._compile (node:internal/modules/cjs/loader:1554:14)",
+              "Object..js (node:internal/modules/cjs/loader:1706:10)",
+              "Module.load (node:internal/modules/cjs/loader:1289:32)",
+              "Function._load (node:internal/modules/cjs/loader:1108:12)",
+              "TracingChannel.traceSync (node:diagnostics_channel:322:14)",
+              "wrapModuleLoad (node:internal/modules/cjs/loader:220:24)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)",
+              "node:internal/main/run_main_module:36:49"
+            ]
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/Service/Service": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerService3D748704"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/Service/TaskCount/Target/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerServiceTaskCountTargetB025BF2D"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/Service/TaskCount/Target/CpuScaling/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerServiceTaskCountTargetCpuScalingC10EF2F7"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikServer/TargetGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikServerTargetGroup2D78069F"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerLogs/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikWorkerWorkerLogs4F6481FA"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskExecutionRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikWorkerWorkerTaskExecutionRoleDBD72B08"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskExecutionRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikWorkerWorkerTaskExecutionRoleDefaultPolicy871BA571"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikWorkerWorkerTaskRole17674E05"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikWorkerWorkerTaskRoleDefaultPolicy1D0D1DC0"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerTaskDef/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikWorkerWorkerTaskDefBAB02C6B"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerService": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "minHealthyPercent has not been configured so the default value of 50% is used. The number of running tasks will decrease below the desired count during deployments etc. See https://github.com/aws/aws-cdk/issues/31705 [ack: @aws-cdk/aws-ecs:minHealthyPercent]",
+            "trace": [
+              "Annotations.addMessage (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1608)",
+              "Annotations.addWarningV2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new BaseService (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ecs/lib/base/base-service.js:1:8201)",
+              "new FargateService2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ecs/lib/fargate/fargate-service.js:1:3888)",
+              "new FargateService2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "new AuthentikWorker (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/constructs/authentik-worker.js:188:27)",
+              "new AuthInfraStack (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/auth-infra-stack.js:221:33)",
+              "Object.<anonymous> (/home/ubuntu/GitHub/TAK-NZ/auth-infra/bin/cdk.js:75:15)",
+              "Module._compile (node:internal/modules/cjs/loader:1554:14)",
+              "Object..js (node:internal/modules/cjs/loader:1706:10)",
+              "Module.load (node:internal/modules/cjs/loader:1289:32)",
+              "Function._load (node:internal/modules/cjs/loader:1108:12)",
+              "TracingChannel.traceSync (node:diagnostics_channel:322:14)",
+              "wrapModuleLoad (node:internal/modules/cjs/loader:220:24)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)",
+              "node:internal/main/run_main_module:36:49"
+            ]
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerService/Service": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikWorkerWorkerService38766934"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerService/TaskCount/Target/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikWorkerWorkerServiceTaskCountTarget4D58E899"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikWorker/WorkerService/TaskCount/Target/WorkerCpuScaling/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikWorkerWorkerServiceTaskCountTargetWorkerCpuScalingB277209C"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Route53Authentik/AuthentikARecord/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "Route53AuthentikAuthentikARecord5357EE01"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Route53Authentik/AuthentikAAAARecord/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "Route53AuthentikAuthentikAAAARecord3BA24FB8"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LdapTokenRetriever/LogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LdapTokenRetrieverLogGroup67698D40"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LdapTokenRetriever/LambdaRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LdapTokenRetrieverLambdaRoleD2B26E17"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LdapTokenRetriever/Function/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LdapTokenRetrieverFunctionA345F996"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LdapTokenRetriever/Resource/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LdapTokenRetrieverEED318C3"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/Logs/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPLogsA8A4E865"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/NLBSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPNLBSecurityGroupD5B97BD0"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/NLB/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPNLBBE603900"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/NLB/LdapListener/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPNLBLdapListener34DCA74F"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/NLB/LdapsListener/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPNLBLdapsListener1BD0C662"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/TaskExecutionRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPTaskExecutionRole6EF84A89"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/TaskExecutionRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPTaskExecutionRoleDefaultPolicyCF95384E"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/TaskRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPTaskRoleB3995714"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/TaskDef/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPTaskDef6D68C93C"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/Service": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "minHealthyPercent has not been configured so the default value of 50% is used. The number of running tasks will decrease below the desired count during deployments etc. See https://github.com/aws/aws-cdk/issues/31705 [ack: @aws-cdk/aws-ecs:minHealthyPercent]",
+            "trace": [
+              "Annotations.addMessage (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:1608)",
+              "Annotations.addWarningV2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/annotations.js:1:825)",
+              "new BaseService (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ecs/lib/base/base-service.js:1:8201)",
+              "new FargateService2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/aws-ecs/lib/fargate/fargate-service.js:1:3888)",
+              "new FargateService2 (/home/ubuntu/GitHub/TAK-NZ/auth-infra/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:488)",
+              "new Ldap (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/constructs/ldap.js:129:27)",
+              "new AuthInfraStack (/home/ubuntu/GitHub/TAK-NZ/auth-infra/lib/auth-infra-stack.js:283:22)",
+              "Object.<anonymous> (/home/ubuntu/GitHub/TAK-NZ/auth-infra/bin/cdk.js:75:15)",
+              "Module._compile (node:internal/modules/cjs/loader:1554:14)",
+              "Object..js (node:internal/modules/cjs/loader:1706:10)",
+              "Module.load (node:internal/modules/cjs/loader:1289:32)",
+              "Function._load (node:internal/modules/cjs/loader:1108:12)",
+              "TracingChannel.traceSync (node:diagnostics_channel:322:14)",
+              "wrapModuleLoad (node:internal/modules/cjs/loader:220:24)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)",
+              "node:internal/main/run_main_module:36:49"
+            ]
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/Service/Service": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPService0EA4E847"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/LdapTargetGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPLdapTargetGroup1919E1F7"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/LdapsTargetGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPLdapsTargetGroup555B6A6F"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/LoadBalancerDnsName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPLoadBalancerDnsName94D80E5D"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/LdapEndpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPLdapEndpointE2999462"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LDAP/LdapsEndpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LDAPLdapsEndpointFC77A08A"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/Route53/LdapARecord/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "Route53LdapARecordB233FD64"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/DatabaseEndpointOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseEndpointOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/DatabaseSecretArnOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseSecretArnOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/RedisEndpointOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisEndpointOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/RedisAuthTokenArnOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisAuthTokenArnOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EfsIdOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EfsIdOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EfsMediaAccessPointOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EfsMediaAccessPointOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/EfsTemplatesAccessPointOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EfsTemplatesAccessPointOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikSecretKeyArnOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikSecretKeyArnOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikAdminTokenArnOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikAdminTokenArnOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikLdapTokenArnOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikLdapTokenArnOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikAlbDnsOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikAlbDnsOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/AuthentikUrlOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AuthentikUrlOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LdapNlbDnsOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LdapNlbDnsOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/LdapTokenRetrieverLambdaArnOutput": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LdapTokenRetrieverLambdaArnOutput"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/TAK-Demo-AuthInfra/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "TAK-Demo-AuthInfra"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  },
+  "minimumCliVersion": "2.1018.1"
+}

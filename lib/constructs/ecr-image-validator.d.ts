@@ -2,6 +2,7 @@
  * ECR Image Validator - Ensures required Docker images exist before deployment
  */
 import { Construct } from 'constructs';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 /**
  * Properties for ECR Image Validator
  */
@@ -18,6 +19,10 @@ export interface EcrImageValidatorProps {
      * Environment name for logging
      */
     environment: string;
+    /**
+     * Environment configuration
+     */
+    config: AuthInfraEnvironmentConfig;
 }
 /**
  * Custom resource to validate ECR images exist before deployment

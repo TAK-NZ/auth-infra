@@ -3,6 +3,7 @@
  */
 import { EcrImageValidator } from '../lib/constructs/ecr-image-validator';
 import { App, Stack } from 'aws-cdk-lib';
+import { DEV_TEST_CONFIG } from '../lib/environment-config';
 
 describe('ECR Image Validator', () => {
   let app: App;
@@ -23,7 +24,8 @@ describe('ECR Image Validator', () => {
     const validator = new EcrImageValidator(stack, 'TestValidator', {
       ecrRepositoryArn,
       requiredImageTags,
-      environment
+      environment,
+      config: DEV_TEST_CONFIG
     });
 
     // Assert
@@ -41,7 +43,8 @@ describe('ECR Image Validator', () => {
       new EcrImageValidator(stack, 'TestValidator', {
         ecrRepositoryArn: invalidEcrRepositoryArn,
         requiredImageTags,
-        environment
+        environment,
+        config: DEV_TEST_CONFIG
       });
     }).toThrow('Invalid ECR repository ARN: invalid-arn');
   });
@@ -57,7 +60,8 @@ describe('ECR Image Validator', () => {
       new EcrImageValidator(stack, 'TestValidator', {
         ecrRepositoryArn: tokenEcrRepositoryArn,
         requiredImageTags,
-        environment
+        environment,
+        config: DEV_TEST_CONFIG
       });
     }).not.toThrow();
   });
@@ -72,7 +76,8 @@ describe('ECR Image Validator', () => {
     const validator = new EcrImageValidator(stack, 'TestValidator', {
       ecrRepositoryArn,
       requiredImageTags,
-      environment
+      environment,
+      config: DEV_TEST_CONFIG
     });
 
     // Assert

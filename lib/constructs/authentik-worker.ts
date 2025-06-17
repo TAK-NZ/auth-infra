@@ -11,7 +11,6 @@ import {
   aws_iam as iam,
   aws_kms as kms,
   Duration,
-  RemovalPolicy,
   Fn,
   Token,
   Stack
@@ -202,8 +201,8 @@ export class AuthentikWorker extends Construct {
     // Create the log group for workers
     const logGroup = new logs.LogGroup(this, 'WorkerLogs', {
       logGroupName: `${id}-worker`,
-      retention: logs.RetentionDays.ONE_WEEK,
-      removalPolicy: RemovalPolicy.DESTROY
+      retention: props.config.monitoring.logRetentionDays,
+      removalPolicy: props.config.general.removalPolicy
     });
 
     // Create task execution role
@@ -224,6 +223,11 @@ export class AuthentikWorker extends Construct {
 
     // Grant explicit KMS permissions for secrets decryption
     props.kmsKey.grantDecrypt(executionRole);
+
+    // Grant S3 access to execution role for environment files (needed during task initialization)
+    if (props.envFileS3Key) {
+      props.s3ConfBucket.grantRead(executionRole);
+    }
 
     // Create task role
     const taskRole = new iam.Role(this, 'WorkerTaskRole', {
@@ -247,7 +251,7 @@ export class AuthentikWorker extends Construct {
       ]
     }));
 
-    // Grant read access to S3 configuration bucket for environment files
+    // Grant read access to S3 configuration bucket for task role (for runtime access)
     if (props.envFileS3Key) {
       props.s3ConfBucket.grantRead(taskRole);
     }

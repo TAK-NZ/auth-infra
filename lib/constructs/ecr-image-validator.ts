@@ -6,6 +6,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as cr from 'aws-cdk-lib/custom-resources';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import type { AuthInfraEnvironmentConfig } from '../environment-config';
 
 /**
  * Properties for ECR Image Validator
@@ -25,6 +26,11 @@ export interface EcrImageValidatorProps {
    * Environment name for logging
    */
   environment: string;
+
+  /**
+   * Environment configuration
+   */
+  config: AuthInfraEnvironmentConfig;
 }
 
 /**
@@ -85,8 +91,8 @@ export class EcrImageValidator extends Construct {
     // Create log group for the custom resource
     const logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName: `/aws/lambda/ecr-image-validator-${props.environment}`,
-      retention: logs.RetentionDays.ONE_WEEK,
-      removalPolicy: cdk.RemovalPolicy.DESTROY
+      retention: props.config.monitoring.logRetentionDays,
+      removalPolicy: props.config.general.removalPolicy
     });
 
     // Lambda function code for validating ECR images
