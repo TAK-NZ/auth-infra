@@ -18,9 +18,11 @@ export interface OutputParams {
     authentikAlbDns: string;
     authentikUrl: string;
     ldapNlbDns: string;
+    ldapEndpoint: string;
+    ldapsEndpoint: string;
     ldapTokenRetrieverLambdaArn: string;
 }
 /**
  * Register all outputs for the Auth Infrastructure stack
  */
-export declare function registerOutputs({ stack, stackName, databaseEndpoint, databaseSecretArn, redisEndpoint, redisAuthTokenArn, efsId, efsMediaAccessPointId, efsTemplatesAccessPointId, authentikSecretKeyArn, authentikAdminTokenArn, authentikLdapTokenArn, authentikAlbDns, authentikUrl, ldapNlbDns, ldapTokenRetrieverLambdaArn }: OutputParams): void;
+export declare function registerOutputs({ stack, stackName, databaseEndpoint, databaseSecretArn, redisEndpoint, redisAuthTokenArn, efsId, efsMediaAccessPointId, efsTemplatesAccessPointId, authentikSecretKeyArn, authentikAdminTokenArn, authentikLdapTokenArn, authentikAlbDns, authentikUrl, ldapNlbDns, ldapEndpoint, ldapsEndpoint, ldapTokenRetrieverLambdaArn }: OutputParams): void;

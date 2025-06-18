@@ -7,8 +7,9 @@
  * but the token can only be retrieved after Authentik is fully running.
  */
 import { Construct } from 'constructs';
-import { aws_lambda as lambda, aws_secretsmanager as secretsmanager, aws_kms as kms, aws_ecs as ecs, CustomResource } from 'aws-cdk-lib';
+import { aws_lambda as lambda, CustomResource } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig, DeploymentConfig, TokenConfig, AuthentikApplicationConfig } from '../construct-configs';
 /**
  * Properties for the LDAP Token Retriever construct
  */
@@ -22,37 +23,21 @@ export interface LdapTokenRetrieverProps {
      */
     config: AuthInfraEnvironmentConfig;
     /**
-     * KMS key for encryption
+     * Infrastructure configuration (KMS key)
      */
-    kmsKey: kms.IKey;
+    infrastructure: InfrastructureConfig;
     /**
-     * Authentik host URL
+     * Deployment configuration (Git SHA)
      */
-    authentikHost: string;
+    deployment: DeploymentConfig;
     /**
-     * Name of the LDAP outpost in Authentik
+     * Token configuration (secrets, services, outpost name)
      */
-    outpostName?: string;
+    token: TokenConfig;
     /**
-     * Admin token secret for accessing Authentik API
+     * Application configuration (Authentik host)
      */
-    adminTokenSecret: secretsmanager.ISecret;
-    /**
-     * LDAP token secret to update
-     */
-    ldapTokenSecret: secretsmanager.ISecret;
-    /**
-     * Git SHA for versioning
-     */
-    gitSha: string;
-    /**
-     * Authentik server ECS service (to ensure it's running before token retrieval)
-     */
-    authentikServerService: ecs.FargateService;
-    /**
-     * Authentik worker ECS service (to ensure it's running before token retrieval)
-     */
-    authentikWorkerService: ecs.FargateService;
+    application: AuthentikApplicationConfig;
 }
 /**
  * LDAP Token Retriever construct

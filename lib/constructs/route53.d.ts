@@ -7,6 +7,7 @@
 import { Construct } from 'constructs';
 import { aws_route53 as route53, aws_elasticloadbalancingv2 as elbv2 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { NetworkConfig } from '../construct-configs';
 /**
  * Properties for the Route53 LDAP construct
  */
@@ -20,17 +21,9 @@ export interface Route53Props {
      */
     config: AuthInfraEnvironmentConfig;
     /**
-     * Hosted Zone ID imported from base infrastructure
+     * Network configuration (DNS zones, hostname, load balancer)
      */
-    hostedZoneId: string;
-    /**
-     * Hosted Zone Name imported from base infrastructure
-     */
-    hostedZoneName: string;
-    /**
-     * Hostname for LDAP service (creates A alias record)
-     */
-    hostnameLdap: string;
+    network: NetworkConfig;
     /**
      * LDAP Network Load Balancer for A alias record
      */

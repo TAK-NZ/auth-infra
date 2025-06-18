@@ -8,6 +8,7 @@
 import { Construct } from 'constructs';
 import { aws_route53 as route53, aws_elasticloadbalancingv2 as elbv2 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { NetworkConfig } from '../construct-configs';
 /**
  * Properties for the Route53 Authentik construct
  */
@@ -21,17 +22,9 @@ export interface Route53AuthentikProps {
      */
     config: AuthInfraEnvironmentConfig;
     /**
-     * Hosted Zone ID imported from base infrastructure
+     * Network configuration (DNS zones, hostname, load balancer)
      */
-    hostedZoneId: string;
-    /**
-     * Hosted Zone Name imported from base infrastructure
-     */
-    hostedZoneName: string;
-    /**
-     * Hostname for Authentik service (creates A/AAAA alias records)
-     */
-    hostnameAuthentik: string;
+    network: NetworkConfig;
     /**
      * Authentik Application Load Balancer for A/AAAA alias records
      */

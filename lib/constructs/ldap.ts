@@ -154,6 +154,7 @@ export class Ldap extends Construct {
 
     // Create network load balancer
     this.loadBalancer = new elbv2.NetworkLoadBalancer(this, 'NLB', {
+      loadBalancerName: 'ldap',
       vpc: props.infrastructure.vpc,
       internetFacing: false,
       vpcSubnets: {
@@ -217,7 +218,7 @@ export class Ldap extends Construct {
         logGroup
       }),
       environment: {
-        AUTHENTIK_HOST: `https://${props.application.authentikHost}/`,
+        AUTHENTIK_HOST: props.application.authentikHost || '',
         AUTHENTIK_INSECURE: 'false'
       },
       secrets: {

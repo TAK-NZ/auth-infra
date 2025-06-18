@@ -4,6 +4,7 @@
 import { Construct } from 'constructs';
 import { aws_ec2 as ec2, aws_elasticloadbalancingv2 as elbv2 } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig, NetworkConfig } from '../construct-configs';
 /**
  * Properties for the ELB construct
  */
@@ -17,13 +18,13 @@ export interface ElbProps {
      */
     config: AuthInfraEnvironmentConfig;
     /**
-     * VPC for deployment
+     * Infrastructure configuration (VPC, security groups, etc.)
      */
-    vpc: ec2.IVpc;
+    infrastructure: InfrastructureConfig;
     /**
-     * SSL certificate ARN for HTTPS
+     * Network configuration (SSL certs, hostnames, etc.)
      */
-    sslCertificateArn: string;
+    network: NetworkConfig;
 }
 /**
  * CDK construct for the Application Load Balancer

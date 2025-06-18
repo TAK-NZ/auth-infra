@@ -59,6 +59,7 @@ export class Elb extends Construct {
 
     // Create load balancer with dualstack IP addressing
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'ALB', {
+      loadBalancerName: 'auth',
       vpc: props.infrastructure.vpc,
       internetFacing: true,
       ipAddressType: elbv2.IpAddressType.DUAL_STACK

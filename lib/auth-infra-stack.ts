@@ -18,7 +18,6 @@ import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 import { Route53 } from './constructs/route53';
 import { Route53Authentik } from './constructs/route53-authentik';
-import { EcrImageValidator } from './constructs/ecr-image-validator';
 
 // Configuration imports
 import type {
@@ -28,7 +27,6 @@ import type {
   DeploymentConfig,
   AuthentikApplicationConfig,
   NetworkConfig,
-  ValidationConfig,
   TokenConfig
 } from './construct-configs';
 
@@ -134,9 +132,6 @@ export class AuthInfraStack extends cdk.Stack {
     // SSL Certificate
     const sslCertificateArn = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.CERTIFICATE_ARN));
 
-    // Add DNS domain name tag
-    cdk.Tags.of(this).add('DNS Zone', hostedZoneName);
-
     // S3 Environment File paths - assumes authentik-config.env already exists in S3
     const envFileS3Key = `authentik-config.env`;
     const envFileS3Uri = `arn:aws:s3:::${s3ConfBucket.bucketName}/${envFileS3Key}`;
@@ -209,16 +204,6 @@ export class AuthInfraStack extends cdk.Stack {
     });
 
     // =================
-    // IMAGE VALIDATION SETUP
-    // =================
-
-    // Validate required ECR images exist before deployment
-    const requiredImageTags = [
-      `auth-infra-server-${gitSha}`,
-      `auth-infra-ldap-${gitSha}`
-    ];
-
-    // =================
     // BUILD CONFIGURATION OBJECTS
     // =================
 
@@ -282,23 +267,6 @@ export class AuthInfraStack extends cdk.Stack {
       hostname: hostnameLdap
     };
 
-    // Build validation config for ECR images
-    const validationConfig: ValidationConfig = {
-      requiredImageTags: requiredImageTags
-    };
-
-    // =================
-    // IMAGE VALIDATION
-    // =================
-
-    // Create ECR validator using config objects
-    const ecrValidator = new EcrImageValidator(this, 'EcrImageValidator', {
-      environment: stackNameComponent,
-      config: environmentConfig,
-      deployment: deploymentConfig,
-      validation: validationConfig
-    });
-
     // =================
     // APPLICATION SERVICES
     // =================
@@ -322,9 +290,6 @@ export class AuthInfraStack extends cdk.Stack {
       application: applicationConfig
     });
 
-    // Ensure Authentik Server waits for ECR image validation
-    authentikServer.node.addDependency(ecrValidator);
-
     // Authentik Worker  
     // Update authentication host for worker after Route53 setup
     const authentikWorkerConfig = { ...applicationConfig };
@@ -337,9 +302,6 @@ export class AuthInfraStack extends cdk.Stack {
       deployment: deploymentConfig,
       application: authentikWorkerConfig
     });
-
-    // Ensure Authentik Worker waits for ECR image validation
-    authentikWorker.node.addDependency(ecrValidator);
 
     // Connect Authentik Server to Load Balancer
     authentikServer.createTargetGroup(vpc, authentikELB.httpsListener);
@@ -397,8 +359,6 @@ export class AuthInfraStack extends cdk.Stack {
       ldapToken: secretsManager.ldapToken
     });
 
-    // Ensure LDAP waits for ECR image validation
-    ldap.node.addDependency(ecrValidator);
     // Ensure LDAP waits for the token to be retrieved
     ldap.node.addDependency(ldapTokenRetriever);
 
@@ -429,7 +389,7 @@ export class AuthInfraStack extends cdk.Stack {
     // Outputs
     registerOutputs({
       stack: this,
-      stackName: stackNameComponent,
+      stackName: stackName,
       databaseEndpoint: database.hostname,
       databaseSecretArn: database.masterSecret.secretArn,
       redisEndpoint: redis.hostname,

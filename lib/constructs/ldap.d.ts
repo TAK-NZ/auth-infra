@@ -2,8 +2,9 @@
  * LDAP Construct - CDK implementation of the Authentik LDAP outpost
  */
 import { Construct } from 'constructs';
-import { aws_ec2 as ec2, aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager, aws_s3 as s3, aws_kms as kms } from 'aws-cdk-lib';
+import { aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager } from 'aws-cdk-lib';
 import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { InfrastructureConfig, StorageConfig, DeploymentConfig, NetworkConfig, AuthentikApplicationConfig } from '../construct-configs';
 /**
  * Properties for the LDAP construct
  */
@@ -17,49 +18,29 @@ export interface LdapProps {
      */
     config: AuthInfraEnvironmentConfig;
     /**
-     * VPC for deployment
+     * Infrastructure configuration (VPC, security groups, ECS cluster, KMS)
      */
-    vpc: ec2.IVpc;
+    infrastructure: InfrastructureConfig;
     /**
-     * Security group for ECS tasks
+     * Storage configuration (S3 bucket)
      */
-    ecsSecurityGroup: ec2.SecurityGroup;
+    storage: StorageConfig;
     /**
-     * ECS cluster
+     * Deployment configuration (ECR repository, Git SHA, enable execute)
      */
-    ecsCluster: ecs.ICluster;
+    deployment: DeploymentConfig;
     /**
-     * S3 configuration bucket for environment files
+     * Network configuration (SSL certificate)
      */
-    s3ConfBucket: s3.IBucket;
+    network: NetworkConfig;
     /**
-     * SSL certificate ARN for LDAPS
+     * Application configuration (Authentik host)
      */
-    sslCertificateArn: string;
-    /**
-     * Authentik host URL
-     */
-    authentikHost: string;
-    /**
-     * ECR repository ARN for ECR images
-     */
-    ecrRepositoryArn?: string;
-    /**
-     * Git SHA for Docker image tagging
-     */
-    gitSha: string;
-    /**
-     * Allow SSH exec into container
-     */
-    enableExecute: boolean;
+    application: AuthentikApplicationConfig;
     /**
      * LDAP token secret from Authentik
      */
     ldapToken: secretsmanager.ISecret;
-    /**
-     * KMS key for secrets encryption
-     */
-    kmsKey: kms.IKey;
 }
 /**
  * CDK construct for the LDAP outpost service
