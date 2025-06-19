@@ -7,22 +7,22 @@
  * Common export names for base infrastructure resources (imported from base stack)
  */
 export const BASE_EXPORT_NAMES = {
-  VPC_ID: 'VPC-ID',
-  VPC_CIDR_IPV4: 'VpcIPv4CIDR',
-  VPC_CIDR_IPV6: 'VpcIPv6CIDR',
+  VPC_ID: 'VpcId',
+  VPC_CIDR_IPV4: 'VpcCidrIpv4',
+  VPC_CIDR_IPV6: 'VpcCidrIpv6',
   SUBNET_PRIVATE_A: 'SubnetPrivateA',
   SUBNET_PRIVATE_B: 'SubnetPrivateB',
   SUBNET_PUBLIC_A: 'SubnetPublicA',
   SUBNET_PUBLIC_B: 'SubnetPublicB',
-  ECS_CLUSTER: 'Ecs-ARN',
-  ECR_REPO: 'Ecr-ARN',
-  KMS_KEY: 'Kms-ARN',
-  KMS_ALIAS: 'Kms-Alias',
-  S3_BUCKET: 'S3ConfBucket-ARN',
+  ECS_CLUSTER: 'EcsClusterArn',
+  ECR_REPO: 'EcrRepoArn',
+  KMS_KEY: 'KmsKeyArn',
+  KMS_ALIAS: 'KmsAlias',
+  S3_BUCKET: 'S3BucketArn',
   S3_ID: 'S3-ID',
-  CERTIFICATE_ARN: 'AcmCert-ARN',
-  HOSTED_ZONE_ID: 'R53Zone-ID',
-  HOSTED_ZONE_NAME: 'R53Zone-Name',
+  CERTIFICATE_ARN: 'CertificateArn',
+  HOSTED_ZONE_ID: 'HostedZoneId',
+  HOSTED_ZONE_NAME: 'HostedZoneName',
 } as const;
 
 /**
