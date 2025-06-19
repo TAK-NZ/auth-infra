@@ -85,14 +85,14 @@ export class LdapTokenRetriever extends Construct {
 
     // Create CloudWatch log group for the Lambda function
     const logGroup = new logs.LogGroup(this, 'LogGroup', {
-      logGroupName: `/aws/lambda/TAK-${props.environment}-AuthInfra-update-ldap-token`,
+      logGroupName: `/aws/lambda/TAK-${props.contextConfig.stackName}-AuthInfra-update-ldap-token`,
       retention: logRetention,
       removalPolicy: removalPolicy
     });
 
     // Create IAM role for the Lambda function
     const lambdaRole = new iam.Role(this, 'LambdaRole', {
-      roleName: `TAK-${props.environment}-AuthInfra-update-ldap-token-lambda-role`,
+      roleName: `TAK-${props.contextConfig.stackName}-AuthInfra-update-ldap-token-lambda-role`,
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
@@ -136,7 +136,7 @@ export class LdapTokenRetriever extends Construct {
 
     // Create the Lambda function
     this.lambdaFunction = new lambda.Function(this, 'Function', {
-      functionName: `TAK-${props.environment}-AuthInfra-update-ldap-token`,
+      functionName: `TAK-${props.contextConfig.stackName}-AuthInfra-update-ldap-token`,
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       role: lambdaRole,

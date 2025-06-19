@@ -91,7 +91,7 @@ export class Elb extends Construct {
   /**
    * Create a target group for Authentik services
    */
-  public createTargetGroup(id: string, port: number, vpc: ec2.IVpc, healthCheckPath: string = '/healthz/'): elbv2.ApplicationTargetGroup {
+  public createTargetGroup(id: string, port: number, vpc: ec2.IVpc, healthCheckPath: string = '/-/health/live/'): elbv2.ApplicationTargetGroup {
     return new elbv2.ApplicationTargetGroup(this, id, {
       vpc: vpc,
       targetType: elbv2.TargetType.IP,

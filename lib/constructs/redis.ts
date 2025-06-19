@@ -86,7 +86,7 @@ export class Redis extends Construct {
     });
 
     // Create security group
-    const securityGroup = new ec2.SecurityGroup(this, '-SecurityGroup', {
+    const securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {
       vpc: props.infrastructure.vpc,
       description: `${id} Security Group`,
       allowAllOutbound: false
