@@ -9,24 +9,8 @@ import { ContextEnvironmentConfig } from '../stack-config';
  * Defines which properties can be overridden and their types
  */
 export declare const OVERRIDE_CONFIG: {
-    r53ZoneName: {
-        type: "string";
-        path: string[];
-    };
-    vpcCidr: {
-        type: "string";
-        path: string[];
-    };
     stackName: {
         type: "string";
-        path: string[];
-    };
-    'networking.createNatGateways': {
-        type: "boolean";
-        path: string[];
-    };
-    'networking.createVpcEndpoints': {
-        type: "boolean";
         path: string[];
     };
     'database.instanceClass': {

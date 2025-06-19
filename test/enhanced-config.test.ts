@@ -12,12 +12,6 @@ describe('Context-Based Configuration Management', () => {
     test('should have all required properties for dev-test', () => {
       const devTestConfig: ContextEnvironmentConfig = {
         stackName: 'DevTest',
-        r53ZoneName: 'dev.tak.nz',
-        vpcCidr: '10.0.0.0/20',
-        networking: {
-          createNatGateways: false,
-          createVpcEndpoints: false
-        },
         database: {
           instanceClass: 'db.t3.micro',
           instanceCount: 1,
@@ -56,7 +50,6 @@ describe('Context-Based Configuration Management', () => {
       
       // Validate structure
       expect(devTestConfig.stackName).toBe('DevTest');
-      expect(devTestConfig.r53ZoneName).toBe('dev.tak.nz');
       expect(devTestConfig.database.instanceClass).toBe('db.t3.micro');
       expect(devTestConfig.ecs.desiredCount).toBe(1);
     });
@@ -64,12 +57,6 @@ describe('Context-Based Configuration Management', () => {
     test('should have different values for production', () => {
       const prodConfig: ContextEnvironmentConfig = {
         stackName: 'Prod',
-        r53ZoneName: 'tak.nz',
-        vpcCidr: '10.1.0.0/20',
-        networking: {
-          createNatGateways: true,
-          createVpcEndpoints: true
-        },
         database: {
           instanceClass: 'db.t3.small',
           instanceCount: 2,
@@ -109,7 +96,6 @@ describe('Context-Based Configuration Management', () => {
       // Validate production-specific values
       expect(prodConfig.database.instanceClass).toBe('db.t3.small');
       expect(prodConfig.ecs.desiredCount).toBe(2);
-      expect(prodConfig.networking.createNatGateways).toBe(true);
       expect(prodConfig.general.removalPolicy).toBe('RETAIN');
     });
   });

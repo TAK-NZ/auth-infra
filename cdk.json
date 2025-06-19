@@ -19,12 +19,6 @@
   "context": {
     "dev-test": {
       "stackName": "DevTest",
-      "r53ZoneName": "dev.tak.nz",
-      "vpcCidr": "10.0.0.0/20",
-      "networking": {
-        "createNatGateways": false,
-        "createVpcEndpoints": false
-      },
       "database": {
         "instanceClass": "db.t3.micro",
         "instanceCount": 1,
@@ -62,12 +56,6 @@
     },
     "prod": {
       "stackName": "Prod",
-      "r53ZoneName": "tak.nz",
-      "vpcCidr": "10.1.0.0/20",
-      "networking": {
-        "createNatGateways": true,
-        "createVpcEndpoints": true
-      },
       "database": {
         "instanceClass": "db.t3.small",
         "instanceCount": 2,

@@ -12,13 +12,7 @@ import { ContextEnvironmentConfig } from '../stack-config';
  */
 export const OVERRIDE_CONFIG = {
   // Top-level properties
-  'r53ZoneName': { type: 'string' as const, path: ['r53ZoneName'] },
-  'vpcCidr': { type: 'string' as const, path: ['vpcCidr'] },
   'stackName': { type: 'string' as const, path: ['stackName'] },
-  
-  // Networking properties
-  'networking.createNatGateways': { type: 'boolean' as const, path: ['networking', 'createNatGateways'] },
-  'networking.createVpcEndpoints': { type: 'boolean' as const, path: ['networking', 'createVpcEndpoints'] },
   
   // Database properties
   'database.instanceClass': { type: 'string' as const, path: ['database', 'instanceClass'] },

@@ -9,12 +9,6 @@
  */
 export interface ContextEnvironmentConfig {
   stackName: string;
-  r53ZoneName: string;
-  vpcCidr?: string;
-  networking: {
-    createNatGateways: boolean;
-    createVpcEndpoints: boolean;
-  };
   database: {
     instanceClass: string;
     instanceCount: number;

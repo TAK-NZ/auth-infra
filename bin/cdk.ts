@@ -35,9 +35,8 @@ Expected cdk.json structure:
 
 // Apply context overrides for non-prefixed parameters
 // This supports direct overrides that work for any environment:
-// --context r53ZoneName=custom.domain.com
-// --context networking.createNatGateways=true
 // --context database.instanceClass=db.t3.small
+// Note: r53ZoneName, vpcCidr, and networking config are now automatically imported from BaseInfra CloudFormation exports
 const finalEnvConfig = applyContextOverrides(app, envConfig);
 
 // Create stack name

@@ -106,9 +106,12 @@ export class AuthInfraStack extends cdk.Stack {
     const { envConfig } = props;
     
     // Extract configuration values directly from envConfig
-    const vpcCidr = envConfig.vpcCidr ?? DEFAULT_VPC_CIDR;
-    const r53ZoneName = envConfig.r53ZoneName;
     const stackNameComponent = envConfig.stackName; // This is the STACK_NAME part (e.g., "DevTest")
+    
+    // Import values from BaseInfra stack exports instead of using config parameters
+    const vpcCidr = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4));
+    const r53ZoneName = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_NAME));
+    
     const isHighAvailability = props.environment === 'prod';
     const environmentLabel = props.environment === 'prod' ? 'Prod' : 'Dev-Test';
     const resolvedStackName = id;
