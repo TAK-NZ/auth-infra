@@ -2,8 +2,6 @@
  * Centralized outputs management for the Auth Infrastructure stack
  */
 import * as cdk from 'aws-cdk-lib';
-import { Fn } from 'aws-cdk-lib';
-import { createDynamicExportName, AUTH_EXPORT_NAMES } from './cloudformation-exports';
 
 export interface OutputParams {
   stack: cdk.Stack;
@@ -26,156 +24,33 @@ export interface OutputParams {
   ldapTokenRetrieverLambdaArn: string;
 }
 
-/**
- * Register all outputs for the Auth Infrastructure stack
- */
-export function registerOutputs({
-  stack,
-  stackName,
-  databaseEndpoint,
-  databaseSecretArn,
-  redisEndpoint,
-  redisAuthTokenArn,
-  efsId,
-  efsMediaAccessPointId,
-  efsTemplatesAccessPointId,
-  authentikSecretKeyArn,
-  authentikAdminTokenArn,
-  authentikLdapTokenArn,
-  authentikAlbDns,
-  authentikUrl,
-  ldapNlbDns,
-  ldapEndpoint,
-  ldapsEndpoint,
-  ldapTokenRetrieverLambdaArn
-}: OutputParams) {
+export function registerOutputs(params: OutputParams): void {
+  const { stack, stackName } = params;
   
-  new cdk.CfnOutput(stack, 'DatabaseEndpointOutput', {
-    description: 'RDS Aurora PostgreSQL cluster endpoint',
-    value: databaseEndpoint,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.DATABASE_ENDPOINT), {
-      StackName: stackName,
-    }),
-  });
+  const outputs = [
+    { key: 'DatabaseEndpoint', value: params.databaseEndpoint, description: 'RDS Aurora PostgreSQL cluster endpoint' },
+    { key: 'DatabaseSecretArn', value: params.databaseSecretArn, description: 'RDS Aurora PostgreSQL master secret ARN' },
+    { key: 'RedisEndpoint', value: params.redisEndpoint, description: 'ElastiCache Redis cluster endpoint' },
+    { key: 'RedisAuthTokenArn', value: params.redisAuthTokenArn, description: 'ElastiCache Redis auth token secret ARN' },
+    { key: 'EfsId', value: params.efsId, description: 'EFS file system ID' },
+    { key: 'EfsMediaAccessPoint', value: params.efsMediaAccessPointId, description: 'EFS media access point ID' },
+    { key: 'EfsTemplatesAccessPoint', value: params.efsTemplatesAccessPointId, description: 'EFS templates access point ID' },
+    { key: 'AuthentikSecretKeyArn', value: params.authentikSecretKeyArn, description: 'Authentik secret key ARN' },
+    { key: 'AuthentikAdminTokenArn', value: params.authentikAdminTokenArn, description: 'Authentik admin token ARN' },
+    { key: 'AuthentikLdapTokenArn', value: params.authentikLdapTokenArn, description: 'Authentik LDAP token ARN' },
+    { key: 'AuthentikAlbDns', value: params.authentikAlbDns, description: 'Authentik Application Load Balancer DNS name' },
+    { key: 'AuthentikUrl', value: params.authentikUrl, description: 'Authentik application URL' },
+    { key: 'LdapNlbDns', value: params.ldapNlbDns, description: 'LDAP Network Load Balancer DNS name' },
+    { key: 'LdapEndpoint', value: params.ldapEndpoint, description: 'LDAP endpoint URL' },
+    { key: 'LdapsEndpoint', value: params.ldapsEndpoint, description: 'LDAPS endpoint URL' },
+    { key: 'LdapTokenRetrieverLambdaArn', value: params.ldapTokenRetrieverLambdaArn, description: 'ARN of the Lambda function that retrieves and updates LDAP tokens' },
+  ];
 
-  new cdk.CfnOutput(stack, 'DatabaseSecretArnOutput', {
-    description: 'RDS Aurora PostgreSQL master secret ARN',
-    value: databaseSecretArn,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.DATABASE_SECRET_ARN), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'RedisEndpointOutput', {
-    description: 'ElastiCache Redis cluster endpoint',
-    value: redisEndpoint,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.REDIS_ENDPOINT), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'RedisAuthTokenArnOutput', {
-    description: 'ElastiCache Redis auth token secret ARN',
-    value: redisAuthTokenArn,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.REDIS_AUTH_TOKEN_ARN), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'EfsIdOutput', {
-    description: 'EFS file system ID',
-    value: efsId,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.EFS_ID), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'EfsMediaAccessPointOutput', {
-    description: 'EFS media access point ID',
-    value: efsMediaAccessPointId,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.EFS_MEDIA_ACCESS_POINT), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'EfsTemplatesAccessPointOutput', {
-    description: 'EFS templates access point ID',
-    value: efsTemplatesAccessPointId,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.EFS_TEMPLATES_ACCESS_POINT), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'AuthentikSecretKeyArnOutput', {
-    description: 'Authentik secret key ARN',
-    value: authentikSecretKeyArn,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.AUTHENTIK_SECRET_KEY_ARN), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'AuthentikAdminTokenArnOutput', {
-    description: 'Authentik admin token ARN',
-    value: authentikAdminTokenArn,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.AUTHENTIK_ADMIN_TOKEN_ARN), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'AuthentikLdapTokenArnOutput', {
-    description: 'Authentik LDAP token ARN',
-    value: authentikLdapTokenArn,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.AUTHENTIK_LDAP_TOKEN_ARN), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'AuthentikAlbDnsOutput', {
-    description: 'Authentik Application Load Balancer DNS name',
-    value: authentikAlbDns,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.AUTHENTIK_ALB_DNS), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'AuthentikUrlOutput', {
-    description: 'Authentik application URL',
-    value: authentikUrl,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.AUTHENTIK_URL), {
-      StackName: stackName,
-    }),
-  });
-
-  // LDAP outputs
-  new cdk.CfnOutput(stack, 'LdapNlbDnsOutput', {
-    description: 'LDAP Network Load Balancer DNS name',
-    value: ldapNlbDns,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAP_NLB_DNS), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'LdapEndpointOutput', {
-    description: 'LDAP endpoint URL',
-    value: ldapEndpoint,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAP_ENDPOINT), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'LdapsEndpointOutput', {
-    description: 'LDAPS endpoint URL',
-    value: ldapsEndpoint,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAPS_ENDPOINT), {
-      StackName: stackName,
-    }),
-  });
-
-  new cdk.CfnOutput(stack, 'LdapTokenRetrieverLambdaArnOutput', {
-    description: 'ARN of the Lambda function that retrieves and updates LDAP tokens',
-    value: ldapTokenRetrieverLambdaArn,
-    exportName: Fn.sub(createDynamicExportName(AUTH_EXPORT_NAMES.LDAP_TOKEN_RETRIEVER_LAMBDA_ARN), {
-      StackName: stackName,
-    }),
+  outputs.forEach(({ key, value, description }) => {
+    new cdk.CfnOutput(stack, `${key}Output`, {
+      value,
+      description,
+      exportName: `${stackName}-${key}`,
+    });
   });
 }

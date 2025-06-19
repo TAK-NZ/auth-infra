@@ -139,9 +139,9 @@ Override specific settings using additional context parameters:
 # Example: Custom database and Redis settings
 npx cdk deploy --context envType=dev-test \
                --context stackName=TestStack \
-               --context authentikAdminUserEmail=admin@company.com \
-               --context dbInstanceClass=db.t4g.small \
-               --context redisNodeType=cache.t4g.small \
+               --context adminUserEmail=admin@company.com \
+               --context instanceClass=db.t4g.small \
+               --context nodeType=cache.t4g.small \
                --context enableDetailedLogging=true
 ```
 
