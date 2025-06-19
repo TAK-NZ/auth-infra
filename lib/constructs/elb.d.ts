@@ -1,22 +1,22 @@
 /**
- * ELB Construct - Load balancer and networking for Authentik
+ * ELB Construct - Application load balancer and networking for Authentik
  */
 import { Construct } from 'constructs';
 import { aws_ec2 as ec2, aws_elasticloadbalancingv2 as elbv2 } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig, NetworkConfig } from '../construct-configs';
 /**
  * Properties for the ELB construct
  */
-export interface ElbProps {
+export interface ELBProps {
     /**
-     * Environment name (e.g. 'prod', 'dev', etc.)
+     * Environment type ('prod' | 'dev-test')
      */
-    environment: string;
+    environment: 'prod' | 'dev-test';
     /**
-     * Environment configuration
+     * Context-based environment configuration (direct from cdk.json)
      */
-    config: AuthInfraEnvironmentConfig;
+    contextConfig: ContextEnvironmentConfig;
     /**
      * Infrastructure configuration (VPC, security groups, etc.)
      */
@@ -42,7 +42,7 @@ export declare class Elb extends Construct {
      * DNS name of the load balancer
      */
     readonly dnsName: string;
-    constructor(scope: Construct, id: string, props: ElbProps);
+    constructor(scope: Construct, id: string, props: ELBProps);
     /**
      * Create a target group for Authentik services
      */

@@ -12,7 +12,7 @@ import {
   Duration,
   RemovalPolicy
 } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig } from '../construct-configs';
 
 /**
@@ -20,9 +20,9 @@ import type { InfrastructureConfig } from '../construct-configs';
  */
 export interface DatabaseProps {
   /**
-   * Environment name (e.g. 'prod', 'dev', etc.)
+   * Environment type ('prod' | 'dev-test')
    */
-  environment: string;
+  environment: 'prod' | 'dev-test';
 
   /**
    * Full stack name (e.g., 'TAK-Demo-AuthInfra')
@@ -30,9 +30,9 @@ export interface DatabaseProps {
   stackName: string;
 
   /**
-   * Environment configuration
+   * Context-based environment configuration (direct from cdk.json)
    */
-  config: AuthInfraEnvironmentConfig;
+  contextConfig: ContextEnvironmentConfig;
 
   /**
    * Infrastructure configuration (VPC, KMS, security groups)
@@ -66,6 +66,12 @@ export class Database extends Construct {
 
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
+
+    // Derive environment-specific values from context (matches reference pattern)
+    const isHighAvailability = props.environment === 'prod';
+    const removalPolicy = props.contextConfig.general.removalPolicy === 'RETAIN' ? 
+      RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
+    const enableMonitoring = props.contextConfig.database.monitoringInterval > 0;
 
     // Create the master secret
     this.masterSecret = new secretsmanager.Secret(this, 'DBMasterSecret', {
@@ -114,7 +120,7 @@ export class Database extends Construct {
     });
 
     // Create the database cluster with conditional configuration for serverless vs provisioned
-    const isServerless = props.config.database.instanceClass === 'db.serverless';
+    const isServerless = props.contextConfig.database.instanceClass === 'db.serverless';
     
     if (isServerless) {
       // Aurora Serverless v2 configuration
@@ -128,8 +134,8 @@ export class Database extends Construct {
         serverlessV2MinCapacity: 0.5,
         serverlessV2MaxCapacity: 4,
         writer: rds.ClusterInstance.serverlessV2('writer'),
-        readers: props.config.database.instanceCount > 1 ? 
-          Array.from({ length: props.config.database.instanceCount - 1 }, (_, i) => 
+        readers: props.contextConfig.database.instanceCount > 1 ? 
+          Array.from({ length: props.contextConfig.database.instanceCount - 1 }, (_, i) => 
             rds.ClusterInstance.serverlessV2(`reader${i + 1}`)
           ) : [],
         parameterGroup,
@@ -142,12 +148,12 @@ export class Database extends Construct {
         storageEncrypted: true,
         storageEncryptionKey: props.infrastructure.kmsKey,
         backup: {
-          retention: Duration.days(props.config.database.backupRetentionDays)
+          retention: Duration.days(props.contextConfig.database.backupRetentionDays)
         },
-        deletionProtection: props.config.database.deletionProtection,
-        removalPolicy: props.config.general.removalPolicy,
+        deletionProtection: props.contextConfig.database.deleteProtection,
+        removalPolicy: removalPolicy,
         cloudwatchLogsExports: ['postgresql'],
-        cloudwatchLogsRetention: props.config.general.enableDetailedLogging ? 
+        cloudwatchLogsRetention: props.contextConfig.general.enableDetailedLogging ? 
           logs.RetentionDays.ONE_MONTH : 
           logs.RetentionDays.ONE_WEEK
       });
@@ -155,7 +161,7 @@ export class Database extends Construct {
       // Provisioned instances configuration
       const instanceType = ec2.InstanceType.of(
         ec2.InstanceClass.T4G,
-        props.config.database.instanceClass.includes('large') ? ec2.InstanceSize.LARGE :
+        props.contextConfig.database.instanceClass.includes('large') ? ec2.InstanceSize.LARGE :
         ec2.InstanceSize.MEDIUM
       );
 
@@ -168,17 +174,17 @@ export class Database extends Construct {
         port: 5432,
         writer: rds.ClusterInstance.provisioned('writer', {
           instanceType,
-          enablePerformanceInsights: props.config.database.enablePerformanceInsights,
-          performanceInsightRetention: props.config.database.enablePerformanceInsights ? 
+          enablePerformanceInsights: props.contextConfig.database.enablePerformanceInsights,
+          performanceInsightRetention: props.contextConfig.database.enablePerformanceInsights ? 
             rds.PerformanceInsightRetention.MONTHS_6 : 
             undefined
         }),
-        readers: props.config.database.instanceCount > 1 ? 
-          Array.from({ length: props.config.database.instanceCount - 1 }, (_, i) => 
+        readers: props.contextConfig.database.instanceCount > 1 ? 
+          Array.from({ length: props.contextConfig.database.instanceCount - 1 }, (_, i) => 
             rds.ClusterInstance.provisioned(`reader${i + 1}`, {
               instanceType,
-              enablePerformanceInsights: props.config.database.enablePerformanceInsights,
-              performanceInsightRetention: props.config.database.enablePerformanceInsights ? 
+              enablePerformanceInsights: props.contextConfig.database.enablePerformanceInsights,
+              performanceInsightRetention: props.contextConfig.database.enablePerformanceInsights ? 
                 rds.PerformanceInsightRetention.MONTHS_6 : 
                 undefined
             })
@@ -193,12 +199,12 @@ export class Database extends Construct {
         storageEncrypted: true,
         storageEncryptionKey: props.infrastructure.kmsKey,
         backup: {
-          retention: Duration.days(props.config.database.backupRetentionDays)
+          retention: Duration.days(props.contextConfig.database.backupRetentionDays)
         },
-        deletionProtection: props.config.database.deletionProtection,
-        removalPolicy: props.config.general.removalPolicy,
+        deletionProtection: props.contextConfig.database.deleteProtection,
+        removalPolicy: removalPolicy,
         cloudwatchLogsExports: ['postgresql'],
-        cloudwatchLogsRetention: props.config.general.enableDetailedLogging ? 
+        cloudwatchLogsRetention: props.contextConfig.general.enableDetailedLogging ? 
           logs.RetentionDays.ONE_MONTH : 
           logs.RetentionDays.ONE_WEEK
       });

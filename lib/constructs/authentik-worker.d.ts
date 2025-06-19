@@ -3,20 +3,20 @@
  */
 import { Construct } from 'constructs';
 import { aws_ecs as ecs } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig, SecretsConfig, StorageConfig, DeploymentConfig, AuthentikApplicationConfig } from '../construct-configs';
 /**
  * Properties for the Authentik Worker construct
  */
 export interface AuthentikWorkerProps {
     /**
-     * Environment name (e.g. 'prod', 'dev', etc.)
+     * Environment type ('prod' | 'dev-test')
      */
-    environment: string;
+    environment: 'prod' | 'dev-test';
     /**
-     * Environment configuration
+     * Context-based environment configuration (direct from cdk.json)
      */
-    config: AuthInfraEnvironmentConfig;
+    contextConfig: ContextEnvironmentConfig;
     /**
      * Infrastructure configuration (VPC, ECS, security groups)
      */

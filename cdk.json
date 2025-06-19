@@ -18,7 +18,7 @@
   },
   "context": {
     "dev-test": {
-      "stackName": "DevTest",
+      "stackName": "Dev",
       "database": {
         "instanceClass": "db.t3.micro",
         "instanceCount": 1,

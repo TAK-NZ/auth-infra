@@ -20,7 +20,7 @@ import {
   Stack,
   Fn
 } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig, DeploymentConfig, TokenConfig, AuthentikApplicationConfig } from '../construct-configs';
 
 /**
@@ -30,12 +30,12 @@ export interface LdapTokenRetrieverProps {
   /**
    * Environment name (e.g. 'prod', 'dev', etc.)
    */
-  environment: string;
+  environment: 'prod' | 'dev-test';
 
   /**
    * Environment configuration
    */
-  config: AuthInfraEnvironmentConfig;
+  contextConfig: ContextEnvironmentConfig;
 
   /**
    * Infrastructure configuration (KMS key)
@@ -75,11 +75,19 @@ export class LdapTokenRetriever extends Construct {
   constructor(scope: Construct, id: string, props: LdapTokenRetrieverProps) {
     super(scope, id);
 
+    // Derive environment-specific values from context (matches reference pattern)
+    const isHighAvailability = props.environment === 'prod';
+    const removalPolicy = props.contextConfig.general.removalPolicy === 'RETAIN' ? 
+      RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
+    const logRetention = isHighAvailability ? 
+      logs.RetentionDays.ONE_MONTH : 
+      logs.RetentionDays.ONE_WEEK;
+
     // Create CloudWatch log group for the Lambda function
     const logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName: `/aws/lambda/TAK-${props.environment}-AuthInfra-update-ldap-token`,
-      retention: props.config.monitoring.logRetentionDays,
-      removalPolicy: props.config.general.removalPolicy
+      retention: logRetention,
+      removalPolicy: removalPolicy
     });
 
     // Create IAM role for the Lambda function

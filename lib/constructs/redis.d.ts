@@ -3,24 +3,24 @@
  */
 import { Construct } from 'constructs';
 import { aws_elasticache as elasticache, aws_ec2 as ec2, aws_secretsmanager as secretsmanager } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig } from '../construct-configs';
 /**
  * Properties for the Redis construct
  */
 export interface RedisProps {
     /**
-     * Environment name (e.g. 'prod', 'dev', etc.)
+     * Environment type ('prod' | 'dev-test')
      */
-    environment: string;
+    environment: 'prod' | 'dev-test';
     /**
      * Full stack name (e.g., 'TAK-Demo-AuthInfra')
      */
     stackName: string;
     /**
-     * Environment configuration
+     * Context-based environment configuration (direct from cdk.json)
      */
-    config: AuthInfraEnvironmentConfig;
+    contextConfig: ContextEnvironmentConfig;
     /**
      * Infrastructure configuration (VPC, KMS, security groups)
      */

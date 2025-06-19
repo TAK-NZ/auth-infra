@@ -6,7 +6,7 @@
  */
 import { Construct } from 'constructs';
 import { aws_route53 as route53, aws_elasticloadbalancingv2 as elbv2 } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { NetworkConfig } from '../construct-configs';
 /**
  * Properties for the Route53 LDAP construct
@@ -15,11 +15,11 @@ export interface Route53Props {
     /**
      * Environment name (e.g. 'prod', 'dev', etc.)
      */
-    environment: string;
+    environment: 'prod' | 'dev-test';
     /**
      * Environment configuration
      */
-    config: AuthInfraEnvironmentConfig;
+    contextConfig: ContextEnvironmentConfig;
     /**
      * Network configuration (DNS zones, hostname, load balancer)
      */

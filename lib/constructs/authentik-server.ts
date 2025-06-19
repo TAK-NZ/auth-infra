@@ -14,9 +14,10 @@ import {
   Duration,
   Fn,
   Token,
-  Stack
+  Stack,
+  RemovalPolicy
 } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { 
   InfrastructureConfig,
   SecretsConfig, 
@@ -30,14 +31,14 @@ import type {
  */
 export interface AuthentikServerProps {
   /**
-   * Environment name (e.g. 'prod', 'dev', etc.)
+   * Environment type ('prod' | 'dev-test')
    */
-  environment: string;
+  environment: 'prod' | 'dev-test';
 
   /**
-   * Environment configuration
+   * Context-based environment configuration (direct from cdk.json)
    */
-  config: AuthInfraEnvironmentConfig;
+  contextConfig: ContextEnvironmentConfig;
 
   /**
    * Infrastructure configuration
@@ -111,11 +112,17 @@ export class AuthentikServer extends Construct {
   constructor(scope: Construct, id: string, props: AuthentikServerProps) {
     super(scope, id);
 
+    // Derive environment-specific values from context (matches reference pattern)
+    const isHighAvailability = props.environment === 'prod';
+    const removalPolicy = props.contextConfig.general.removalPolicy === 'RETAIN' ? 
+      RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
+    const logRetentionDays = isHighAvailability ? 30 : 7;
+
     // Create the log group
     const logGroup = new logs.LogGroup(this, 'ServerLogs', {
       logGroupName: `${id}-server`,
-      retention: props.config.monitoring.logRetentionDays,
-      removalPolicy: props.config.general.removalPolicy
+      retention: logRetentionDays,
+      removalPolicy: removalPolicy
     });
 
     // Create config bucket if using config file
@@ -123,7 +130,7 @@ export class AuthentikServer extends Construct {
     if (props.deployment.useConfigFile) {
       configBucket = new s3.Bucket(this, 'ConfigBucket', {
         bucketName: `${id}-config`.toLowerCase(),
-        removalPolicy: props.config.general.removalPolicy,
+        removalPolicy: removalPolicy,
         encryption: s3.BucketEncryption.S3_MANAGED,
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
       });
@@ -186,8 +193,8 @@ export class AuthentikServer extends Construct {
 
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
-      cpu: props.config.ecs.taskCpu,
-      memoryLimitMiB: props.config.ecs.taskMemory,
+      cpu: props.contextConfig.ecs.taskCpu,
+      memoryLimitMiB: props.contextConfig.ecs.taskMemory,
       executionRole,
       taskRole
     });
@@ -293,7 +300,7 @@ export class AuthentikServer extends Construct {
       cluster: props.infrastructure.ecsCluster,
       taskDefinition: this.taskDefinition,
       healthCheckGracePeriod: Duration.seconds(300),
-      desiredCount: props.config.ecs.desiredCount,
+      desiredCount: props.contextConfig.ecs.desiredCount,
       securityGroups: [props.infrastructure.ecsSecurityGroup],
       enableExecuteCommand: props.deployment.enableExecute,
       assignPublicIp: false,
@@ -303,8 +310,8 @@ export class AuthentikServer extends Construct {
 
     // Add auto scaling
     const scaling = this.ecsService.autoScaleTaskCount({
-      minCapacity: props.config.ecs.minCapacity,
-      maxCapacity: props.config.ecs.maxCapacity
+      minCapacity: 1,
+      maxCapacity: isHighAvailability ? 10 : 3
     });
 
     // Scale based on CPU utilization

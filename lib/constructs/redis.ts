@@ -9,7 +9,7 @@ import {
   aws_kms as kms
 } from 'aws-cdk-lib';
 
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig } from '../construct-configs';
 
 /**
@@ -17,9 +17,9 @@ import type { InfrastructureConfig } from '../construct-configs';
  */
 export interface RedisProps {
   /**
-   * Environment name (e.g. 'prod', 'dev', etc.)
+   * Environment type ('prod' | 'dev-test')
    */
-  environment: string;
+  environment: 'prod' | 'dev-test';
 
   /**
    * Full stack name (e.g., 'TAK-Demo-AuthInfra')
@@ -27,9 +27,9 @@ export interface RedisProps {
   stackName: string;
 
   /**
-   * Environment configuration
+   * Context-based environment configuration (direct from cdk.json)
    */
-  config: AuthInfraEnvironmentConfig;
+  contextConfig: ContextEnvironmentConfig;
 
   /**
    * Infrastructure configuration (VPC, KMS, security groups)
@@ -63,6 +63,10 @@ export class Redis extends Construct {
 
   constructor(scope: Construct, id: string, props: RedisProps) {
     super(scope, id);
+
+    // Derive environment-specific values from context (matches reference pattern)
+    const isHighAvailability = props.environment === 'prod';
+    const automaticFailoverEnabled = props.contextConfig.redis.numCacheNodes > 1;
 
     // Create the auth token secret
     this.authToken = new secretsmanager.Secret(this, 'RedisAuthToken', {
@@ -100,18 +104,18 @@ export class Redis extends Construct {
     // Create the Redis replication group
     this.replicationGroup = new elasticache.CfnReplicationGroup(this, 'Redis', {
       replicationGroupDescription: 'Valkey (Redis) cluster for Authentik',
-      automaticFailoverEnabled: props.config.redis.automaticFailoverEnabled,
+      automaticFailoverEnabled: automaticFailoverEnabled,
       atRestEncryptionEnabled: true,
       transitEncryptionEnabled: true,
       transitEncryptionMode: 'required',
       authToken: this.authToken.secretValue.unsafeUnwrap(),
       kmsKeyId: props.infrastructure.kmsKey.keyArn,
-      cacheNodeType: props.config.redis.nodeType,
+      cacheNodeType: props.contextConfig.redis.nodeType,
       cacheSubnetGroupName: subnetGroup.ref,
       engine: 'valkey',
       engineVersion: '7.2',
       autoMinorVersionUpgrade: true,
-      numCacheClusters: props.config.redis.numCacheClusters,
+      numCacheClusters: props.contextConfig.redis.numCacheNodes,
       securityGroupIds: [securityGroup.securityGroupId]
     });
 

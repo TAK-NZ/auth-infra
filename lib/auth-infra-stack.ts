@@ -29,7 +29,6 @@ import type {
   NetworkConfig,
   TokenConfig
 } from './construct-configs';
-import { AuthInfraEnvironmentConfig } from './environment-config';
 
 // Utility imports
 import { registerOutputs } from './outputs';
@@ -40,56 +39,6 @@ import { DEFAULT_VPC_CIDR } from './utils/constants';
 export interface AuthInfraStackProps extends StackProps {
   environment: 'prod' | 'dev-test';
   envConfig: ContextEnvironmentConfig; // Environment configuration from context
-}
-
-/**
- * Transform context-based configuration to legacy environment config format
- * This allows us to use the new context system while maintaining compatibility with existing constructs
- */
-function transformContextToEnvironmentConfig(
-  contextConfig: ContextEnvironmentConfig,
-  isHighAvailability: boolean
-): AuthInfraEnvironmentConfig {
-  const removalPolicy = contextConfig.general.removalPolicy === 'RETAIN' ? 
-    cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY;
-  
-  return {
-    database: {
-      instanceClass: contextConfig.database.instanceClass,
-      instanceCount: contextConfig.database.instanceCount,
-      backupRetentionDays: contextConfig.database.backupRetentionDays,
-      deletionProtection: contextConfig.database.deleteProtection,
-      enablePerformanceInsights: contextConfig.database.enablePerformanceInsights,
-      enableMonitoring: contextConfig.database.monitoringInterval > 0,
-    },
-    redis: {
-      nodeType: contextConfig.redis.nodeType,
-      numCacheClusters: contextConfig.redis.numCacheNodes,
-      automaticFailoverEnabled: contextConfig.redis.numCacheNodes > 1,
-    },
-    ecs: {
-      taskCpu: contextConfig.ecs.taskCpu,
-      taskMemory: contextConfig.ecs.taskMemory,
-      desiredCount: contextConfig.ecs.desiredCount,
-      minCapacity: 1,
-      maxCapacity: isHighAvailability ? 10 : 3,
-      workerDesiredCount: contextConfig.ecs.desiredCount,
-      workerMinCapacity: 1,
-      workerMaxCapacity: isHighAvailability ? 10 : 3,
-    },
-    efs: {
-      throughputMode: 'bursting' as const,
-      removalPolicy: removalPolicy,
-    },
-    general: {
-      removalPolicy: removalPolicy,
-      enableDetailedLogging: contextConfig.general.enableDetailedLogging,
-    },
-    monitoring: {
-      enableCloudWatchAlarms: isHighAvailability,
-      logRetentionDays: isHighAvailability ? 30 : 7,
-    },
-  };
 }
 
 /**
@@ -123,8 +72,9 @@ export class AuthInfraStack extends cdk.Stack {
     // Add Environment Type tag to the stack
     cdk.Tags.of(this).add('Environment Type', environmentLabel);
 
-    // Transform context config to environment config for constructs
-    const environmentConfig = transformContextToEnvironmentConfig(envConfig, isHighAvailability);
+    // TODO: Replace with direct context usage once constructs are updated
+    // For now, we'll use envConfig directly but rename it for clarity
+    const environmentConfig = envConfig; // Direct context usage (matches reference pattern)
 
     const stackName = Fn.ref('AWS::StackName');
     const region = cdk.Stack.of(this).region;
@@ -237,26 +187,26 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Database
     const database = new Database(this, 'Database', {
-      environment: stackNameComponent,
+      environment: props.environment,
       stackName: resolvedStackName,
-      config: environmentConfig,
+      contextConfig: envConfig,
       infrastructure: authentikInfrastructureConfig,
       securityGroups: [dbSecurityGroup]
     });
 
     // Redis
     const redis = new Redis(this, 'Redis', {
-      environment: stackNameComponent,
+      environment: props.environment,
       stackName: resolvedStackName,
-      config: environmentConfig,
+      contextConfig: envConfig,
       infrastructure: authentikInfrastructureConfig,
       securityGroups: [authentikSecurityGroup]
     });
 
     // EFS
     const efs = new Efs(this, 'EFS', {
-      environment: stackNameComponent,
-      config: environmentConfig,
+      environment: props.environment,
+      contextConfig: envConfig,
       infrastructure: authentikInfrastructureConfig,
       vpcCidrBlock: Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4)),
       allowAccessFrom: [authentikSecurityGroup]
@@ -332,16 +282,16 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Authentik Load Balancer
     const authentikELB = new Elb(this, 'AuthentikELB', {
-      environment: stackNameComponent,
-      config: environmentConfig,
+      environment: props.environment,
+      contextConfig: envConfig,
       infrastructure: authentikInfrastructureConfig,
       network: authentikNetworkConfig
     });
 
     // Authentik Server
     const authentikServer = new AuthentikServer(this, 'AuthentikServer', {
-      environment: stackNameComponent,
-      config: environmentConfig,
+      environment: props.environment,
+      contextConfig: envConfig,
       infrastructure: authentikInfrastructureConfig,
       secrets: secretsConfig,
       storage: storageConfig,
@@ -353,8 +303,8 @@ export class AuthInfraStack extends cdk.Stack {
     // Update authentication host for worker after Route53 setup
     const authentikWorkerConfig = { ...applicationConfig };
     const authentikWorker = new AuthentikWorker(this, 'AuthentikWorker', {
-      environment: stackNameComponent,
-      config: environmentConfig,
+      environment: props.environment,
+      contextConfig: envConfig,
       infrastructure: authentikInfrastructureConfig,
       secrets: secretsConfig,
       storage: storageConfig,
@@ -371,8 +321,8 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Route53 Authentik DNS Records (needed before LDAP token retriever)
     const route53Authentik = new Route53Authentik(this, 'Route53Authentik', {
-      environment: stackNameComponent,
-      config: environmentConfig,
+      environment: props.environment,
+      contextConfig: envConfig,
       network: authentikNetworkConfig,
       authentikLoadBalancer: authentikELB.loadBalancer
     });
@@ -398,8 +348,8 @@ export class AuthInfraStack extends cdk.Stack {
 
     // LDAP Token Retriever
     const ldapTokenRetriever = new LdapTokenRetriever(this, 'LdapTokenRetriever', {
-      environment: stackNameComponent,
-      config: environmentConfig,
+      environment: props.environment,
+      contextConfig: envConfig,
       infrastructure: authentikInfrastructureConfig,
       deployment: deploymentConfig,
       token: tokenConfig,
@@ -408,8 +358,8 @@ export class AuthInfraStack extends cdk.Stack {
 
     // LDAP
     const ldap = new Ldap(this, 'LDAP', {
-      environment: stackNameComponent,
-      config: environmentConfig,
+      environment: props.environment,
+      contextConfig: envConfig,
       infrastructure: ldapInfrastructureConfig,
       storage: storageConfig,
       deployment: deploymentConfig,
@@ -431,8 +381,8 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Route53 LDAP DNS Records (after LDAP construct is created)
     const route53 = new Route53(this, 'Route53', {
-      environment: stackNameComponent,
-      config: environmentConfig,
+      environment: props.environment,
+      contextConfig: envConfig,
       network: ldapNetworkConfig,
       ldapLoadBalancer: ldap.loadBalancer
     });

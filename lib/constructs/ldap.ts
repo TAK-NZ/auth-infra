@@ -12,10 +12,11 @@ import {
   aws_iam as iam,
   Duration,
   Fn,
-  Token
+  Token,
+  RemovalPolicy
 } from 'aws-cdk-lib';
 
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { 
   InfrastructureConfig, 
   StorageConfig, 
@@ -31,12 +32,12 @@ export interface LdapProps {
   /**
    * Environment name (e.g. 'prod', 'dev', etc.)
    */
-  environment: string;
+  environment: 'prod' | 'dev-test';
 
   /**
    * Environment configuration
    */
-  config: AuthInfraEnvironmentConfig;
+  contextConfig: ContextEnvironmentConfig;
 
   /**
    * Infrastructure configuration (VPC, security groups, ECS cluster, KMS)
@@ -125,11 +126,19 @@ export class Ldap extends Construct {
   constructor(scope: Construct, id: string, props: LdapProps) {
     super(scope, id);
 
+    // Derive environment-specific values from context (matches reference pattern)
+    const isHighAvailability = props.environment === 'prod';
+    const removalPolicy = props.contextConfig.general.removalPolicy === 'RETAIN' ? 
+      RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
+    const logRetention = isHighAvailability ? 
+      logs.RetentionDays.ONE_MONTH : 
+      logs.RetentionDays.ONE_WEEK;
+
     // Create the log group
     const logGroup = new logs.LogGroup(this, 'Logs', {
       logGroupName: id,
-      retention: props.config.monitoring.logRetentionDays,
-      removalPolicy: props.config.general.removalPolicy
+      retention: logRetention,
+      removalPolicy: removalPolicy
     });
 
     // Create security group for NLB
@@ -195,8 +204,8 @@ export class Ldap extends Construct {
 
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
-      cpu: props.config.ecs.taskCpu,
-      memoryLimitMiB: props.config.ecs.taskMemory,
+      cpu: props.contextConfig.ecs.taskCpu,
+      memoryLimitMiB: props.contextConfig.ecs.taskMemory,
       executionRole,
       taskRole
     });
@@ -245,7 +254,7 @@ export class Ldap extends Construct {
     this.ecsService = new ecs.FargateService(this, 'Service', {
       cluster: props.infrastructure.ecsCluster,
       taskDefinition: this.taskDefinition,
-      desiredCount: props.config.ecs.desiredCount,
+      desiredCount: props.contextConfig.ecs.desiredCount,
       securityGroups: [props.infrastructure.ecsSecurityGroup],
       enableExecuteCommand: props.deployment.enableExecute,
       assignPublicIp: false,

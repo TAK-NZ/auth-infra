@@ -9,7 +9,7 @@ import {
   aws_iam as iam,
   RemovalPolicy
 } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig } from '../construct-configs';
 
 /**
@@ -17,14 +17,14 @@ import type { InfrastructureConfig } from '../construct-configs';
  */
 export interface EfsProps {
   /**
-   * Environment name (e.g. 'prod', 'dev', etc.)
+   * Environment type ('prod' | 'dev-test')
    */
-  environment: string;
+  environment: 'prod' | 'dev-test';
 
   /**
-   * Environment configuration
+   * Context-based environment configuration (direct from cdk.json)
    */
-  config: AuthInfraEnvironmentConfig;
+  contextConfig: ContextEnvironmentConfig;
 
   /**
    * Infrastructure configuration (VPC, KMS)
@@ -64,6 +64,12 @@ export class Efs extends Construct {
   constructor(scope: Construct, id: string, props: EfsProps) {
     super(scope, id);
 
+    // Derive environment-specific values from context (matches reference pattern)
+    const isHighAvailability = props.environment === 'prod';
+    const efsRemovalPolicy = props.contextConfig.general.removalPolicy === 'RETAIN' ? 
+      RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
+    const throughputMode = efs.ThroughputMode.BURSTING; // Use bursting mode for cost optimization
+
     // Create security group for EFS
     const efsSecurityGroup = new ec2.SecurityGroup(this, 'EFSMountTargetSecurityGroup', {
       vpc: props.infrastructure.vpc,
@@ -86,13 +92,6 @@ export class Efs extends Construct {
       ec2.Port.tcp(2049),
       'Allow NFS access from VPC'
     );
-
-    // Determine removal policy and throughput mode from environment configuration
-    // Production: RETAIN policy to preserve data, Dev/Test: DESTROY to avoid costs
-    const efsRemovalPolicy = props.config.efs.removalPolicy;
-    const throughputMode = props.config.efs.throughputMode === 'provisioned' 
-      ? efs.ThroughputMode.PROVISIONED 
-      : efs.ThroughputMode.BURSTING;
 
     // Build EFS configuration object with file system policy
     const efsConfig: any = {
@@ -126,10 +125,8 @@ export class Efs extends Construct {
       })
     };
 
-    // Add provisioned throughput if specified
-    if (props.config.efs.throughputMode === 'provisioned' && props.config.efs.provisionedThroughput) {
-      efsConfig.provisionedThroughputPerSecond = props.config.efs.provisionedThroughput;
-    }
+    // Since we're using bursting mode for cost optimization, skip provisioned throughput
+    // (This simplifies the config to match reference architecture patterns)
 
     // Create the EFS file system
     this.fileSystem = new efs.FileSystem(this, 'EFS', efsConfig);

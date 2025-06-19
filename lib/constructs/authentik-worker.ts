@@ -13,9 +13,10 @@ import {
   Duration,
   Fn,
   Token,
-  Stack
+  Stack,
+  RemovalPolicy
 } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { 
   InfrastructureConfig, 
   SecretsConfig, 
@@ -29,14 +30,14 @@ import type {
  */
 export interface AuthentikWorkerProps {
   /**
-   * Environment name (e.g. 'prod', 'dev', etc.)
+   * Environment type ('prod' | 'dev-test')
    */
-  environment: string;
+  environment: 'prod' | 'dev-test';
 
   /**
-   * Environment configuration
+   * Context-based environment configuration (direct from cdk.json)
    */
-  config: AuthInfraEnvironmentConfig;
+  contextConfig: ContextEnvironmentConfig;
 
   /**
    * Infrastructure configuration (VPC, ECS, security groups)
@@ -110,11 +111,17 @@ export class AuthentikWorker extends Construct {
   constructor(scope: Construct, id: string, props: AuthentikWorkerProps) {
     super(scope, id);
 
+    // Derive environment-specific values from context (matches reference pattern)
+    const isHighAvailability = props.environment === 'prod';
+    const removalPolicy = props.contextConfig.general.removalPolicy === 'RETAIN' ? 
+      RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
+    const logRetentionDays = isHighAvailability ? 30 : 7;
+
     // Create the log group for workers
     const logGroup = new logs.LogGroup(this, 'WorkerLogs', {
       logGroupName: `${id}-worker`,
-      retention: props.config.monitoring.logRetentionDays,
-      removalPolicy: props.config.general.removalPolicy
+      retention: logRetentionDays,
+      removalPolicy: removalPolicy
     });
 
     // Create task execution role
@@ -172,8 +179,8 @@ export class AuthentikWorker extends Construct {
 
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'WorkerTaskDef', {
-      cpu: props.config.ecs.taskCpu,
-      memoryLimitMiB: props.config.ecs.taskMemory,
+      cpu: props.contextConfig.ecs.taskCpu,
+      memoryLimitMiB: props.contextConfig.ecs.taskMemory,
       executionRole,
       taskRole
     });
@@ -283,7 +290,7 @@ export class AuthentikWorker extends Construct {
     this.ecsService = new ecs.FargateService(this, 'WorkerService', {
       cluster: props.infrastructure.ecsCluster,
       taskDefinition: this.taskDefinition,
-      desiredCount: props.config.ecs.workerDesiredCount || 1, // Default to 1 worker
+      desiredCount: props.contextConfig.ecs.desiredCount, // Use same as server
       securityGroups: [props.infrastructure.ecsSecurityGroup],
       enableExecuteCommand: props.deployment.enableExecute,
       assignPublicIp: false,
@@ -293,8 +300,8 @@ export class AuthentikWorker extends Construct {
 
     // Add auto scaling for workers
     const scaling = this.ecsService.autoScaleTaskCount({
-      minCapacity: props.config.ecs.workerMinCapacity || 1,
-      maxCapacity: props.config.ecs.workerMaxCapacity || 3
+      minCapacity: 1,
+      maxCapacity: isHighAvailability ? 10 : 3
     });
 
     // Scale based on CPU utilization (workers may have different scaling patterns)

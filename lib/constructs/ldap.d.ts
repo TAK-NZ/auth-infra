@@ -3,7 +3,7 @@
  */
 import { Construct } from 'constructs';
 import { aws_ecs as ecs, aws_elasticloadbalancingv2 as elbv2, aws_secretsmanager as secretsmanager } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig, StorageConfig, DeploymentConfig, NetworkConfig, AuthentikApplicationConfig } from '../construct-configs';
 /**
  * Properties for the LDAP construct
@@ -12,11 +12,11 @@ export interface LdapProps {
     /**
      * Environment name (e.g. 'prod', 'dev', etc.)
      */
-    environment: string;
+    environment: 'prod' | 'dev-test';
     /**
      * Environment configuration
      */
-    config: AuthInfraEnvironmentConfig;
+    contextConfig: ContextEnvironmentConfig;
     /**
      * Infrastructure configuration (VPC, security groups, ECS cluster, KMS)
      */

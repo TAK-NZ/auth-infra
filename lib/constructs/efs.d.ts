@@ -3,20 +3,20 @@
  */
 import { Construct } from 'constructs';
 import { aws_efs as efs, aws_ec2 as ec2 } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig } from '../construct-configs';
 /**
  * Properties for the EFS construct
  */
 export interface EfsProps {
     /**
-     * Environment name (e.g. 'prod', 'dev', etc.)
+     * Environment type ('prod' | 'dev-test')
      */
-    environment: string;
+    environment: 'prod' | 'dev-test';
     /**
-     * Environment configuration
+     * Context-based environment configuration (direct from cdk.json)
      */
-    config: AuthInfraEnvironmentConfig;
+    contextConfig: ContextEnvironmentConfig;
     /**
      * Infrastructure configuration (VPC, KMS)
      */

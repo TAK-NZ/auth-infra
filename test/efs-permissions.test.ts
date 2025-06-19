@@ -9,7 +9,6 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { AuthentikServer } from '../lib/constructs/authentik-server';
 import { AuthentikWorker } from '../lib/constructs/authentik-worker';
-import { DEV_TEST_CONFIG } from '../lib/environment-config';
 import type {
   InfrastructureConfig,
   SecretsConfig,
@@ -17,6 +16,46 @@ import type {
   DeploymentConfig,
   AuthentikApplicationConfig
 } from '../lib/construct-configs';
+import type { ContextEnvironmentConfig } from '../lib/stack-config';
+
+// Test context configuration (matches reference pattern)
+const TEST_CONTEXT_CONFIG: ContextEnvironmentConfig = {
+  stackName: 'Test',
+  database: {
+    instanceClass: 'db.serverless',
+    instanceCount: 1,
+    allocatedStorage: 20,
+    maxAllocatedStorage: 100,
+    enablePerformanceInsights: false,
+    monitoringInterval: 0,
+    backupRetentionDays: 1,
+    deleteProtection: false,
+  },
+  redis: {
+    nodeType: 'cache.t4g.micro',
+    numCacheNodes: 1,
+    enableTransit: true,
+    enableAtRest: true,
+  },
+  ecs: {
+    taskCpu: 512,
+    taskMemory: 1024,
+    desiredCount: 1,
+    enableDetailedLogging: true,
+  },
+  authentik: {
+    domain: 'auth.test.example.com',
+    adminUserEmail: 'admin@test.example.com',
+  },
+  ldap: {
+    domain: 'ldap.test.example.com',
+  },
+  general: {
+    removalPolicy: 'DESTROY',
+    enableDetailedLogging: true,
+    enableContainerInsights: false,
+  },
+};
 
 describe('EFS IAM Permissions', () => {
   let app: App;
@@ -121,8 +160,8 @@ describe('EFS IAM Permissions', () => {
     const configs = createTestConfigs(mockSecrets, mockS3Bucket);
 
     const server = new AuthentikServer(stack, 'TestAuthentikServer', {
-      environment: 'test',
-      config: DEV_TEST_CONFIG,
+      environment: 'dev-test',
+      contextConfig: TEST_CONTEXT_CONFIG,
       infrastructure: configs.infrastructureConfig,
       secrets: configs.secretsConfig,
       storage: configs.storageConfig,
@@ -149,8 +188,8 @@ describe('EFS IAM Permissions', () => {
     };
 
     const worker = new AuthentikWorker(stack, 'TestAuthentikWorker', {
-      environment: 'test',
-      config: DEV_TEST_CONFIG,
+      environment: 'dev-test',
+      contextConfig: TEST_CONTEXT_CONFIG,
       infrastructure: configs.infrastructureConfig,
       secrets: {
         ...configs.secretsConfig,

@@ -1,5 +1,5 @@
 /**
- * ELB Construct - Load balancer and networking for Authentik
+ * ELB Construct - Application load balancer and networking for Authentik
  */
 import { Construct } from 'constructs';
 import {
@@ -7,22 +7,22 @@ import {
   aws_elasticloadbalancingv2 as elbv2,
   Duration
 } from 'aws-cdk-lib';
-import type { AuthInfraEnvironmentConfig } from '../environment-config';
+import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig, NetworkConfig } from '../construct-configs';
 
 /**
  * Properties for the ELB construct
  */
-export interface ElbProps {
+export interface ELBProps {
   /**
-   * Environment name (e.g. 'prod', 'dev', etc.)
+   * Environment type ('prod' | 'dev-test')
    */
-  environment: string;
+  environment: 'prod' | 'dev-test';
 
   /**
-   * Environment configuration
+   * Context-based environment configuration (direct from cdk.json)
    */
-  config: AuthInfraEnvironmentConfig;
+  contextConfig: ContextEnvironmentConfig;
 
   /**
    * Infrastructure configuration (VPC, security groups, etc.)
@@ -54,7 +54,7 @@ export class Elb extends Construct {
    */
   public readonly dnsName: string;
 
-  constructor(scope: Construct, id: string, props: ElbProps) {
+  constructor(scope: Construct, id: string, props: ELBProps) {
     super(scope, id);
 
     // Create load balancer with dualstack IP addressing
