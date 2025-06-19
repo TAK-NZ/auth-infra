@@ -1,11 +1,10 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "lib": [
-      "es2020",
-      "dom"
+      "es2022"
     ],
     "declaration": true,
     "strict": true,
@@ -24,10 +23,7 @@
     "typeRoots": [
       "./node_modules/@types"
     ],
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "isolatedModules": true
   },
   "exclude": [
     "node_modules",

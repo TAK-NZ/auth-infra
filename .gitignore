@@ -1,20 +1,55 @@
 node_modules
 
-# Compiled TypeScript output
-bin/*.js
-bin/*.d.ts
-lib/*.js
-lib/*.d.ts
-test/*.js
-test/*.d.ts
-*.js.map
+# Compiled TypeScript output - exclude all compiled files
+**/*.js
+**/*.d.ts
+**/*.js.map
+# But keep configuration files that are intentionally JavaScript
+!*.config.js
+!eslint.config.js
+!jest.config.js
 
 # CDK asset staging directory
 .cdk.staging
 cdk.out
 
-# GitHub Copilot instructions
-.github/copilot-instructions.md
+# Debug and development files
+debug-params.js
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Backup directory (legacy CloudFormation templates)
 backup/

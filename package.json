@@ -17,13 +17,13 @@
     "test:watch": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest --watch",
     "test:coverage": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest --coverage",
     
-    "deploy:dev": "npm run build && cdk deploy --context envType=dev-test",
-    "deploy:prod": "npm run build && cdk deploy --context envType=prod",
-    "synth:dev": "npm run build && cdk synth --context envType=dev-test",
-    "synth:prod": "npm run build && cdk synth --context envType=prod",
+    "deploy:dev": "npm run build && cdk deploy --context env=dev-test",
+    "deploy:prod": "npm run build && cdk deploy --context env=prod",
+    "synth:dev": "npm run build && cdk synth --context env=dev-test",
+    "synth:prod": "npm run build && cdk synth --context env=prod",
     
-    "cdk:diff:dev": "npm run build && cdk diff --context envType=dev-test",
-    "cdk:diff:prod": "npm run build && cdk diff --context envType=prod",
+    "cdk:diff:dev": "npm run build && cdk diff --context env=dev-test",
+    "cdk:diff:prod": "npm run build && cdk diff --context env=prod",
     "cdk:bootstrap": "cdk bootstrap"
   },  
   "devDependencies": {

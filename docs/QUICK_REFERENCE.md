@@ -1,85 +1,176 @@
-# TAK Authentication Infrastructure - Quick Reference
+# Quick Reference Guide
 
-## Quick Comparison
+## Essential Commands
 
-### Production Configuration
+### **Development Workflow**
 ```bash
-# Deploy production
-npx cdk deploy --context envType=prod --context authentikAdminUserEmail=admin@company.com --profile tak
-```
-- ✅ High availability (multi-AZ deployment)
-- ✅ Full VPC endpoints for AWS services
-- ✅ Redundant Aurora database instances
-- ✅ Container Insights enabled
-- ❌ Higher cost (~$210/month)
+# Install and build
+npm install && npm run build
 
-### Dev-Test Configuration  
+# Deploy development environment
+npm run deploy:dev
+
+# Deploy production environment
+npm run deploy:prod
+
+# Preview changes
+npm run synth:dev
+npm run synth:prod
+
+# Show differences
+npm run cdk:diff:dev
+npm run cdk:diff:prod
+```
+
+### **Testing**
 ```bash
-# Deploy dev-test (default)
-npx cdk deploy --context authentikAdminUserEmail=admin@example.com --profile tak
+# Run all tests
+npm test
+
+# Watch mode
+npm run test:watch
+
+# Coverage report
+npm run test:coverage
 ```
-- ✅ Cost optimized (~$120/month)
-- ✅ Same core functionality
-- ✅ Perfect for development
-- ❌ Single database instance
-- ❌ Limited monitoring
 
-## Key Resources Deployed
+### **Cleanup**
+```bash
+# Clean build artifacts
+npm run clean
 
-| Resource | Dev-Test | Production | Notes |
-|----------|----------|------------|-------|
-| Aurora PostgreSQL | 1 instance | 2 instances | Primary + secondary |
-| ElastiCache Redis | 1 node | 2 nodes | Single vs multi-AZ |
-| ECS Services | 3 (3 containers) | 3 (6 containers) | Authentik server + worker + LDAP |
-| Load Balancers | 2 | 2 | ALB + NLB |
-| EFS File System | 1 | 1 | Shared storage |
-| Secrets Manager | 3 secrets | 3 secrets | DB, LDAP, admin tokens |
-| Container Insights | ❌ | ✅ | Monitoring |
-| Deletion Protection | ❌ | ✅ | Data safety |
+# Destroy stack (development)
+npx cdk destroy --context env=dev-test
+```
 
-## Stack Architecture
+## Common Deployment Patterns
 
-### AuthInfraStack (Main Stack)
-- Authentik web application (ECS Fargate)
-- Aurora PostgreSQL database
-- ElastiCache Redis cluster
-- Application Load Balancer
-- EFS file system for media/certs
-- Secrets Manager integration
+### **Basic Deployment**
+```bash
+# Minimal required parameters
+npm run deploy:dev -- \
+  --context stackName=Demo \
+  --context authentik.adminUserEmail=admin@company.com
+```
 
-### LdapStack (LDAP Outpost)
-- Authentik LDAP Outpost (ECS Fargate)
-- Network Load Balancer
-- LDAP service integration
-- TAK Server compatibility
+### **Custom Database**
+```bash
+# Upgrade database instance
+npm run deploy:dev -- \
+  --context stackName=Demo \
+  --context authentik.adminUserEmail=admin@company.com \
+  --context database.instanceClass=db.t3.small
+```
 
-## Cost Breakdown
+### **Production Deployment**
+```bash
+# Full production setup
+npm run deploy:prod -- \
+  --context stackName=Prod \
+  --context authentik.adminUserEmail=admin@company.com
+```
 
-### Dev-Test (~$120/month)
-- Aurora PostgreSQL (1 instance): $45
-- ElastiCache Redis (1 node): $15
-- ECS Fargate (3 containers): $50
-- Load Balancers (ALB + NLB): $20
-- Storage (EFS + backups): $5
+### **High-Performance Development**
+```bash
+# Development with production-like resources
+npm run deploy:dev -- \
+  --context stackName=Staging \
+  --context authentik.adminUserEmail=admin@company.com \
+  --context ecs.taskCpu=1024 \
+  --context ecs.taskMemory=2048 \
+  --context database.instanceClass=db.t3.small
+```
 
-### Production (~$210/month)
-- Aurora PostgreSQL (2 instances): $90
-- ElastiCache Redis (2 nodes): $30
-- ECS Fargate (6 containers): $80
-- Load Balancers (ALB + NLB): $20
-- Storage (EFS + backups): $5
+## Environment Defaults
 
-## Decision Matrix
+| Setting | dev-test | prod |
+|---------|----------|------|
+| **Database** | db.t3.micro (1 instance) | db.t3.small (2 instances) |
+| **Redis** | cache.t3.micro (1 node) | cache.t3.small (2 nodes) |
+| **ECS** | 512 CPU, 1024 MB | 1024 CPU, 2048 MB |
+| **Encryption** | Disabled | Enabled |
+| **Monitoring** | Basic | Enhanced |
+| **Cleanup** | DESTROY | RETAIN |
 
-Choose **Dev-Test** if:
-- 💰 Cost optimization priority
-- 🧪 Development/testing workloads
-- 📚 Learning about TAK on AWS
-- ⏰ Some downtime acceptable
+## Stack Outputs
 
-Choose **Production** if:
-- 🚀 Production workloads
-- 🔒 High availability required
-- 👥 Serving real users
-- 📊 Full monitoring needed
+After deployment, the stack provides these outputs:
 
+```bash
+# View all outputs
+aws cloudformation describe-stacks \
+  --stack-name TAK-Demo-AuthInfra \
+  --query 'Stacks[0].Outputs'
+```
+
+### **Key Outputs**
+- `AuthentikUrl` - Web interface URL
+- `LdapEndpoint` - LDAP connection string
+- `DatabaseEndpoint` - RDS endpoint
+- `RedisEndpoint` - ElastiCache endpoint
+
+## Troubleshooting Quick Fixes
+
+### **Missing Base Infrastructure**
+```bash
+# Check if base stack exists
+aws cloudformation describe-stacks --stack-name TAK-Demo-BaseInfra
+```
+
+### **ECR Images Missing**
+```bash
+# List available images
+aws ecr describe-images --repository-name TAK-Demo-BaseInfra
+```
+
+### **Parameter Validation Errors**
+```bash
+# Validate configuration
+npm run synth:dev -- --context stackName=Demo
+```
+
+### **Deployment Stuck**
+```bash
+# Check CloudFormation events
+aws cloudformation describe-stack-events \
+  --stack-name TAK-Demo-AuthInfra \
+  --max-items 10
+```
+
+## Service Endpoints
+
+After successful deployment:
+
+- **Authentik Web UI**: `https://account.{domain}`
+- **LDAP Service**: `ldap.{domain}:389` (LDAP) / `ldap.{domain}:636` (LDAPS)
+- **Admin Credentials**: Stored in AWS Secrets Manager
+
+## Cost Optimization Tips
+
+### **Development**
+- Use `env=dev-test` for cost-optimized defaults
+- Single database instance (`database.instanceCount=1`)
+- Smaller instance types (`db.t3.micro`, `cache.t3.micro`)
+- Disable encryption for non-sensitive data
+
+### **Production**
+- Use `env=prod` for high-availability defaults
+- Enable all security features
+- Monitor costs with AWS Cost Explorer
+- Use Reserved Instances for predictable workloads
+
+## Security Checklist
+
+- ✅ Admin email configured
+- ✅ Database encryption enabled (prod)
+- ✅ Redis encryption enabled (prod)
+- ✅ Security groups properly configured
+- ✅ Secrets stored in AWS Secrets Manager
+- ✅ SSL certificates from ACM
+
+## Next Steps
+
+1. **Configure Authentik** - Access web interface and set up authentication
+2. **Test LDAP** - Verify LDAP connectivity from TAK server
+3. **Monitor Resources** - Set up CloudWatch alarms
+4. **Deploy TAK Server** - Connect to authentication infrastructure

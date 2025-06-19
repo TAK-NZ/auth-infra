@@ -1,295 +1,177 @@
-# Parameters Management
+# Configuration Parameters Reference
 
-The AuthInfra project uses a context-driven parameter management system that aligns with CDK best practices. All stack configuration is handled through CDK context parameters, providing clear separation between AWS credentials and stack configuration.
+## Overview
 
-## Parameter Resolution Hierarchy
+This document provides a comprehensive reference for all configuration parameters available in the TAK Authentication Infrastructure CDK stack.
 
-Parameters are resolved in the following order (highest to lowest priority):
+## Parameter Categories
 
-1. **CDK Context** (highest precedence) - `--context` CLI parameters
-2. **Environment Defaults** - Based on `envType` (prod vs dev-test)
-3. **Built-in Defaults** - Hardcoded fallback values
+### **Required Parameters**
 
-## Environment-Specific Defaults
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `stackName` | string | Stack identifier for CloudFormation exports | `"Demo"`, `"Prod"` |
+| `authentik.adminUserEmail` | string | Administrator email for Authentik | `"admin@company.com"` |
 
-The stack automatically applies optimal defaults based on `envType`:
-
-### Development/Test (`envType=dev-test`)
-- **Database**: `db.t4g.micro`, single instance, 1-day backup retention
-- **Redis**: `cache.t4g.micro`, single node, no failover
-- **ECS**: 512 CPU / 1024 MB memory, 1 instance per service
-- **Monitoring**: Basic logging, no CloudWatch alarms
-- **Cost**: Optimized for minimal spend
-
-### Production (`envType=prod`)
-- **Database**: `db.t4g.small`, multi-AZ, 7-day backup retention
-- **Redis**: `cache.t4g.small`, multi-node, automatic failover
-- **ECS**: 1024 CPU / 2048 MB memory, 2 instances per service
-- **Monitoring**: Comprehensive alarms and extended log retention
-- **Reliability**: High availability configuration
-
-## Parameter Reference
-
-### Required Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `stackName` | string | Stack identifier (e.g., `Demo`, `Prod`) |
-| `authentikAdminUserEmail` | string | Admin user email for Authentik setup |
-
-### Optional Core Configuration
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `envType` | string | `dev-test` | Environment type: `prod` or `dev-test` |
-| `project` | string | `TAK` | Project prefix for resource naming |
-| `gitSha` | string | auto-detected | Git SHA for ECR image tagging |
-| `enableExecute` | boolean | `false` | Enable ECS exec for debugging |
-| `useAuthentikConfigFile` | boolean | `false` | Load environment variables from S3 authentik-config.env file |
-| `ldapBaseDn` | string | `dc=example,dc=com` | LDAP base DN |
-| `hostnameAuthentik` | string | `account` | Hostname for Authentik service DNS records |
-| `hostnameLdap` | string | `ldap` | Hostname for LDAP service DNS records |
-
-### Infrastructure Override Parameters
+### **Database Configuration**
 
 | Parameter | Type | Default (dev-test) | Default (prod) | Description |
 |-----------|------|-------------------|----------------|-------------|
-| `dbInstanceClass` | string | `db.t4g.micro` | `db.t4g.small` | RDS instance class |
-| `dbInstanceCount` | number | `1` | `2` | Number of RDS instances |
-| `redisNodeType` | string | `cache.t4g.micro` | `cache.t4g.small` | Redis node type |
-| `ecsTaskCpu` | number | `512` | `1024` | ECS task CPU units |
-| `ecsTaskMemory` | number | `1024` | `2048` | ECS task memory (MB) |
-| `enableDetailedLogging` | boolean | `false` (dev) | `true` (prod) | Enable detailed CloudWatch logging |
+| `database.instanceClass` | string | `db.t3.micro` | `db.t3.small` | RDS instance class |
+| `database.instanceCount` | number | `1` | `2` | Number of database instances |
+| `database.allocatedStorage` | number | `20` | `100` | Initial storage allocation (GB) |
+| `database.maxAllocatedStorage` | number | `100` | `1000` | Maximum storage allocation (GB) |
+| `database.enablePerformanceInsights` | boolean | `false` | `true` | Enable performance insights |
+| `database.monitoringInterval` | number | `0` | `60` | Enhanced monitoring interval |
+| `database.backupRetentionDays` | number | `7` | `30` | Backup retention period |
+| `database.deleteProtection` | boolean | `false` | `true` | Enable deletion protection |
 
-## Deployment Examples
+### **Redis Configuration**
 
-### Minimal Development Deployment
+| Parameter | Type | Default (dev-test) | Default (prod) | Description |
+|-----------|------|-------------------|----------------|-------------|
+| `redis.nodeType` | string | `cache.t3.micro` | `cache.t3.small` | ElastiCache node type |
+| `redis.numCacheNodes` | number | `1` | `2` | Number of cache nodes |
+| `redis.enableTransit` | boolean | `false` | `true` | Enable encryption in transit |
+| `redis.enableAtRest` | boolean | `false` | `true` | Enable encryption at rest |
 
+### **ECS Configuration**
+
+| Parameter | Type | Default (dev-test) | Default (prod) | Description |
+|-----------|------|-------------------|----------------|-------------|
+| `ecs.taskCpu` | number | `512` | `1024` | CPU units for ECS tasks |
+| `ecs.taskMemory` | number | `1024` | `2048` | Memory (MB) for ECS tasks |
+| `ecs.desiredCount` | number | `1` | `2` | Desired number of running tasks |
+| `ecs.enableDetailedLogging` | boolean | `true` | `false` | Enable detailed application logging |
+
+### **Application Configuration**
+
+| Parameter | Type | Default (dev-test) | Default (prod) | Description |
+|-----------|------|-------------------|----------------|-------------|
+| `authentik.domain` | string | `account.dev.tak.nz` | `account.tak.nz` | Authentik web interface domain |
+| `authentik.adminUserEmail` | string | **Required** | **Required** | Administrator email address |
+| `ldap.domain` | string | `ldap.dev.tak.nz` | `ldap.tak.nz` | LDAP service domain |
+
+### **General Configuration**
+
+| Parameter | Type | Default (dev-test) | Default (prod) | Description |
+|-----------|------|-------------------|----------------|-------------|
+| `general.removalPolicy` | string | `DESTROY` | `RETAIN` | Resource cleanup policy |
+| `general.enableDetailedLogging` | boolean | `true` | `false` | Enable detailed CloudWatch logging |
+| `general.enableContainerInsights` | boolean | `false` | `true` | Enable ECS Container Insights |
+
+## Environment Types
+
+### **dev-test Environment**
+- **Focus**: Cost optimization and development efficiency
+- **Database**: Single instance, minimal storage
+- **Redis**: Single node, no encryption
+- **ECS**: Minimal CPU/memory allocation
+- **Logging**: Detailed logging enabled for debugging
+- **Cleanup**: Resources can be destroyed
+
+### **prod Environment**
+- **Focus**: High availability, security, and production readiness
+- **Database**: Multi-AZ deployment, performance insights
+- **Redis**: Multi-node, encryption enabled
+- **ECS**: Higher resource allocation, multiple tasks
+- **Logging**: Optimized logging, Container Insights enabled
+- **Cleanup**: Resources protected from deletion
+
+## Parameter Override Examples
+
+### **Basic Overrides**
 ```bash
-# Only required parameters
-npx cdk deploy --context stackName=Demo \
-               --context authentikAdminUserEmail=admin@example.com
+# Custom admin email
+npm run deploy:dev -- --context authentik.adminUserEmail=admin@company.com
+
+# Custom stack name
+npm run deploy:dev -- --context stackName=MyDemo
 ```
 
-### Production Deployment
-
+### **Database Scaling**
 ```bash
-# Production environment with high availability
-npx cdk deploy --context envType=prod \
-               --context stackName=Prod \
-               --context authentikAdminUserEmail=admin@company.com
+# Upgrade database instance
+npm run deploy:dev -- --context database.instanceClass=db.t3.small
+
+# Enable multi-AZ for development
+npm run deploy:dev -- --context database.instanceCount=2
+
+# Increase storage
+npm run deploy:dev -- --context database.allocatedStorage=50
 ```
 
-### Custom Configuration
-
+### **Performance Tuning**
 ```bash
-# Development with custom infrastructure sizing
-npx cdk deploy --context envType=dev-test \
-               --context stackName=CustomDemo \
-               --context authentikAdminUserEmail=admin@company.com \
-               --context dbInstanceClass=db.t4g.small \
-               --context redisNodeType=cache.t4g.small \
-               --context ecsTaskCpu=1024 \
-               --context ecsTaskMemory=2048 \
-               --context enableDetailedLogging=true
+# Increase ECS resources
+npm run deploy:dev -- \
+  --context ecs.taskCpu=1024 \
+  --context ecs.taskMemory=2048
+
+# Scale Redis
+npm run deploy:dev -- --context redis.nodeType=cache.t3.small
+
+# Enable performance monitoring
+npm run deploy:dev -- --context database.enablePerformanceInsights=true
 ```
 
-### Development with Debugging
-
+### **Security Enhancements**
 ```bash
-# Enable ECS exec for debugging
-npx cdk deploy --context stackName=Debug \
-               --context authentikAdminUserEmail=admin@example.com \
-               --context enableExecute=true
+# Enable Redis encryption in dev
+npm run deploy:dev -- \
+  --context redis.enableTransit=true \
+  --context redis.enableAtRest=true
+
+# Enable database protection
+npm run deploy:dev -- --context database.deleteProtection=true
 ```
 
-### Using S3 Environment File
+## Configuration Validation
 
-```bash
-# Deploy with S3 environment file enabled (assumes authentik-config.env exists in S3)
-npx cdk deploy --context stackName=ConfigDemo \
-               --context authentikAdminUserEmail=admin@company.com \
-               --context useAuthentikConfigFile=true
-```
+The stack validates configuration parameters at deployment time:
 
-### Custom DNS Hostnames
-
-```bash
-# Custom hostnames for services
-npx cdk deploy --context stackName=CustomDNS \
-               --context authentikAdminUserEmail=admin@company.com \
-               --context hostnameAuthentik=auth \
-               --context hostnameLdap=directory \
-               --context ldapBaseDn="dc=company,dc=local"
-```
-
-## S3 Environment File Configuration
-
-The stack can optionally load environment variables from an S3-stored configuration file for Authentik containers.
-
-### Configuration
-
-| Parameter | Description |
-|-----------|-------------|
-| `useAuthentikConfigFile` | When `true`, ECS containers will load environment variables from S3 |
-| **S3 Path** | `{stackName}/authentik-config.env` in the configuration bucket |
-| **Default Behavior** | Environment file is **not** loaded (containers use only CDK-defined environment variables) |
-
-### Prerequisites
-
-Before enabling `useAuthentikConfigFile=true`, ensure:
-
-1. **File exists**: `authentik-config.env` must exist in S3 at `{stackName}/authentik-config.env`
-2. **Proper format**: File should contain environment variables in `KEY=value` format
-3. **S3 permissions**: ECS tasks have read access to the configuration bucket (handled automatically)
-
-### Example Usage
-
-```bash
-# Deploy without S3 environment file (default)
-npx cdk deploy --context stackName=Demo \
-               --context authentikAdminUserEmail=admin@example.com
-
-# Deploy with S3 environment file
-npx cdk deploy --context stackName=Demo \
-               --context authentikAdminUserEmail=admin@example.com \
-               --context useAuthentikConfigFile=true
-```
-
-### File Location
-
-For `stackName=Demo`, the file should be located at:
-```
-s3://tak-demo-config-bucket/Demo/authentik-config.env
-```
-
-## AWS Credentials
-
-AWS credentials are handled separately from stack configuration:
-
-```bash
-# Option 1: AWS Profile (recommended)
-aws configure --profile tak
-export AWS_PROFILE=tak
-
-# Option 2: Environment variables (AWS credentials only)
-export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-export CDK_DEFAULT_REGION=$(aws configure get region)
-
-# Option 3: IAM roles for CI/CD
-# AWS credentials automatically available in CI/CD environments
-```
-
-## Stack Naming Convention
-
-Stack names follow the pattern: `TAK-<stackName>-AuthInfra`
-
-Examples:
-- `--context stackName=Demo` → `TAK-Demo-AuthInfra`
-- `--context stackName=Prod` → `TAK-Prod-AuthInfra`
-- `--context stackName=Test` → `TAK-Test-AuthInfra`
-
-## Resource Imports
-
-The AuthInfra stack imports resources from the BaseInfra stack using the pattern:
-`TAK-<stackName>-BaseInfra-<resource>`
-
-Required BaseInfra exports:
-- `TAK-<stackName>-BaseInfra-VPC-ID`
-- `TAK-<stackName>-BaseInfra-Kms-ARN`
-- `TAK-<stackName>-BaseInfra-Ecs-ARN`
-- `TAK-<stackName>-BaseInfra-S3ConfBucket-ARN`
-- `TAK-<stackName>-BaseInfra-Ecr-ARN`
-
-## DNS and Service Endpoints
-
-The stack creates two separate DNS records for the services:
-
-### Authentik Service
-- **URL**: `https://{hostnameAuthentik}.{domainName}`
-- **Default**: `https://account.{domainName}`
-- **Purpose**: Main Authentik web interface and API
-- **TLS**: Uses ACM certificate for the domain
-
-### LDAP Service  
-- **URL**: `ldaps://{hostnameLdap}.{domainName}:636`
-- **Default**: `ldaps://ldap.{domainName}:636`
-- **Purpose**: LDAP directory service endpoint
-- **TLS**: Uses the same ACM certificate
-
-## Architecture Benefits
-
-**Context-driven Configuration**: All parameters passed via CDK context for better CI/CD integration
-
-**Environment-aware Defaults**: Automatic configuration based on `envType` (dev-test vs prod)
-
-**Type Safety**: Full TypeScript typing and validation for all parameters
-
-**Resource Import Integration**: Seamless integration with BaseInfra stack exports
-
-**Split DNS Management**: Separate Route53 constructs for Authentik and LDAP services
-
-**EFS Integration**: Proper EFS mount configuration with IAM permissions and access points
-
-**Git SHA Tracking**: Automatic git commit tracking for ECR image tagging
-
-## Automatic Git SHA Detection
-
-The `gitSha` parameter is automatically detected from the current git repository when the CDK is executed:
-
-- **Automatic Detection**: The system runs `git rev-parse HEAD` to get the current commit SHA
-- **Full SHA Format**: Returns the complete 40-character SHA hash (e.g., `7e696824b7c12836338e52725cdec1ac96e9db5d`)
-- **Context Override**: You can override with `--context gitSha=your-custom-sha`
-- **Fallback**: If git is not available or fails, it falls back to `'development'`
-
-This automatic detection ensures that:
-1. Container images are tagged with the exact commit they were built from
-2. Deployments can be traced back to specific code versions
-3. No manual input is required for version tracking
+- **Required parameters** must be provided
+- **Database instance classes** must be valid RDS instance types
+- **Redis node types** must be valid ElastiCache node types
+- **ECS CPU/memory** combinations must be valid Fargate configurations
+- **Email addresses** must be valid format
 
 ## Best Practices
 
-1. **Required Parameters**: Always provide `stackName` and `authentikAdminUserEmail`
-2. **Environment Type**: Use `envType=prod` for production deployments to get high availability defaults
-3. **Infrastructure Overrides**: Only override infrastructure parameters when you have specific requirements
-4. **DNS Configuration**: Use meaningful hostnames (`hostnameAuthentik`, `hostnameLdap`) for your organization
-5. **S3 Environment Files**: Only use `useAuthentikConfigFile=true` when you need custom Authentik environment variables
-6. **Debugging**: Enable `enableExecute=true` only for development/debugging purposes
-7. **Git SHA**: Let the system auto-detect the git SHA for proper image tagging
-8. **Stack Naming**: Use descriptive but concise stack names (e.g., `Demo`, `Prod`, `Staging`)
+### **Development Environments**
+- Use cost-optimized defaults (`env=dev-test`)
+- Override only specific parameters as needed
+- Enable detailed logging for debugging
+- Use smaller instance sizes
 
-## AWS Credentials
+### **Production Environments**
+- Use production defaults (`env=prod`)
+- Enable all security features
+- Use multi-AZ deployments
+- Monitor performance and costs
 
-AWS credentials are handled separately from stack configuration:
+### **Staging Environments**
+- Start with production configuration
+- Selectively optimize for cost
+- Test production-like settings
+- Validate performance characteristics
 
-```bash
-# Option 1: AWS Profile (recommended)
-aws configure --profile tak
-export AWS_PROFILE=tak
+## Troubleshooting
 
-# Option 2: Environment variables (AWS credentials only)
-export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-export CDK_DEFAULT_REGION=$(aws configure get region)
-
-# Option 3: IAM roles for CI/CD
-# AWS credentials automatically available in CI/CD environments
+### **Invalid Parameter Values**
 ```
-
-## Complete Example
-
-Here's a complete example showing all commonly used parameters:
-
-```bash
-# Production deployment with custom configuration
-npx cdk deploy \
-  --context envType=prod \
-  --context stackName=Production \
-  --context authentikAdminUserEmail=admin@company.com \
-  --context ldapBaseDn="dc=company,dc=local" \
-  --context hostnameAuthentik=auth \
-  --context hostnameLdap=directory \
-  --context useAuthentikConfigFile=true \
-  --context enableDetailedLogging=true \
-  --context dbInstanceClass=db.t4g.medium \
-  --context redisNodeType=cache.t4g.medium
+Error: Invalid instance class: db.invalid.type
 ```
+**Solution**: Use valid AWS instance types from the documentation.
+
+### **Resource Limits**
+```
+Error: Requested CPU/memory combination not supported
+```
+**Solution**: Use valid Fargate CPU/memory combinations.
+
+### **Missing Required Parameters**
+```
+Error: authentik.adminUserEmail is required
+```
+**Solution**: Provide all required parameters via context or configuration.
