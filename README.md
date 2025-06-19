@@ -1,38 +1,43 @@
-<h1 align=center>TAK Auth Infra</h1>
+# TAK Authentication Infrastructure
 
-<p align=center>TAK Authentication Layer (Authentik SSO & LDAP)</p>
+<p align=center>Modern AWS CDK v2 authentication infrastructure for Team Awareness Kit (TAK) deployments using Authentik SSO & LDAP
 
-## Background
+## Overview
 
 The [Team Awareness Kit (TAK)](https://tak.gov/solutions/emergency) provides Fire, Emergency Management, and First Responders an operationally agnostic tool for improved situational awareness and a common operational picture. 
-This repo - which is part of a [larger collection](https://github.com/TAK-NZ/) - deploys [Authentik](https://goauthentik.io/) as the authentication layer for a [TAK server](https://tak.gov/solutions/emergency) on AWS.
 
-While a TAK server supports built-in file-based authentication, this approach is very limited. This stack provides a robust LDAP-based authentication solution using Authentik, which offers advanced capabilities such as single sign-on via OIDC, user management, and enterprise-grade security features.
+This repository deploys the authentication layer infrastructure for a complete TAK server deployment, providing robust LDAP-based authentication using [Authentik](https://goauthentik.io/) with advanced capabilities such as single sign-on via OIDC, user management, and enterprise-grade security features.
 
-This stack must be deployed after the base infrastructure layer:
+### Architecture Layers
 
-| Name                  | Notes |
-| --------------------- | ----- |
-| `TAK-<name>-BaseInfra` | Base Layer (VPC, ECS, ECR, S3, KMS) - [repo](https://github.com/TAK-NZ/base-infra) |
+This authentication infrastructure requires the base infrastructure and supports additional application layers:
 
-The following additional layers should be deployed after this authentication layer:
+| Layer | Repository | Description |
+|-------|------------|-------------|
+| **Base Infrastructure** | [`base-infra`](https://github.com/TAK-NZ/base-infra) | VPC, ECS, ECR, S3, KMS, ACM |
+| **Authentication Layer** | `auth-infra` (this repo) | Authentik SSO and LDAP |
+| **TAK Server Layer** | [`tak-infra`](https://github.com/TAK-NZ/tak-infra) | TAK Server deployment |
 
-| Name                  | Notes |
-| --------------------- | ----- |
-| `TAK-<name>-TakInfra` | TAK Server layer - [repo](https://github.com/TAK-NZ/tak-infra) |
+## Quick Start
 
-## Pre-Reqs
+### Prerequisites
+- [AWS Account](https://signin.aws.amazon.com/signup) with configured credentials
+- Base infrastructure stack (`TAK-<name>-BaseInfra`) must be deployed first
+- Public Route 53 hosted zone (e.g., `tak.nz`)
+- [Node.js](https://nodejs.org/) and npm installed
 
-The following dependencies must be fulfilled:
-- An [AWS Account](https://signin.aws.amazon.com/signup?request_type=register). 
-  - Your AWS credentials must be configured for the CDK to access your account. You can configure credentials using the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) (`aws configure`) or [environment variables](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html). The deployment examples in this guide assume you have configured an AWS profile named `tak` - you can either create this profile or substitute it with your preferred profile name in the commands below.
-- The base infrastructure stack (`TAK-<name>-BaseInfra`) must be deployed first.
-  - This provides the VPC, ECS cluster, ECR repository, S3 bucket, KMS key, and ACM certificate.
-  - The ACM certificate from the base stack is automatically imported and used for HTTPS/TLS.
-- A public hosted zone in Route 53 for your domain name (e.g., `tak.nz`).
-  - This stack creates the following default hostnames (which can be changed):
-    - account: Authentik SSO (e.g., `account.tak.nz`)
-    - ldap: Internal LDAP endpoint (e.g., `ldap.tak.nz`)
+### Installation & Deployment
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Deploy development environment
+npm run deploy:dev
+
+# 3. Deploy production environment  
+npm run deploy:prod
+```
 
 ## Resources
 
@@ -105,19 +110,66 @@ The following parameters are **mandatory** for deployment:
 
 - **`authentikAdminUserEmail`**: Email address for the Authentik administrator account
 
+## Development
+
+### Prerequisites
+- Node.js 18 or later
+- AWS CLI configured
+- Docker (for local testing)
+
+### Getting Started
+```bash
+# Install dependencies
+npm install
+
+# Run tests
+npm test
+
+# Build the project
+npm run build
+
+# Clean build artifacts
+npm run clean
+```
+
+### Testing
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### CDK Commands
+```bash
+# Synthesize CloudFormation template
+npm run synth
+
+# Deploy to AWS
+npm run deploy
+
+# Destroy infrastructure
+npm run destroy
+
+# Show differences
+npm run diff
+```
+
+## Configuration
+
 ### Basic Deployment
 
 Deploy the stack with CDK context parameters (no environment variables needed for stack configuration):
 
 ```bash
-# AWS credentials (auto-detectable from profile/environment)
-export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-export CDK_DEFAULT_REGION=$(aws configure get region)
-
 # Deploy with required parameters via CDK context
-npx cdk deploy --context envType=dev-test \
-               --context stackName=MyFirstStack \
-               --context authentikAdminUserEmail=admin@company.com
+npm run deploy -- --context envType=dev-test \
+                   --context stackName=MyFirstStack \
+                   --context adminUserEmail=admin@company.com
 ```
 
 ### Production Deployment
@@ -126,9 +178,9 @@ For production deployments, use `envType=prod` which automatically applies produ
 
 ```bash
 # Production deployment with enhanced security and availability
-npx cdk deploy --context envType=prod \
-               --context stackName=ProdStack \
-               --context authentikAdminUserEmail=admin@company.com
+npm run deploy -- --context envType=prod \
+                   --context stackName=ProdStack \
+                   --context adminUserEmail=admin@company.com
 ```
 
 ### Custom Configuration
@@ -137,12 +189,12 @@ Override specific settings using additional context parameters:
 
 ```bash
 # Example: Custom database and Redis settings
-npx cdk deploy --context envType=dev-test \
-               --context stackName=TestStack \
-               --context adminUserEmail=admin@company.com \
-               --context instanceClass=db.t4g.small \
-               --context nodeType=cache.t4g.small \
-               --context enableDetailedLogging=true
+npm run deploy -- --context envType=dev-test \
+                   --context stackName=TestStack \
+                   --context adminUserEmail=admin@company.com \
+                   --context instanceClass=db.t4g.small \
+                   --context nodeType=cache.t4g.small \
+                   --context enableDetailedLogging=true
 ```
 
 ### Available Context Parameters
@@ -151,8 +203,14 @@ npx cdk deploy --context envType=dev-test \
 |-----------|----------|---------|-------------|
 | `envType` | No | `dev-test` | Environment type: `prod` or `dev-test` |
 | `stackName` | **Yes** | None | Stack identifier (forms `TAK-{stackName}-AuthInfra`) |
-| `dbInstanceClass` | No | env-based* | RDS PostgreSQL instance class |
-| `dbInstanceCount` | No | env-based* | Number of RDS instances (1 or 2) |
+| `instanceClass` | No | env-based* | RDS PostgreSQL instance class |
+| `instanceCount` | No | env-based* | Number of RDS instances (1 or 2) |
+| `nodeType` | No | env-based* | ElastiCache Redis node type |
+| `adminUserEmail` | **Yes** | None | Authentik administrator email |
+| `taskCpu` | No | env-based* | ECS task CPU units |
+| `taskMemory` | No | env-based* | ECS task memory (MB) |
+| `desiredCount` | No | env-based* | Number of ECS tasks |
+| `enableDetailedLogging` | No | env-based* | Enable detailed application logging |
 | `redisNodeType` | No | env-based* | ElastiCache Redis node type |
 | `ecsTaskCpu` | No | env-based* | ECS task CPU units (512, 1024, 2048, 4096) |
 | `ecsTaskMemory` | No | env-based* | ECS task memory in MB |
@@ -248,31 +306,27 @@ export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --outpu
 export CDK_DEFAULT_REGION=$(aws configure get region --profile tak || echo "ap-southeast-2")
 
 # Deploy with minimal required parameters
-npx cdk deploy --profile tak \
-               --context envType=dev-test \
-               --context stackName=MyFirstStack \
-               --context authentikAdminUserEmail=admin@example.com
+npm run deploy -- --context envType=dev-test \
+                   --context stackName=MyFirstStack \
+                   --context adminUserEmail=admin@example.com
 ```
 
 #### Production Deployment
 ```bash
 # Production deployment with admin email
-npx cdk deploy --profile tak \
-               --context envType=prod \
-               --context stackName=ProdStack \
-               --context authentikAdminUserEmail=admin@company.com
+npm run deploy -- --context envType=prod \
+                   --context stackName=ProdStack \
+                   --context adminUserEmail=admin@company.com
 ```
 
 #### Custom Configuration Deployment
 ```bash
 # Development with custom settings
-npx cdk deploy --profile tak \
-               --context envType=dev-test \
-               --context stackName=TestStack \
-               --context authentikAdminUserEmail=admin@company.com \
-               --context authentikLdapBaseDn=DC=company,DC=com \
-               --context dbInstanceClass=db.t4g.small \
-               --context enableDetailedLogging=true
+npm run deploy -- --context envType=dev-test \
+                   --context stackName=TestStack \
+                   --context adminUserEmail=admin@company.com \
+                   --context instanceClass=db.t4g.small \
+                   --context enableDetailedLogging=true
 ```
 
 **Stack Naming**: The final AWS stack name follows the pattern `TAK-<stackName>-AuthInfra`
@@ -330,3 +384,81 @@ The estimated AWS cost for this authentication layer without data transfer or pr
 | ---------------- | ---------------------- | -------------------- |
 | Prod            | $366.87 USD           | $4,402.44 USD        |
 | Dev-Test        | $106.25 USD           | $1,275.00 USD        |
+
+## Infrastructure Resources
+
+### Authentication Services
+- **Authentik SSO** - Web-based single sign-on portal
+- **LDAP Provider** - Enterprise LDAP directory service
+- **User Management** - Web UI for user and group administration
+
+### Core Infrastructure
+- **Database** - RDS Aurora PostgreSQL cluster with encryption and backup retention
+- **Cache** - ElastiCache Redis cluster for session management
+- **Storage** - EFS file system for persistent Authentik data and certificates
+- **Secrets** - AWS Secrets Manager for database credentials and API tokens
+- **Load Balancers** - Application Load Balancer (ALB) for web interface and Network Load Balancer (NLB) for LDAP
+- **Security Groups** - Fine-grained network access controls
+- **DNS Records** - Route 53 records for service endpoints
+
+## Available Environments
+
+| Environment | Stack Name | Description | Domain | Monthly Cost* |
+|-------------|------------|-------------|--------|---------------|
+| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | `account.dev.tak.nz` | ~$85 |
+| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `account.tak.nz` | ~$245 |
+
+*Estimated AWS costs for ap-southeast-2, excluding data processing and storage usage
+
+## Development Workflow
+
+### New NPM Scripts (Enhanced Developer Experience)
+```bash
+# Development and Testing
+npm run dev                    # Build and test
+npm run test:watch            # Run tests in watch mode
+npm run test:coverage         # Generate coverage report
+
+# Environment-Specific Deployment
+npm run deploy:dev            # Deploy to dev-test
+npm run deploy:prod           # Deploy to production
+npm run synth:dev             # Preview dev infrastructure
+npm run synth:prod            # Preview prod infrastructure
+
+# Infrastructure Management
+npm run cdk:diff:dev          # Show what would change in dev
+npm run cdk:diff:prod         # Show what would change in prod
+npm run cdk:bootstrap         # Bootstrap CDK in account
+```
+
+### Configuration System
+
+The project uses **AWS CDK context-based configuration** for consistent deployments:
+
+- **All settings** stored in [`cdk.json`](cdk.json) under `context` section
+- **Version controlled** - consistent deployments across team members
+- **Runtime overrides** - use `--context` flag for one-off changes
+- **Environment-specific** - separate configs for dev-test and production
+
+#### Required Parameters
+
+The following parameters are **mandatory** for deployment:
+
+- **`stackName`**: The environment/stack name component (e.g., "Demo", "Prod")
+  - **CRITICAL**: This determines CloudFormation export names for importing VPC and resources from base infrastructure
+  - Must match the `<name>` part of your base infrastructure stack name `TAK-<name>-BaseInfra`
+  - Example: If your base stack is `TAK-Demo-BaseInfra`, use `stackName=Demo`
+
+- **`adminUserEmail`**: Email address for the Authentik administrator account
+
+#### Configuration Override Examples
+```bash
+# Override admin email for custom deployment
+npm run deploy:dev -- --context adminUserEmail=admin@company.com
+
+# Deploy with custom database settings
+npm run deploy:dev -- --context instanceClass=db.t4g.small --context nodeType=cache.t4g.small
+
+# Enable detailed logging for debugging
+npm run deploy:dev -- --context enableDetailedLogging=true
+```

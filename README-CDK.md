@@ -1,53 +1,57 @@
-# TAK Authentication Infrastructure - CDK Migration
+# TAK Authentication Infrastructure - CDK Documentation
 
-This project has been migrated from using `@openaddresses/cloudfriend` to AWS CDK v2. The infrastructure is now defined using TypeScript and AWS CDK L2 constructs.
+This project uses AWS CDK v2 for infrastructure as code, defining authentication services using TypeScript and AWS CDK L2 constructs.
 
 ## Architecture Overview
 
 The infrastructure consists of several key components:
 
 - **Database**: Aurora PostgreSQL Serverless v2 cluster with enhanced monitoring
-- **Cache**: Redis (Valkey) cluster for session management
+- **Cache**: Redis (Valkey) cluster for session management  
 - **Storage**: EFS for persistent storage with access points
 - **Secrets**: AWS Secrets Manager for credential management
 - **Compute**: ECS Fargate services for Authentik server and worker
 - **Load Balancer**: Application Load Balancer with SSL termination
+- **LDAP**: LDAP outpost for TAK server integration
 
 ## Prerequisites
 
 - Node.js >= 18
 - AWS CLI configured with appropriate credentials
 - AWS CDK CLI installed globally: `npm install -g aws-cdk`
-- Ensure the base infrastructure stack is deployed first
+- Base infrastructure stack deployed first
 
 ## Project Structure
 
 ```
 ├── bin/
-│   └── app.ts              # CDK app entry point
+│   └── cdk.ts              # CDK app entry point
 ├── lib/
 │   ├── auth-infra-stack.ts # Main stack definition
-│   ├── ldap-stack.ts      # LDAP outpost stack definition
-│   ├── parameters.ts      # Centralized parameter management
-│   ├── stack-naming.ts    # Stack naming utility
-│   └── constructs/         # CDK constructs
-│       ├── authentik.ts    # ECS services, ALB, IAM roles
-│       ├── database.ts     # Aurora PostgreSQL cluster
-│       ├── efs.ts          # EFS file system and access points
-│       ├── redis.ts        # Redis cluster
-│       ├── secrets.ts      # Secrets Manager secrets
-│       └── ldap.ts         # LDAP outpost construct
-├── docs/
-│   └── PARAMETERS.md      # Parameter management documentation
-├── examples/
-│   ├── parameters-example.js    # Parameter usage examples
-│   └── stack-naming-example.js  # Stack naming examples
+│   ├── stack-config.ts     # Configuration management
+│   ├── outputs.ts          # Stack outputs
+│   ├── constructs/         # CDK constructs
+│   │   ├── authentik-server.ts  # Authentik server service
+│   │   ├── authentik-worker.ts  # Authentik worker service
+│   │   ├── database.ts          # Aurora PostgreSQL cluster
+│   │   ├── efs.ts               # EFS file system
+│   │   ├── redis.ts             # Redis cluster
+│   │   ├── secrets-manager.ts   # Secrets management
+│   │   ├── ldap.ts              # LDAP outpost service
+│   │   └── elb.ts               # Load balancer
+│   └── utils/              # Utility functions
+│       ├── constants.ts         # Constants and defaults
+│       ├── context-overrides.ts # Context parameter handling
+│       └── tag-helpers.ts       # Resource tagging
+├── test/                   # Test files
 ├── cdk.json               # CDK configuration
 ├── tsconfig.json          # TypeScript configuration
 └── package.json           # Dependencies and scripts
 ```
 
-## Installation
+## Development
+
+### Installation
 
 1. Install dependencies:
 ```bash
@@ -59,28 +63,54 @@ npm install
 npm run build
 ```
 
+### Development Commands
+
+```bash
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Clean build artifacts
+npm run clean
+
+# Watch mode for development
+npm run build:watch
+```
+
+### CDK Commands
+
+```bash
+# Synthesize CloudFormation template
+npm run synth
+
+# Deploy to AWS
+npm run deploy
+
+# Show differences
+npm run diff
+
+# Destroy infrastructure
+npm run destroy
+```
+
 ## Deployment
 
 ### Deploy to Development Environment
 
 ```bash
-# SSL Certificate ARN is automatically imported from BaseInfra stack
-cdk deploy --context environment=dev --context envType=dev-test \\
-  --parameters EnableExecute=false \\
-  --parameters AuthentikAdminUserEmail=admin@example.com \\
-  --parameters AuthentikLDAPBaseDN=DC=example,DC=com \\
-  --parameters AuthentikConfigFile=false
+npm run deploy -- --context envType=dev-test \
+                   --context stackName=DevStack \
+                   --context adminUserEmail=admin@example.com
 ```
 
 ### Deploy to Production Environment
 
 ```bash
-# SSL Certificate ARN is automatically imported from BaseInfra stack
-cdk deploy --context environment=prod --context envType=prod \\
-  --parameters EnableExecute=false \\
-  --parameters AuthentikAdminUserEmail=admin@example.com \\
-  --parameters AuthentikLDAPBaseDN=DC=example,DC=com \\
-  --parameters AuthentikConfigFile=false
+npm run deploy -- --context envType=prod \
+                   --context stackName=ProdStack \
+                   --context adminUserEmail=admin@example.com
 ```
 
 ## Migration Notes
