@@ -1,5 +1,5 @@
 {
-  "app": "node bin/cdk.js",
+  "app": "npx ts-node --prefer-ts-exts bin/cdk.ts",
   "watch": {
     "include": [
       "**"
@@ -17,9 +17,97 @@
     ]
   },
   "context": {
-    "project": "TAK-NZ",
-    "stackName": "DevTest",
-    "envType": "dev-test",
+    "dev-test": {
+      "stackName": "DevTest",
+      "r53ZoneName": "dev.tak.nz",
+      "vpcCidr": "10.0.0.0/20",
+      "networking": {
+        "createNatGateways": false,
+        "createVpcEndpoints": false
+      },
+      "database": {
+        "instanceClass": "db.t3.micro",
+        "instanceCount": 1,
+        "allocatedStorage": 20,
+        "maxAllocatedStorage": 100,
+        "enablePerformanceInsights": false,
+        "monitoringInterval": 0,
+        "backupRetentionDays": 7,
+        "deleteProtection": false
+      },
+      "redis": {
+        "nodeType": "cache.t3.micro",
+        "numCacheNodes": 1,
+        "enableTransit": false,
+        "enableAtRest": false
+      },
+      "ecs": {
+        "taskCpu": 512,
+        "taskMemory": 1024,
+        "desiredCount": 1,
+        "enableDetailedLogging": true
+      },
+      "authentik": {
+        "domain": "account.dev.tak.nz",
+        "adminUserEmail": "admin@tak.nz"
+      },
+      "ldap": {
+        "domain": "ldap.dev.tak.nz"
+      },
+      "general": {
+        "removalPolicy": "DESTROY",
+        "enableDetailedLogging": true,
+        "enableContainerInsights": false
+      }
+    },
+    "prod": {
+      "stackName": "Prod",
+      "r53ZoneName": "tak.nz",
+      "vpcCidr": "10.1.0.0/20",
+      "networking": {
+        "createNatGateways": true,
+        "createVpcEndpoints": true
+      },
+      "database": {
+        "instanceClass": "db.t3.small",
+        "instanceCount": 2,
+        "allocatedStorage": 100,
+        "maxAllocatedStorage": 1000,
+        "enablePerformanceInsights": true,
+        "monitoringInterval": 60,
+        "backupRetentionDays": 30,
+        "deleteProtection": true
+      },
+      "redis": {
+        "nodeType": "cache.t3.small",
+        "numCacheNodes": 2,
+        "enableTransit": true,
+        "enableAtRest": true
+      },
+      "ecs": {
+        "taskCpu": 1024,
+        "taskMemory": 2048,
+        "desiredCount": 2,
+        "enableDetailedLogging": false
+      },
+      "authentik": {
+        "domain": "account.tak.nz",
+        "adminUserEmail": "admin@tak.nz"
+      },
+      "ldap": {
+        "domain": "ldap.tak.nz"
+      },
+      "general": {
+        "removalPolicy": "RETAIN",
+        "enableDetailedLogging": false,
+        "enableContainerInsights": true
+      }
+    },
+    "tak-defaults": {
+      "project": "TAK.NZ",
+      "component": "AuthInfra",
+      "region": "ap-southeast-2"
+    },
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:target-partitions": [
       "aws",

@@ -29,14 +29,67 @@ import type {
   NetworkConfig,
   TokenConfig
 } from './construct-configs';
+import { AuthInfraEnvironmentConfig } from './environment-config';
 
 // Utility imports
 import { registerOutputs } from './outputs';
 import { createBaseImportValue, BASE_EXPORT_NAMES } from './cloudformation-imports';
-import { AuthInfraConfigResult } from './stack-config';
+import { ContextEnvironmentConfig } from './stack-config';
+import { DEFAULT_VPC_CIDR } from './utils/constants';
 
 export interface AuthInfraStackProps extends StackProps {
-  configResult: AuthInfraConfigResult;
+  environment: 'prod' | 'dev-test';
+  envConfig: ContextEnvironmentConfig; // Environment configuration from context
+}
+
+/**
+ * Transform context-based configuration to legacy environment config format
+ * This allows us to use the new context system while maintaining compatibility with existing constructs
+ */
+function transformContextToEnvironmentConfig(
+  contextConfig: ContextEnvironmentConfig,
+  isHighAvailability: boolean
+): AuthInfraEnvironmentConfig {
+  const removalPolicy = contextConfig.general.removalPolicy === 'RETAIN' ? 
+    cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY;
+  
+  return {
+    database: {
+      instanceClass: contextConfig.database.instanceClass,
+      instanceCount: contextConfig.database.instanceCount,
+      backupRetentionDays: contextConfig.database.backupRetentionDays,
+      deletionProtection: contextConfig.database.deleteProtection,
+      enablePerformanceInsights: contextConfig.database.enablePerformanceInsights,
+      enableMonitoring: contextConfig.database.monitoringInterval > 0,
+    },
+    redis: {
+      nodeType: contextConfig.redis.nodeType,
+      numCacheClusters: contextConfig.redis.numCacheNodes,
+      automaticFailoverEnabled: contextConfig.redis.numCacheNodes > 1,
+    },
+    ecs: {
+      taskCpu: contextConfig.ecs.taskCpu,
+      taskMemory: contextConfig.ecs.taskMemory,
+      desiredCount: contextConfig.ecs.desiredCount,
+      minCapacity: 1,
+      maxCapacity: isHighAvailability ? 10 : 3,
+      workerDesiredCount: contextConfig.ecs.desiredCount,
+      workerMinCapacity: 1,
+      workerMaxCapacity: isHighAvailability ? 10 : 3,
+    },
+    efs: {
+      throughputMode: 'bursting' as const,
+      removalPolicy: removalPolicy,
+    },
+    general: {
+      removalPolicy: removalPolicy,
+      enableDetailedLogging: contextConfig.general.enableDetailedLogging,
+    },
+    monitoring: {
+      enableCloudWatchAlarms: isHighAvailability,
+      logRetentionDays: isHighAvailability ? 30 : 7,
+    },
+  };
 }
 
 /**
@@ -49,35 +102,38 @@ export class AuthInfraStack extends cdk.Stack {
       description: 'TAK Authentication Layer - Authentik, LDAP Outpost',
     });
 
-    const { 
-      stackConfig, 
-      environmentConfig, 
-      computedValues 
-    } = props.configResult;
+    // Use environment configuration directly (no complex transformations needed)
+    const { envConfig } = props;
     
-    // Extract configuration values
-    const envType = stackConfig.envType;
-    const stackNameComponent = stackConfig.stackName; // This is the STACK_NAME part (e.g., "MyFirstStack")
+    // Extract configuration values directly from envConfig
+    const vpcCidr = envConfig.vpcCidr ?? DEFAULT_VPC_CIDR;
+    const r53ZoneName = envConfig.r53ZoneName;
+    const stackNameComponent = envConfig.stackName; // This is the STACK_NAME part (e.g., "DevTest")
+    const isHighAvailability = props.environment === 'prod';
+    const environmentLabel = props.environment === 'prod' ? 'Prod' : 'Dev-Test';
     const resolvedStackName = id;
     
     // Use computed values from configuration
-    const enableHighAvailability = computedValues.enableHighAvailability;
-    const enableDetailedMonitoring = computedValues.enableDetailedMonitoring;
+    const enableHighAvailability = isHighAvailability;
+    const enableDetailedMonitoring = envConfig.general.enableDetailedLogging;
 
     // Add Environment Type tag to the stack
-    cdk.Tags.of(this).add('Environment Type', computedValues.environmentLabel);
+    cdk.Tags.of(this).add('Environment Type', environmentLabel);
+
+    // Transform context config to environment config for constructs
+    const environmentConfig = transformContextToEnvironmentConfig(envConfig, isHighAvailability);
 
     const stackName = Fn.ref('AWS::StackName');
     const region = cdk.Stack.of(this).region;
 
-    // Context-based parameter resolution
-    const gitSha = this.node.tryGetContext('calculatedGitSha') || 'development';
-    const enableExecute = Boolean(this.node.tryGetContext('enableExecute') || false);
-    const authentikAdminUserEmail = this.node.tryGetContext('validatedAuthentikAdminUserEmail') || '';
-    const useAuthentikConfigFile = Boolean(this.node.tryGetContext('useAuthentikConfigFile') || false);
-    const ldapBaseDn = this.node.tryGetContext('ldapBaseDn') || 'dc=example,dc=com';
-    const hostnameAuthentik = this.node.tryGetContext('hostnameAuthentik') || 'account';
-    const hostnameLdap = this.node.tryGetContext('hostnameLdap') || 'ldap';
+    // Configuration-based parameter resolution
+    const authentikAdminUserEmail = envConfig.authentik.adminUserEmail;
+    const ldapBaseDn = `dc=${r53ZoneName.split('.').join(',dc=')}`;
+    const hostnameAuthentik = envConfig.authentik.domain.split('.')[0]; // Extract subdomain
+    const hostnameLdap = envConfig.ldap.domain.split('.')[0]; // Extract subdomain
+    const gitSha = 'latest'; // Use fixed tag for context-driven approach
+    const enableExecute = false; // Disable by default for security
+    const useAuthentikConfigFile = false; // Use environment variables
 
     // =================
     // IMPORT BASE INFRASTRUCTURE RESOURCES

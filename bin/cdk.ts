@@ -1,76 +1,56 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { AuthInfraStack } from '../lib/auth-infra-stack';
-import { createStackConfig } from '../lib/stack-config';
-import { getGitSha, validateCdkContextParams } from '../lib/utils';
+import { applyContextOverrides } from '../lib/utils/context-overrides';
+import { DEFAULT_AWS_REGION } from '../lib/utils/constants';
+import { generateStandardTags } from '../lib/utils/tag-helpers';
 
 const app = new cdk.App();
 
-// Read configuration from CDK context only (command line --context parameters)
-const ProjectName = app.node.tryGetContext('project');
-const customStackName = app.node.tryGetContext('stackName');
-const envType = app.node.tryGetContext('envType') || 'dev-test';
-const authentikAdminUserEmail = app.node.tryGetContext('authentikAdminUserEmail');
+// Get environment from context (defaults to dev-test)
+const envName = app.node.tryGetContext('env') || 'dev-test';
 
-// Calculate Git SHA for ECR image tagging
-const gitSha = app.node.tryGetContext('gitSha') || getGitSha();
+// Get the environment configuration from context
+// CDK automatically handles context overrides via --context flag
+const envConfig = app.node.tryGetContext(envName);
+const defaults = app.node.tryGetContext('tak-defaults');
 
-// Validate parameters
-validateCdkContextParams({
-  envType,
-  stackName: customStackName,
-  authentikAdminUserEmail
-});
+if (!envConfig) {
+  throw new Error(`
+❌ Environment configuration for '${envName}' not found in cdk.json
 
-// Read optional context overrides
-const overrides = {
-  ...(app.node.tryGetContext('dbInstanceClass') && {
-    database: { instanceClass: app.node.tryGetContext('dbInstanceClass') }
-  }),
-  ...(app.node.tryGetContext('dbInstanceCount') && {
-    database: { instanceCount: parseInt(app.node.tryGetContext('dbInstanceCount'), 10) }
-  }),
-  ...(app.node.tryGetContext('redisNodeType') && {
-    redis: { nodeType: app.node.tryGetContext('redisNodeType') }
-  }),
-  ...(app.node.tryGetContext('ecsTaskCpu') && {
-    ecs: { taskCpu: parseInt(app.node.tryGetContext('ecsTaskCpu'), 10) }
-  }),
-  ...(app.node.tryGetContext('ecsTaskMemory') && {
-    ecs: { taskMemory: parseInt(app.node.tryGetContext('ecsTaskMemory'), 10) }
-  }),
-  ...(app.node.tryGetContext('enableDetailedLogging') !== undefined && {
-    general: { enableDetailedLogging: app.node.tryGetContext('enableDetailedLogging') === 'true' }
-  }),
-};
+Usage:
+  npx cdk deploy --context env=dev-test
+  npx cdk deploy --context env=prod
 
-// Create the stack name early so we can use it in configuration
-const stackName = `TAK-${customStackName}-AuthInfra`; // Always use TAK prefix
+Expected cdk.json structure:
+{
+  "context": {
+    "dev-test": { ... },
+    "prod": { ... }
+  }
+}
+  `);
+}
 
-// Set calculated values in CDK context for the stack to use
-app.node.setContext('calculatedGitSha', gitSha);
-app.node.setContext('validatedAuthentikAdminUserEmail', authentikAdminUserEmail);
+// Apply context overrides for non-prefixed parameters
+// This supports direct overrides that work for any environment:
+// --context r53ZoneName=custom.domain.com
+// --context networking.createNatGateways=true
+// --context database.instanceClass=db.t3.small
+const finalEnvConfig = applyContextOverrides(app, envConfig);
 
-// Create complete configuration
-const configResult = createStackConfig(
-  envType as 'prod' | 'dev-test',
-  customStackName,
-  Object.keys(overrides).length > 0 ? overrides : undefined,
-  'TAK', // Always use TAK as project prefix
-  'AuthInfra'
-);
+// Create stack name
+const stackName = `TAK-${finalEnvConfig.stackName}-AuthInfra`;
 
-// Create the stack with environment configuration
+// Create the stack
 const stack = new AuthInfraStack(app, stackName, {
-  configResult: configResult,
+  environment: envName as 'prod' | 'dev-test',
+  envConfig: finalEnvConfig,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION || 'ap-southeast-2',
+    region: process.env.CDK_DEFAULT_REGION || defaults?.region || DEFAULT_AWS_REGION,
   },
-  tags: {
-    Project: ProjectName || 'TAK',
-    Environment: customStackName,
-    Component: 'AuthInfra',
-    ManagedBy: 'CDK',    
-  }
+  tags: generateStandardTags(finalEnvConfig, envName as 'prod' | 'dev-test', defaults)
 });
+

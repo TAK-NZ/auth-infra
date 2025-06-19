@@ -1,9 +1,10 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { StackProps } from 'aws-cdk-lib';
-import { AuthInfraConfigResult } from './stack-config';
+import { ContextEnvironmentConfig } from './stack-config';
 export interface AuthInfraStackProps extends StackProps {
-    configResult: AuthInfraConfigResult;
+    environment: 'prod' | 'dev-test';
+    envConfig: ContextEnvironmentConfig;
 }
 /**
  * Main CDK stack for the TAK Auth Infrastructure

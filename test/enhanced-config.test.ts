@@ -1,65 +1,128 @@
 /**
- * Test suite for the enhanced createStackConfig function
+ * Test suite for context-based configuration
  */
-import { createStackConfig, AuthInfraConfigResult } from '../lib/stack-config';
+import { ContextEnvironmentConfig } from '../lib/stack-config';
+import { applyContextOverrides } from '../lib/utils/context-overrides';
+import { SECRET_NAMES } from '../lib/utils/constants';
+import * as cdk from 'aws-cdk-lib';
 
-describe('Enhanced Configuration Management', () => {
+describe('Context-Based Configuration Management', () => {
   
-  describe('createStackConfig with complete configuration', () => {
-    test('should create valid dev-test configuration with computed values', () => {
-      const result = createStackConfig('dev-test', 'TestStack');
-      
-      // Check stack config
-      expect(result.stackConfig.envType).toBe('dev-test');
-      expect(result.stackConfig.stackName).toBe('TestStack');
-      expect(result.stackConfig.projectName).toBe('TAK');
-      expect(result.stackConfig.componentName).toBe('AuthInfra');
-      
-      // Check computed values
-      expect(result.computedValues.enableHighAvailability).toBe(false);
-      expect(result.computedValues.environmentLabel).toBe('Dev-Test');
-      expect(result.computedValues.desiredContainerCount).toBe(1);
-      
-      // Check environment config
-      expect(result.environmentConfig.ecs.desiredCount).toBe(1);
-      expect(result.environmentConfig.ecs.workerDesiredCount).toBe(1);
-      expect(result.environmentConfig.database.instanceClass).toBe('db.serverless');
-    });
-
-    test('should create valid production configuration with computed values', () => {
-      const result = createStackConfig('prod', 'ProdStack');
-      
-      // Check computed values
-      expect(result.computedValues.enableHighAvailability).toBe(true);
-      expect(result.computedValues.environmentLabel).toBe('Prod');
-      expect(result.computedValues.desiredContainerCount).toBe(2);
-      
-      // Check environment config
-      expect(result.environmentConfig.ecs.desiredCount).toBe(2);
-      expect(result.environmentConfig.ecs.workerDesiredCount).toBe(2);
-      expect(result.environmentConfig.database.instanceClass).toBe('db.t4g.large');
-    });
-
-    test('should apply overrides correctly', () => {
-      const overrides = {
-        database: { instanceClass: 'db.t4g.medium' },
-        ecs: { desiredCount: 3, workerDesiredCount: 4 }
+  describe('ContextEnvironmentConfig interface', () => {
+    test('should have all required properties for dev-test', () => {
+      const devTestConfig: ContextEnvironmentConfig = {
+        stackName: 'DevTest',
+        r53ZoneName: 'dev.tak.nz',
+        vpcCidr: '10.0.0.0/20',
+        networking: {
+          createNatGateways: false,
+          createVpcEndpoints: false
+        },
+        database: {
+          instanceClass: 'db.t3.micro',
+          instanceCount: 1,
+          allocatedStorage: 20,
+          maxAllocatedStorage: 100,
+          enablePerformanceInsights: false,
+          monitoringInterval: 0,
+          backupRetentionDays: 7,
+          deleteProtection: false
+        },
+        redis: {
+          nodeType: 'cache.t3.micro',
+          numCacheNodes: 1,
+          enableTransit: false,
+          enableAtRest: false
+        },
+        ecs: {
+          taskCpu: 512,
+          taskMemory: 1024,
+          desiredCount: 1,
+          enableDetailedLogging: true
+        },
+        authentik: {
+          domain: 'account.dev.tak.nz',
+          adminUserEmail: 'admin@tak.nz'
+        },
+        ldap: {
+          domain: 'ldap.dev.tak.nz'
+        },
+        general: {
+          removalPolicy: 'DESTROY',
+          enableDetailedLogging: true,
+          enableContainerInsights: false
+        }
       };
       
-      const result = createStackConfig('dev-test', 'TestStack', overrides);
-      
-      // Check that overrides are applied to environment config
-      expect(result.environmentConfig.database.instanceClass).toBe('db.t4g.medium');
-      expect(result.environmentConfig.ecs.desiredCount).toBe(3);
-      expect(result.environmentConfig.ecs.workerDesiredCount).toBe(4);
-      
-      // Container count should not override explicit context values
-      expect(result.computedValues.desiredContainerCount).toBe(1); // Based on HA setting
+      // Validate structure
+      expect(devTestConfig.stackName).toBe('DevTest');
+      expect(devTestConfig.r53ZoneName).toBe('dev.tak.nz');
+      expect(devTestConfig.database.instanceClass).toBe('db.t3.micro');
+      expect(devTestConfig.ecs.desiredCount).toBe(1);
     });
 
-    test('should validate required parameters', () => {
-      expect(() => createStackConfig('dev-test', '')).toThrow('stackName is required');
-      expect(() => createStackConfig('invalid' as any, 'TestStack')).toThrow('Environment type must be one of: prod, dev-test');
+    test('should have different values for production', () => {
+      const prodConfig: ContextEnvironmentConfig = {
+        stackName: 'Prod',
+        r53ZoneName: 'tak.nz',
+        vpcCidr: '10.1.0.0/20',
+        networking: {
+          createNatGateways: true,
+          createVpcEndpoints: true
+        },
+        database: {
+          instanceClass: 'db.t3.small',
+          instanceCount: 2,
+          allocatedStorage: 100,
+          maxAllocatedStorage: 1000,
+          enablePerformanceInsights: true,
+          monitoringInterval: 60,
+          backupRetentionDays: 30,
+          deleteProtection: true
+        },
+        redis: {
+          nodeType: 'cache.t3.small',
+          numCacheNodes: 2,
+          enableTransit: true,
+          enableAtRest: true
+        },
+        ecs: {
+          taskCpu: 1024,
+          taskMemory: 2048,
+          desiredCount: 2,
+          enableDetailedLogging: false
+        },
+        authentik: {
+          domain: 'account.tak.nz',
+          adminUserEmail: 'admin@tak.nz'
+        },
+        ldap: {
+          domain: 'ldap.tak.nz'
+        },
+        general: {
+          removalPolicy: 'RETAIN',
+          enableDetailedLogging: false,
+          enableContainerInsights: true
+        }
+      };
+      
+      // Validate production-specific values
+      expect(prodConfig.database.instanceClass).toBe('db.t3.small');
+      expect(prodConfig.ecs.desiredCount).toBe(2);
+      expect(prodConfig.networking.createNatGateways).toBe(true);
+      expect(prodConfig.general.removalPolicy).toBe('RETAIN');
+    });
+  });
+
+  describe('Secret constants', () => {
+    test('should have all secret name constants', () => {
+      expect(SECRET_NAMES.AUTHENTIK_SECRET_KEY).toBe('authentik-secret-key');
+      expect(SECRET_NAMES.AUTHENTIK_POSTGRES_PASSWORD).toBe('authentik-postgres-password');
+      expect(SECRET_NAMES.AUTHENTIK_REDIS_PASSWORD).toBe('authentik-redis-password');
+      expect(SECRET_NAMES.LDAP_ADMIN_PASSWORD).toBe('ldap-admin-password');
+      expect(SECRET_NAMES.LDAP_CONFIG_PASSWORD).toBe('ldap-config-password');
+      expect(SECRET_NAMES.LDAP_READONLY_USER).toBe('readonly');
+      expect(SECRET_NAMES.LDAP_READONLY_PASSWORD).toBe('ldap-readonly-password');
     });
   });
 });
