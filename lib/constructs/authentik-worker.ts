@@ -294,6 +294,9 @@ export class AuthentikWorker extends Construct {
       securityGroups: [props.infrastructure.ecsSecurityGroup],
       enableExecuteCommand: props.deployment.enableExecute,
       assignPublicIp: false,
+      // Configure deployment to maintain availability
+      minHealthyPercent: isHighAvailability ? 100 : 50,
+      maxHealthyPercent: 200,
       // Disable circuit breaker temporarily to get better error information
       // circuitBreaker: { rollback: true }
     });

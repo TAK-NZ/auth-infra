@@ -258,6 +258,9 @@ export class Ldap extends Construct {
       securityGroups: [props.infrastructure.ecsSecurityGroup],
       enableExecuteCommand: props.deployment.enableExecute,
       assignPublicIp: false,
+      // Configure deployment to maintain availability
+      minHealthyPercent: isHighAvailability ? 100 : 50,
+      maxHealthyPercent: 200,
       circuitBreaker: { rollback: true }
     });
 
