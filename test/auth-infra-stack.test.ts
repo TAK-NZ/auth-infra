@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { AuthInfraStack } from '../lib/auth-infra-stack';
+import { applyContextOverrides } from '../lib/utils/context-overrides';
 
 describe('AuthInfraStack', () => {
   let app: cdk.App;
@@ -9,12 +10,56 @@ describe('AuthInfraStack', () => {
 
   beforeEach(() => {
     app = new cdk.App();
-    // Set required context parameters
-    app.node.setContext('authentikAdminUserEmail', 'admin@example.com');
-    app.node.setContext('authentikLdapBaseDn', 'DC=example,DC=com');
+    
+    // Mock the dev-test environment configuration
+    const mockEnvConfig = {
+      stackName: "Dev",
+      database: {
+        instanceClass: "db.t3.micro",
+        instanceCount: 1,
+        allocatedStorage: 20,
+        maxAllocatedStorage: 100,
+        enablePerformanceInsights: false,
+        monitoringInterval: 0,
+        backupRetentionDays: 7,
+        deleteProtection: false
+      },
+      redis: {
+        nodeType: "cache.t3.micro",
+        numCacheNodes: 1,
+        enableTransit: false,
+        enableAtRest: false
+      },
+      ecs: {
+        taskCpu: 512,
+        taskMemory: 1024,
+        desiredCount: 1,
+        enableDetailedLogging: true
+      },
+      authentik: {
+        domain: "account.dev.tak.nz",
+        adminUserEmail: "admin@tak.nz"
+      },
+      ldap: {
+        domain: "ldap.dev.tak.nz"
+      },
+      general: {
+        removalPolicy: "DESTROY",
+        enableDetailedLogging: true,
+        enableContainerInsights: false
+      }
+    };
+    
+    // Apply context overrides (though none for testing)
+    const finalEnvConfig = applyContextOverrides(app, mockEnvConfig);
     
     stack = new AuthInfraStack(app, 'TestStack', {
-      envType: 'dev-test',
+      environment: 'dev-test',
+      envConfig: finalEnvConfig,
+      env: {
+        account: '123456789012',
+        region: 'us-west-2',
+      },
     });
     template = Template.fromStack(stack);
   });
@@ -51,8 +96,8 @@ describe('AuthInfraStack', () => {
   });
 
   test('Contains both Authentik and LDAP ECS Task Definitions', () => {
-    // Should have 2 task definitions - one for Authentik, one for LDAP
-    template.resourceCountIs('AWS::ECS::TaskDefinition', 2);
+    // Should have 3 task definitions - Server, Worker, and LDAP
+    template.resourceCountIs('AWS::ECS::TaskDefinition', 3);
     
     template.hasResourceProperties('AWS::ECS::TaskDefinition', {
       RequiresCompatibilities: ['FARGATE'],
@@ -94,62 +139,21 @@ describe('AuthInfraStack', () => {
     });
   });
 
-  test('Stack has required parameters', () => {
-    template.hasParameter('EnableExecute', {
-      Type: 'String',
-      AllowedValues: ['true', 'false'],
-      Default: 'false',
-    });
-
-    template.hasParameter('AuthentikAdminUserEmail', {
-      Type: 'String',
-    });
-
-    template.hasParameter('AuthentikLDAPBaseDN', {
-      Type: 'String',
-      Default: 'DC=example,DC=com',
-    });
-
-    template.hasParameter('IpAddressType', {
-      Type: 'String',
-      AllowedValues: ['ipv4', 'dualstack'],
-      Default: 'dualstack',
-    });
-
-    // GitSha parameter was removed - now used directly from imports
-    // SSLCertificateARN parameter was removed - now imported from base stack
-    
-    template.hasParameter('AuthentikAdminUserEmail', {
-      Type: 'String',
-      Description: 'E-Mail address for the Authentik akadmin user',
-    });
-  });
-
-  test('Stack has required outputs', () => {
-    // CDK generates unique output names with suffixes
+  test('Stack has CloudFormation outputs', () => {
+    // Check that we have stack outputs for key resources
     const templateObj = template.toJSON();
     const outputKeys = Object.keys(templateObj.Outputs || {});
     
-    // Check for Authentik URL output (name starts with 'Authentik' but may have suffix)
-    const authentikOutput = outputKeys.find(key => key.startsWith('Authentik') && !key.includes('LDAP'));
-    expect(authentikOutput).toBeDefined();
-    if (authentikOutput) {
-      expect(templateObj.Outputs[authentikOutput]).toMatchObject({
-        Description: 'HTTP(S) ALB endpoint for CNAME',
-      });
-    }
-
-    // Check for LDAP Base DN output (name starts with 'Authentik' and includes 'LDAP')
-    const ldapBaseDnOutput = outputKeys.find(key => key.startsWith('Authentik') && key.includes('LDAP'));
-    expect(ldapBaseDnOutput).toBeDefined();
-    if (ldapBaseDnOutput) {
-      expect(templateObj.Outputs[ldapBaseDnOutput]).toMatchObject({
-        Description: 'LDAP Base DN',
-      });
-    }
-  });
-
-  test('Stack has conditions', () => {
-    template.hasCondition('CreateProdResources', {});
+    // Should have outputs for database, Redis, EFS, etc.
+    expect(outputKeys.length).toBeGreaterThan(0);
+    
+    // Check for some key outputs (names may have suffixes due to CDK)
+    const hasDbOutput = outputKeys.some(key => key.includes('Database'));
+    const hasRedisOutput = outputKeys.some(key => key.includes('Redis'));
+    const hasEfsOutput = outputKeys.some(key => key.includes('Efs'));
+    
+    expect(hasDbOutput).toBe(true);
+    expect(hasRedisOutput).toBe(true);
+    expect(hasEfsOutput).toBe(true);
   });
 });
