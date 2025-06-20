@@ -155,6 +155,29 @@ export class AuthentikWorker extends Construct {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
 
+    // Add ECS Exec and logging permissions to task role
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'ssmmessages:CreateControlChannel',
+        'ssmmessages:CreateDataChannel',
+        'ssmmessages:OpenControlChannel',
+        'ssmmessages:OpenDataChannel'
+      ],
+      resources: ['*']
+    }));
+
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'logs:CreateLogStream',
+        'logs:DescribeLogStreams',
+        'logs:PutLogEvents',
+        'logs:DescribeLogGroups'
+      ],
+      resources: ['*']
+    }));
+
     // Add EFS permissions for task role
     taskRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
@@ -229,10 +252,8 @@ export class AuthentikWorker extends Construct {
       command: ['worker'], // Worker command
       environment: {
         AUTHENTIK_POSTGRESQL__HOST: props.application.database.hostname,
-        AUTHENTIK_POSTGRESQL__USER: 'authentik',
         ...(props.application.database.readReplicaHostname && {
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST: props.application.database.readReplicaHostname,
-          AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: 'authentik',
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: 'authentik',
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT: '5432',
         }),
@@ -246,8 +267,10 @@ export class AuthentikWorker extends Construct {
         AUTHENTIK_BOOTSTRAP_LDAP_AUTHENTIK_HOST: props.application.authentikHost || '',
       },
       secrets: {
+        AUTHENTIK_POSTGRESQL__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),
         AUTHENTIK_POSTGRESQL__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.database, 'password'),
         ...(props.application.database.readReplicaHostname && {
+          AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.database, 'password'),
         }),
         AUTHENTIK_REDIS__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.redisAuthToken),
@@ -266,6 +289,9 @@ export class AuthentikWorker extends Construct {
         timeout: Duration.seconds(30),
         retries: 3,
         startPeriod: Duration.seconds(60)
+      },
+      restartPolicy: {
+        enabled: true
       },
       essential: true
     };
@@ -306,8 +332,7 @@ export class AuthentikWorker extends Construct {
       // Configure deployment to maintain availability
       minHealthyPercent: isHighAvailability ? 100 : 50,
       maxHealthyPercent: 200,
-      // Disable circuit breaker temporarily to get better error information
-      // circuitBreaker: { rollback: true }
+      circuitBreaker: { rollback: true }
     });
 
     // Add auto scaling for workers

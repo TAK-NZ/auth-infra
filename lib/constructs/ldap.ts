@@ -191,6 +191,29 @@ export class Ldap extends Construct {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
 
+    // Add ECS Exec and logging permissions to task role
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'ssmmessages:CreateControlChannel',
+        'ssmmessages:CreateDataChannel',
+        'ssmmessages:OpenControlChannel',
+        'ssmmessages:OpenDataChannel'
+      ],
+      resources: ['*']
+    }));
+
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'logs:CreateLogStream',
+        'logs:DescribeLogStreams',
+        'logs:PutLogEvents',
+        'logs:DescribeLogGroups'
+      ],
+      resources: ['*']
+    }));
+
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
       cpu: props.contextConfig.ecs.taskCpu,
