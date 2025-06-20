@@ -32,11 +32,6 @@ export interface EfsProps {
   infrastructure: InfrastructureConfig;
 
   /**
-   * VPC CIDR block for security group rules
-   */
-  vpcCidrBlock: string;
-
-  /**
    * Security groups for EFS access
    */
   allowAccessFrom: ec2.SecurityGroup[];
@@ -86,12 +81,7 @@ export class Efs extends Construct {
       );
     });
 
-    // Also allow access from VPC CIDR for broader compatibility
-    efsSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4(props.vpcCidrBlock), // Reverted to use props.vpcCidrBlock directly
-      ec2.Port.tcp(2049),
-      'Allow NFS access from VPC'
-    );
+
 
     // Build EFS configuration object with file system policy
     const efsConfig: any = {

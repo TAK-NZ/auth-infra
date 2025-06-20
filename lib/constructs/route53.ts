@@ -53,6 +53,11 @@ export class Route53 extends Construct {
   public readonly ldapARecord: route53.ARecord;
 
   /**
+   * LDAP AAAA record
+   */
+  public readonly ldapAAAARecord: route53.AaaaRecord;
+
+  /**
    * Full DNS name for LDAP service
    */
   public readonly ldapFqdn: string;
@@ -69,7 +74,7 @@ export class Route53 extends Construct {
     // Calculate full domain name
     this.ldapFqdn = `${props.network.hostname}.${props.network.hostedZoneName}`;
 
-    // Create A record alias for LDAP (IPv4 only for NLB)
+    // Create A record alias for LDAP (IPv4)
     this.ldapARecord = new route53.ARecord(this, 'LdapARecord', {
       zone: this.hostedZone,
       recordName: props.network.hostname,
@@ -77,6 +82,16 @@ export class Route53 extends Construct {
         new targets.LoadBalancerTarget(props.ldapLoadBalancer)
       ),
       comment: `LDAP IPv4 alias record for ${props.environment} environment`
+    });
+
+    // Create AAAA record alias for LDAP (IPv6)
+    this.ldapAAAARecord = new route53.AaaaRecord(this, 'LdapAAAARecord', {
+      zone: this.hostedZone,
+      recordName: props.network.hostname,
+      target: route53.RecordTarget.fromAlias(
+        new targets.LoadBalancerTarget(props.ldapLoadBalancer)
+      ),
+      comment: `LDAP IPv6 alias record for ${props.environment} environment`
     });
   }
 

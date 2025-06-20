@@ -44,11 +44,10 @@ const TEST_CONTEXT_CONFIG: ContextEnvironmentConfig = {
     enableDetailedLogging: true,
   },
   authentik: {
-    domain: 'auth.test.example.com',
+    hostname: 'auth',
     adminUserEmail: 'admin@test.example.com',
-  },
-  ldap: {
-    domain: 'ldap.test.example.com',
+    ldapHostname: 'ldap',
+    ldapBaseDn: 'dc=test,dc=example,dc=com',
   },
   general: {
     removalPolicy: 'DESTROY',

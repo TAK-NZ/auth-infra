@@ -35,11 +35,10 @@ describe('Context-Based Configuration Management', () => {
           enableDetailedLogging: true
         },
         authentik: {
-          domain: 'account.dev.tak.nz',
-          adminUserEmail: 'admin@tak.nz'
-        },
-        ldap: {
-          domain: 'ldap.dev.tak.nz'
+          hostname: 'account',
+          adminUserEmail: 'admin@tak.nz',
+          ldapHostname: 'ldap',
+          ldapBaseDn: 'dc=tak,dc=nz'
         },
         general: {
           removalPolicy: 'DESTROY',
@@ -80,11 +79,10 @@ describe('Context-Based Configuration Management', () => {
           enableDetailedLogging: false
         },
         authentik: {
-          domain: 'account.tak.nz',
-          adminUserEmail: 'admin@tak.nz'
-        },
-        ldap: {
-          domain: 'ldap.tak.nz'
+          hostname: 'account',
+          adminUserEmail: 'admin@tak.nz',
+          ldapHostname: 'ldap',
+          ldapBaseDn: 'dc=tak,dc=nz'
         },
         general: {
           removalPolicy: 'RETAIN',

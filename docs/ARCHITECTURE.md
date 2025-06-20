@@ -135,17 +135,65 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 
 ## Security Architecture
 
-### 1. Encryption
+### 1. Network Security Groups
+
+The infrastructure implements a layered security model with dedicated security groups for each component, following the principle of least privilege.
+
+#### Internet-Facing Services
+
+**AuthentikELBALBSecurityGroup** (Application Load Balancer)
+- **Port 80/TCP** from `0.0.0.0/0` (IPv4) and `::/0` (IPv6) - HTTP redirects to HTTPS
+- **Port 443/TCP** from `0.0.0.0/0` (IPv4) and `::/0` (IPv6) - HTTPS web interface
+
+**LDAPNLBSecurityGroup** (Network Load Balancer)
+- **Port 389/TCP** from VPC CIDR (IPv4/IPv6) - LDAP access
+- **Port 636/TCP** from VPC CIDR (IPv4/IPv6) - LDAPS access
+
+#### Application Services
+
+**AuthentikSecurityGroup** (Server)
+- **Port 9000/TCP** from `AuthentikELBALBSecurityGroup` only - ALB to application traffic
+
+**AuthentikWorkerSecurityGroup** (Worker)
+- **No inbound rules** - Worker processes background tasks, no incoming connections required
+
+**LdapSecurityGroup** (LDAP Outpost)
+- **Port 3389/TCP** from `LDAPNLBSecurityGroup` - LDAP traffic from NLB
+- **Port 6636/TCP** from `LDAPNLBSecurityGroup` - LDAPS traffic from NLB
+
+#### Data Layer Services
+
+**DBSecurityGroup** (Aurora PostgreSQL)
+- **Port 5432/TCP** from `AuthentikSecurityGroup` - Database access from Server
+- **Port 5432/TCP** from `AuthentikWorkerSecurityGroup` - Database access from Worker
+
+**RedisSecurityGroup** (ElastiCache)
+- **Port 6379/TCP** from `AuthentikSecurityGroup` - Redis access from Server
+- **Port 6379/TCP** from `AuthentikWorkerSecurityGroup` - Redis access from Worker
+
+**EFSMountTargetSecurityGroup** (Elastic File System)
+- **Port 2049/TCP** from `AuthentikSecurityGroup` - NFS access from Server
+- **Port 2049/TCP** from `AuthentikWorkerSecurityGroup` - NFS access from Worker
+
+#### Security Design Principles
+
+- **Network Segmentation**: Each service tier has dedicated security groups
+- **Minimal Access**: Only required ports and protocols are allowed
+- **Source Restriction**: Database, Redis, and EFS only accept traffic from application security groups
+- **Dualstack Support**: Internet-facing services support both IPv4 and IPv6
+- **No Broad Access**: VPC CIDR rules eliminated in favor of specific security group references
+
+### 2. Encryption
 - **In Transit**: TLS 1.2+ for all communications
 - **At Rest**: AWS KMS encryption for all data stores
 - **Key Management**: Separate KMS keys per environment
 
-### 2. Access Control
+### 3. Access Control
 - **IAM Roles**: Service-specific roles with minimal permissions
-- **Security Groups**: Network-level access control
+- **Security Groups**: Network-level access control (detailed above)
 - **Secrets Management**: AWS Secrets Manager for sensitive data
 
-### 3. Monitoring and Logging
+### 4. Monitoring and Logging
 - **CloudWatch Logs**: Application and system logs
 - **CloudWatch Metrics**: Performance and health metrics
 - **AWS CloudTrail**: API access logging
@@ -165,7 +213,6 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 ### 3. Environment Separation
 - **Development**: Single AZ, minimal redundancy
 - **Production**: Multi-AZ, full redundancy and backups
-- **Staging**: Production-like for testing
 
 ## Cost Optimization
 

@@ -31,13 +31,13 @@ export interface ContextEnvironmentConfig {
     taskMemory: number;
     desiredCount: number;
     enableDetailedLogging: boolean;
+    enableEcsExec?: boolean;
   };
   authentik: {
-    domain: string;
+    hostname: string;
     adminUserEmail: string;
-  };
-  ldap: {
-    domain: string;
+    ldapHostname: string;
+    ldapBaseDn?: string;
   };
   general: {
     removalPolicy: string;

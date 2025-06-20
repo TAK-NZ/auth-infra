@@ -44,12 +44,10 @@ export function applyContextOverrides(
     },
     authentik: {
       ...baseConfig.authentik,
-      domain: app.node.tryGetContext('authentikDomain') ?? baseConfig.authentik.domain,
+      hostname: app.node.tryGetContext('authentikHostname') ?? baseConfig.authentik.hostname,
       adminUserEmail: app.node.tryGetContext('adminUserEmail') ?? baseConfig.authentik.adminUserEmail,
-    },
-    ldap: {
-      ...baseConfig.ldap,
-      domain: app.node.tryGetContext('ldapDomain') ?? baseConfig.ldap.domain,
+      ldapHostname: app.node.tryGetContext('ldapHostname') ?? baseConfig.authentik.ldapHostname,
+      ldapBaseDn: app.node.tryGetContext('ldapBaseDn') ?? baseConfig.authentik.ldapBaseDn,
     },
     general: {
       ...baseConfig.general,

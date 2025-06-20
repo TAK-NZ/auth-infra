@@ -68,6 +68,11 @@ export interface LdapProps {
    * LDAP token secret from Authentik
    */
   ldapToken: secretsmanager.ISecret;
+
+  /**
+   * Security group for the Network Load Balancer
+   */
+  nlbSecurityGroup: ec2.SecurityGroup;
 }
 
 /**
@@ -141,31 +146,15 @@ export class Ldap extends Construct {
       removalPolicy: removalPolicy
     });
 
-    // Create security group for NLB
-    const nlbSecurityGroup = new ec2.SecurityGroup(this, 'NLBSecurityGroup', {
-      vpc: props.infrastructure.vpc,
-      description: 'Allow 389 and 636 Access to NLB',
-      allowAllOutbound: false
-    });
-
-    // Allow LDAP traffic
-    nlbSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4('10.0.0.0/8'),
-      ec2.Port.tcp(389),
-      'Allow LDAP access'
-    );
-
-    nlbSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4('10.0.0.0/8'),
-      ec2.Port.tcp(636),
-      'Allow LDAPS access'
-    );
+    // Use the provided NLB security group
+    const nlbSecurityGroup = props.nlbSecurityGroup;
 
     // Create network load balancer
     this.loadBalancer = new elbv2.NetworkLoadBalancer(this, 'NLB', {
       loadBalancerName: 'ldap',
       vpc: props.infrastructure.vpc,
       internetFacing: false,
+      ipAddressType: elbv2.IpAddressType.DUAL_STACK,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
       }

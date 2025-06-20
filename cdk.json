@@ -40,14 +40,14 @@
         "taskCpu": 512,
         "taskMemory": 1024,
         "desiredCount": 1,
-        "enableDetailedLogging": true
+        "enableDetailedLogging": true,
+        "enableEcsExec": true
       },
       "authentik": {
-        "domain": "account.dev.tak.nz",
-        "adminUserEmail": "admin@tak.nz"
-      },
-      "ldap": {
-        "domain": "ldap.dev.tak.nz"
+        "hostname": "account",
+        "adminUserEmail": "admin@tak.nz",
+        "ldapHostname": "ldap",
+        "ldapBaseDn": "dc=tak,dc=nz"
       },
       "general": {
         "removalPolicy": "DESTROY",
@@ -78,14 +78,14 @@
         "taskCpu": 1024,
         "taskMemory": 2048,
         "desiredCount": 2,
-        "enableDetailedLogging": false
+        "enableDetailedLogging": false,
+        "enableEcsExec": false
       },
       "authentik": {
-        "domain": "account.tak.nz",
-        "adminUserEmail": "admin@tak.nz"
-      },
-      "ldap": {
-        "domain": "ldap.tak.nz"
+        "hostname": "account",
+        "adminUserEmail": "admin@tak.nz",
+        "ldapHostname": "ldap",
+        "ldapBaseDn": "dc=tak,dc=nz"
       },
       "general": {
         "removalPolicy": "RETAIN",
