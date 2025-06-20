@@ -169,6 +169,11 @@ export interface AuthentikApplicationConfig {
      * Database hostname
      */
     hostname: string;
+
+    /**
+     * Database read replica hostname (optional)
+     */
+    readReplicaHostname?: string;
   };
 
   /**

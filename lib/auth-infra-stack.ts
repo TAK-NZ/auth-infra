@@ -16,7 +16,7 @@ import { AuthentikServer } from './constructs/authentik-server';
 import { AuthentikWorker } from './constructs/authentik-worker';
 import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
-import { Route53 } from './constructs/route53';
+import { Route53 } from './constructs/route53-ldap';
 import { Route53Authentik } from './constructs/route53-authentik';
 
 // Configuration imports
@@ -84,6 +84,8 @@ export class AuthInfraStack extends cdk.Stack {
     const gitSha = 'latest'; // Use fixed tag for context-driven approach
     const enableEcsExec = envConfig.ecs.enableEcsExec ?? (props.environment === 'dev-test');
     const useS3AuthentikConfigFile = envConfig.authentik.useS3AuthentikConfigFile ?? (props.environment === 'prod');
+    // NOTE: Postgres read replicas are currently broken in Authentik - see https://github.com/goauthentik/authentik/issues/14319#issuecomment-2844233291
+    const enablePostgresReadReplicas = envConfig.authentik.enablePostgresReadReplicas ?? false;
 
     // =================
     // IMPORT BASE INFRASTRUCTURE RESOURCES
@@ -285,7 +287,8 @@ export class AuthInfraStack extends cdk.Stack {
       adminUserEmail: authentikAdminUserEmail,
       ldapBaseDn: ldapBaseDn,
       database: {
-        hostname: database.hostname
+        hostname: database.hostname,
+        readReplicaHostname: enablePostgresReadReplicas ? database.readerEndpoint : undefined
       },
       redis: {
         hostname: redis.hostname

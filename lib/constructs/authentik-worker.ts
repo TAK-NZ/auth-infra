@@ -230,6 +230,12 @@ export class AuthentikWorker extends Construct {
       environment: {
         AUTHENTIK_POSTGRESQL__HOST: props.application.database.hostname,
         AUTHENTIK_POSTGRESQL__USER: 'authentik',
+        ...(props.application.database.readReplicaHostname && {
+          AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST: props.application.database.readReplicaHostname,
+          AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: 'authentik',
+          AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: 'authentik',
+          AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT: '5432',
+        }),
         AUTHENTIK_REDIS__HOST: props.application.redis.hostname,
         AUTHENTIK_REDIS__TLS: 'True',
         AUTHENTIK_REDIS__TLS_REQS: 'required',
@@ -241,6 +247,9 @@ export class AuthentikWorker extends Construct {
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.database, 'password'),
+        ...(props.application.database.readReplicaHostname && {
+          AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.database, 'password'),
+        }),
         AUTHENTIK_REDIS__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.redisAuthToken),
         AUTHENTIK_SECRET_KEY: ecs.Secret.fromSecretsManager(props.secrets.authentik.secretKey),
         ...(props.secrets.authentik.ldapServiceUser ? {

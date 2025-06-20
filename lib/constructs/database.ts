@@ -64,6 +64,11 @@ export class Database extends Construct {
    */
   public readonly hostname: string;
 
+  /**
+   * The database reader endpoint hostname (for read replicas)
+   */
+  public readonly readerEndpoint: string;
+
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
 
@@ -218,7 +223,8 @@ export class Database extends Construct {
       });
     }
 
-    // Store the hostname
+    // Store the hostname and reader endpoint
     this.hostname = this.cluster.clusterEndpoint.hostname;
+    this.readerEndpoint = this.cluster.clusterReadEndpoint.hostname;
   }
 }

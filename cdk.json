@@ -48,7 +48,8 @@
         "adminUserEmail": "admin@tak.nz",
         "ldapHostname": "ldap",
         "ldapBaseDn": "dc=tak,dc=nz",
-        "useS3AuthentikConfigFile": false
+        "useS3AuthentikConfigFile": false,
+        "enablePostgresReadReplicas": false
       },
       "general": {
         "removalPolicy": "DESTROY",
@@ -87,7 +88,8 @@
         "adminUserEmail": "admin@tak.nz",
         "ldapHostname": "ldap",
         "ldapBaseDn": "dc=tak,dc=nz",
-        "useS3AuthentikConfigFile": true
+        "useS3AuthentikConfigFile": true,
+        "enablePostgresReadReplicas": false
       },
       "general": {
         "removalPolicy": "RETAIN",
