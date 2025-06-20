@@ -48,6 +48,7 @@ export function applyContextOverrides(
       adminUserEmail: app.node.tryGetContext('adminUserEmail') ?? baseConfig.authentik.adminUserEmail,
       ldapHostname: app.node.tryGetContext('ldapHostname') ?? baseConfig.authentik.ldapHostname,
       ldapBaseDn: app.node.tryGetContext('ldapBaseDn') ?? baseConfig.authentik.ldapBaseDn,
+      useS3AuthentikConfigFile: app.node.tryGetContext('useS3AuthentikConfigFile') ?? baseConfig.authentik.useS3AuthentikConfigFile,
     },
     general: {
       ...baseConfig.general,

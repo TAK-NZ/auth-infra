@@ -38,6 +38,7 @@ export interface ContextEnvironmentConfig {
     adminUserEmail: string;
     ldapHostname: string;
     ldapBaseDn?: string;
+    useS3AuthentikConfigFile?: boolean;
   };
   general: {
     removalPolicy: string;

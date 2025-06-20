@@ -72,10 +72,7 @@ export class AuthInfraStack extends cdk.Stack {
     // Add Environment Type tag to the stack
     cdk.Tags.of(this).add('Environment Type', environmentLabel);
 
-    // TODO: Replace with direct context usage once constructs are updated
-    // For now, we'll use envConfig directly but rename it for clarity
-    const environmentConfig = envConfig; // Direct context usage (matches reference pattern)
-
+    // Get runtime CloudFormation values for stack outputs and resource naming
     const stackName = Fn.ref('AWS::StackName');
     const region = cdk.Stack.of(this).region;
 
@@ -86,7 +83,7 @@ export class AuthInfraStack extends cdk.Stack {
     const hostnameLdap = envConfig.authentik.ldapHostname;
     const gitSha = 'latest'; // Use fixed tag for context-driven approach
     const enableEcsExec = envConfig.ecs.enableEcsExec ?? (props.environment === 'dev-test');
-    const useAuthentikConfigFile = false; // Use environment variables
+    const useS3AuthentikConfigFile = envConfig.authentik.useS3AuthentikConfigFile ?? (props.environment === 'prod');
 
     // =================
     // IMPORT BASE INFRASTRUCTURE RESOURCES
@@ -281,7 +278,7 @@ export class AuthInfraStack extends cdk.Stack {
       gitSha: gitSha,
       ecrRepositoryArn: ecrRepository,
       enableExecute: enableEcsExec,
-      useConfigFile: useAuthentikConfigFile
+      useConfigFile: useS3AuthentikConfigFile
     };
 
     const applicationConfig: AuthentikApplicationConfig = {
