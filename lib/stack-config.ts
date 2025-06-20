@@ -12,6 +12,7 @@ export interface ContextEnvironmentConfig {
   database: {
     instanceClass: string;
     instanceCount: number;
+    engineVersion?: string;
     allocatedStorage: number;
     maxAllocatedStorage: number;
     enablePerformanceInsights: boolean;

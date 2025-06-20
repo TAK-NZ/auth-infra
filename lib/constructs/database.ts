@@ -67,11 +67,17 @@ export class Database extends Construct {
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
 
+    // Validate required database configuration
+    if (!props.contextConfig.database) {
+      throw new Error('Database configuration is required when using Database construct');
+    }
+    const dbConfig = props.contextConfig.database;
+
     // Derive environment-specific values from context (matches reference pattern)
     const isHighAvailability = props.environment === 'prod';
-    const removalPolicy = props.contextConfig.general.removalPolicy === 'RETAIN' ? 
+    const removalPolicy = props.contextConfig.general?.removalPolicy === 'RETAIN' ? 
       RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
-    const enableMonitoring = props.contextConfig.database.monitoringInterval > 0;
+    const enableMonitoring = dbConfig.monitoringInterval > 0;
 
     // Create the master secret
     this.masterSecret = new secretsmanager.Secret(this, 'DBMasterSecret', {
@@ -105,9 +111,11 @@ export class Database extends Construct {
     });
 
     // Create parameter group for PostgreSQL
+    const engineVersionString = dbConfig.engineVersion || '17.4';
+    const engineVersion = rds.AuroraPostgresEngineVersion.of(engineVersionString, engineVersionString);
     const parameterGroup = new rds.ParameterGroup(this, 'DBParameterGroup', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_17_4
+        version: engineVersion
       }),
       description: `${id} cluster parameter group`,
       parameters: {
@@ -120,13 +128,13 @@ export class Database extends Construct {
     });
 
     // Create the database cluster with conditional configuration for serverless vs provisioned
-    const isServerless = props.contextConfig.database.instanceClass === 'db.serverless';
+    const isServerless = dbConfig.instanceClass === 'db.serverless';
     
     if (isServerless) {
       // Aurora Serverless v2 configuration
       this.cluster = new rds.DatabaseCluster(this, 'DBCluster', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
-          version: rds.AuroraPostgresEngineVersion.VER_17_4
+          version: engineVersion
         }),
         credentials: rds.Credentials.fromSecret(this.masterSecret),
         defaultDatabaseName: 'authentik',
@@ -134,8 +142,8 @@ export class Database extends Construct {
         serverlessV2MinCapacity: 0.5,
         serverlessV2MaxCapacity: 4,
         writer: rds.ClusterInstance.serverlessV2('writer'),
-        readers: props.contextConfig.database.instanceCount > 1 ? 
-          Array.from({ length: props.contextConfig.database.instanceCount - 1 }, (_, i) => 
+        readers: dbConfig.instanceCount > 1 ? 
+          Array.from({ length: dbConfig.instanceCount - 1 }, (_, i) => 
             rds.ClusterInstance.serverlessV2(`reader${i + 1}`)
           ) : [],
         parameterGroup,
@@ -161,21 +169,21 @@ export class Database extends Construct {
       // Provisioned instances configuration
       const instanceType = ec2.InstanceType.of(
         ec2.InstanceClass.T4G,
-        props.contextConfig.database.instanceClass.includes('large') ? ec2.InstanceSize.LARGE :
+        dbConfig.instanceClass.includes('large') ? ec2.InstanceSize.LARGE :
         ec2.InstanceSize.MEDIUM
       );
 
       this.cluster = new rds.DatabaseCluster(this, 'DBCluster', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
-          version: rds.AuroraPostgresEngineVersion.VER_17_4
+          version: engineVersion
         }),
         credentials: rds.Credentials.fromSecret(this.masterSecret),
         defaultDatabaseName: 'authentik',
         port: 5432,
         writer: rds.ClusterInstance.provisioned('writer', {
           instanceType,
-          enablePerformanceInsights: props.contextConfig.database.enablePerformanceInsights,
-          performanceInsightRetention: props.contextConfig.database.enablePerformanceInsights ? 
+          enablePerformanceInsights: dbConfig.enablePerformanceInsights,
+          performanceInsightRetention: dbConfig.enablePerformanceInsights ? 
             rds.PerformanceInsightRetention.MONTHS_6 : 
             undefined
         }),

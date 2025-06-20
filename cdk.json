@@ -20,8 +20,9 @@
     "dev-test": {
       "stackName": "Dev",
       "database": {
-        "instanceClass": "db.t3.micro",
+        "instanceClass": "db.serverless",
         "instanceCount": 1,
+        "engineVersion": "17.4",
         "allocatedStorage": 20,
         "maxAllocatedStorage": 100,
         "enablePerformanceInsights": false,
@@ -57,8 +58,9 @@
     "prod": {
       "stackName": "Prod",
       "database": {
-        "instanceClass": "db.t3.small",
+        "instanceClass": "db.t4g.large",
         "instanceCount": 2,
+        "engineVersion": "17.4",
         "allocatedStorage": 100,
         "maxAllocatedStorage": 1000,
         "enablePerformanceInsights": true,

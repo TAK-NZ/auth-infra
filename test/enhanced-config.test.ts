@@ -50,8 +50,8 @@ describe('Context-Based Configuration Management', () => {
       
       // Validate structure
       expect(devTestConfig.stackName).toBe('DevTest');
-      expect(devTestConfig.database.instanceClass).toBe('db.t3.micro');
-      expect(devTestConfig.ecs.desiredCount).toBe(1);
+      expect(devTestConfig.database?.instanceClass).toBe('db.t3.micro');
+      expect(devTestConfig.ecs?.desiredCount).toBe(1);
     });
 
     test('should have different values for production', () => {
@@ -94,9 +94,9 @@ describe('Context-Based Configuration Management', () => {
       };
       
       // Validate production-specific values
-      expect(prodConfig.database.instanceClass).toBe('db.t3.small');
-      expect(prodConfig.ecs.desiredCount).toBe(2);
-      expect(prodConfig.general.removalPolicy).toBe('RETAIN');
+      expect(prodConfig.database?.instanceClass).toBe('db.t3.small');
+      expect(prodConfig.ecs?.desiredCount).toBe(2);
+      expect(prodConfig.general?.removalPolicy).toBe('RETAIN');
     });
   });
 
