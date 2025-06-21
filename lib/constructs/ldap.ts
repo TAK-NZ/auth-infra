@@ -5,6 +5,7 @@ import { Construct } from 'constructs';
 import {
   aws_ec2 as ec2,
   aws_ecs as ecs,
+  aws_ecr as ecr,
   aws_elasticloadbalancingv2 as elbv2,
   aws_logs as logs,
   aws_secretsmanager as secretsmanager,
@@ -222,18 +223,29 @@ export class Ldap extends Construct {
       taskRole
     });
 
-    // Determine Docker image - ECR repository is required
+    // Import existing ECR repository
     if (!props.deployment.ecrRepositoryArn) {
       throw new Error('ecrRepositoryArn is required for Authentik LDAP deployment');
     }
     
-    // Convert ECR ARN to proper repository URI  
-    const ecrRepositoryUri = this.convertEcrArnToRepositoryUri(props.deployment.ecrRepositoryArn);
-    const dockerImage = `${ecrRepositoryUri}:auth-infra-ldap-${props.deployment.gitSha}`;
+    const ecrRepository = ecr.Repository.fromRepositoryArn(
+      this, 
+      'ECRRepo', 
+      props.deployment.ecrRepositoryArn
+    );
+
+    // Build LDAP Docker image with version
+    const containerImage = ecs.ContainerImage.fromAsset('./docker/authentik-ldap', {
+      repository: ecrRepository,
+      tag: `auth-infra-ldap-${props.deployment.gitSha}`,
+      buildArgs: {
+        AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
+      }
+    });
 
     // Create container definition
     const container = this.taskDefinition.addContainer('AuthentikLdap', {
-      image: ecs.ContainerImage.fromRegistry(dockerImage),
+      image: containerImage,
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'authentik-ldap',
         logGroup

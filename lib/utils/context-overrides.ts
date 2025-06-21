@@ -50,6 +50,8 @@ export function applyContextOverrides(
       ldapBaseDn: app.node.tryGetContext('ldapBaseDn') ?? baseConfig.authentik.ldapBaseDn,
       useS3AuthentikConfigFile: app.node.tryGetContext('useS3AuthentikConfigFile') ?? baseConfig.authentik.useS3AuthentikConfigFile,
       enablePostgresReadReplicas: app.node.tryGetContext('enablePostgresReadReplicas') ?? baseConfig.authentik.enablePostgresReadReplicas,
+      branding: app.node.tryGetContext('branding') ?? baseConfig.authentik.branding,
+      authentikVersion: app.node.tryGetContext('authentikVersion') ?? baseConfig.authentik.authentikVersion,
     },
     general: {
       ...baseConfig.general,

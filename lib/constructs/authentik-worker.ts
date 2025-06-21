@@ -5,6 +5,7 @@ import { Construct } from 'constructs';
 import {
   aws_ec2 as ec2,
   aws_ecs as ecs,
+  aws_ecr as ecr,
   aws_logs as logs,
   aws_secretsmanager as secretsmanager,
   aws_s3 as s3,
@@ -233,18 +234,31 @@ export class AuthentikWorker extends Construct {
       }
     });
 
-    // Determine Docker image - Always use ECR (workers use the same image as server)
+    // Import existing ECR repository
     if (!props.deployment.ecrRepositoryArn) {
       throw new Error('ECR repository ARN is required for Authentik Worker deployment');
     }
     
-    // Convert ECR ARN to proper repository URI
-    const ecrRepositoryUri = this.convertEcrArnToRepositoryUri(props.deployment.ecrRepositoryArn);
-    const dockerImage = `${ecrRepositoryUri}:auth-infra-server-${props.deployment.gitSha}`;
+    const ecrRepository = ecr.Repository.fromRepositoryArn(
+      this, 
+      'ECRRepo', 
+      props.deployment.ecrRepositoryArn
+    );
+
+    // Build Docker image with branding and version (same as server)
+    const dockerfileName = `Dockerfile.${props.contextConfig.authentik.branding}`;
+    const containerImage = ecs.ContainerImage.fromAsset('./docker/authentik-server', {
+      repository: ecrRepository,
+      tag: `auth-infra-server-${props.deployment.gitSha}`,
+      file: dockerfileName,
+      buildArgs: {
+        AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
+      }
+    });
 
     // Prepare container definition options for worker
     let containerDefinitionOptions: ecs.ContainerDefinitionOptions = {
-      image: ecs.ContainerImage.fromRegistry(dockerImage),
+      image: containerImage,
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'authentik-worker',
         logGroup

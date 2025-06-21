@@ -40,6 +40,8 @@ export interface ContextEnvironmentConfig {
     ldapBaseDn?: string;
     useS3AuthentikConfigFile?: boolean;
     enablePostgresReadReplicas?: boolean;
+    branding: string;
+    authentikVersion: string;
   };
   general: {
     removalPolicy: string;

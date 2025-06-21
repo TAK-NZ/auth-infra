@@ -49,7 +49,9 @@
         "ldapHostname": "ldap",
         "ldapBaseDn": "dc=tak,dc=nz",
         "useS3AuthentikConfigFile": false,
-        "enablePostgresReadReplicas": false
+        "enablePostgresReadReplicas": false,
+        "branding": "tak-nz",
+        "authentikVersion": "2025.6.2"
       },
       "general": {
         "removalPolicy": "DESTROY",
@@ -89,7 +91,13 @@
         "ldapHostname": "ldap",
         "ldapBaseDn": "dc=tak,dc=nz",
         "useS3AuthentikConfigFile": true,
-        "enablePostgresReadReplicas": false
+        "enablePostgresReadReplicas": false,
+        "branding": "tak-nz",
+        "authentikVersion": "2025.6.2"
+      },
+      "docker": {
+        "branding": "tak-nz",
+        "authentikVersion": "2025.6.2"
       },
       "general": {
         "removalPolicy": "RETAIN",
