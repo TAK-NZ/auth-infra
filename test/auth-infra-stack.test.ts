@@ -44,6 +44,10 @@ describe('AuthInfraStack', () => {
         branding: "tak-nz",
         authentikVersion: "2025.6.2"
       },
+      ecr: {
+        imageRetentionCount: 5,
+        scanOnPush: false
+      },
       general: {
         removalPolicy: "DESTROY",
         enableDetailedLogging: true,

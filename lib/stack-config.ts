@@ -43,6 +43,10 @@ export interface ContextEnvironmentConfig {
     branding: string;
     authentikVersion: string;
   };
+  ecr: {
+    imageRetentionCount: number;
+    scanOnPush: boolean;
+  };
   general: {
     removalPolicy: string;
     enableDetailedLogging: boolean;

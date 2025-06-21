@@ -53,6 +53,10 @@ export function applyContextOverrides(
       branding: app.node.tryGetContext('branding') ?? baseConfig.authentik.branding,
       authentikVersion: app.node.tryGetContext('authentikVersion') ?? baseConfig.authentik.authentikVersion,
     },
+    ecr: {
+      imageRetentionCount: app.node.tryGetContext('imageRetentionCount') ?? baseConfig.ecr.imageRetentionCount,
+      scanOnPush: app.node.tryGetContext('scanOnPush') ?? baseConfig.ecr.scanOnPush,
+    },
     general: {
       ...baseConfig.general,
       removalPolicy: app.node.tryGetContext('removalPolicy') || baseConfig.general.removalPolicy,

@@ -17,21 +17,24 @@ This authentication infrastructure requires the base infrastructure and is the f
         Domain: tak.nz                        Domain: dev.tak.nz
 
 ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│          Layer 4                │    │          Layer 4                │
+│         CloudTAK                │    │         CloudTAK                │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+                │                                        │
+                ▼                                        ▼
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
 │        VideoInfra               │    │        VideoInfra               │
 │    CloudFormation Stack         │    │    CloudFormation Stack         │
 └─────────────────────────────────┘    └─────────────────────────────────┘
                 │                                        │
                 ▼                                        ▼
 ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│          Layer 3                │    │          Layer 3                │
 │         TakInfra                │    │         TakInfra                │
 │    CloudFormation Stack         │    │    CloudFormation Stack         │
 └─────────────────────────────────┘    └─────────────────────────────────┘
                 │                                        │
                 ▼                                        ▼
 ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│          Layer 2                │    │          Layer 2                │
 │        AuthInfra                │    │        AuthInfra                │
 │    CloudFormation Stack         │    │    CloudFormation Stack         │
 │      (This Repository)          │    │      (This Repository)          │
@@ -39,7 +42,6 @@ This authentication infrastructure requires the base infrastructure and is the f
                 │                                        │
                 ▼                                        ▼
 ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│          Layer 1                │    │          Layer 1                │
 │        BaseInfra                │    │        BaseInfra                │
 │    CloudFormation Stack         │    │    CloudFormation Stack         │
 └─────────────────────────────────┘    └─────────────────────────────────┘
@@ -51,8 +53,9 @@ This authentication infrastructure requires the base infrastructure and is the f
 | **AuthInfra** | `auth-infra` (this repo) | SSO via Authentik, LDAP |
 | **TAKInfra** | [`tak-infra`](https://github.com/TAK-NZ/tak-infra) | TAK Server |
 | **VideoInfra** | [`video-infra`](https://github.com/TAK-NZ/video-infra) | Video Server based on Mediamtx |
+| **CloudTAK** | [`CloudTAK`](https://github.com/TAK-NZ/CloudTAK) | CloudTAK web interface and ETL |
 
-**Deployment Order**: BaseInfra must be deployed first, followed by AuthInfra, TakInfra, and finally VideoInfra. Each layer imports outputs from the layer below via CloudFormation exports.
+**Deployment Order**: BaseInfra must be deployed first, followed by AuthInfra, TakInfra, VideoInfra, and finally CloudTAK. Each layer imports outputs from the layer below via CloudFormation exports.
 
 ## Quick Start
 
@@ -257,6 +260,10 @@ npm run deploy -- --context envType=dev-test \
 | `authentikLdapBaseDn` | No | `DC=example,DC=com` | LDAP base DN for directory structure |
 | `hostnameAuthentik` | No | `account` | Hostname for Authentik service (creates DNS A/AAAA records) |
 | `hostnameLdap` | No | `ldap` | Hostname for LDAP service (creates DNS A record) |
+| `branding` | No | `tak-nz` | Docker image branding variant (`tak-nz`, `generic`) |
+| `authentikVersion` | No | `2025.6.2` | Authentik version for Docker images |
+| `imageRetentionCount` | No | env-based* | Number of ECR images to retain |
+| `scanOnPush` | No | env-based* | Enable ECR vulnerability scanning |
 
 *Environment-based defaults: `prod` = high-availability, `dev-test` = cost-optimized
 
@@ -270,6 +277,8 @@ The stack uses environment-based defaults for optimal configuration:
 - `redisNodeType`: `cache.t4g.micro`
 - `ecsTaskCpu`: `512`
 - `ecsTaskMemory`: `1024`
+- `imageRetentionCount`: `5` (ECR images)
+- `scanOnPush`: `false` (ECR vulnerability scanning)
 - Cost-optimized for development/testing
 - Resources can be destroyed (`RemovalPolicy.DESTROY`)
 
@@ -279,6 +288,8 @@ The stack uses environment-based defaults for optimal configuration:
 - `redisNodeType`: `cache.t4g.small` 
 - `ecsTaskCpu`: `1024`
 - `ecsTaskMemory`: `2048`
+- `imageRetentionCount`: `20` (ECR images)
+- `scanOnPush`: `true` (ECR vulnerability scanning)
 - High-availability configuration with redundancy
 - Resources protected from deletion (`RemovalPolicy.RETAIN`)
 
@@ -497,4 +508,13 @@ npm run deploy:dev -- --context instanceClass=db.t4g.small --context nodeType=ca
 
 # Enable detailed logging for debugging
 npm run deploy:dev -- --context enableDetailedLogging=true
+
+# Override ECR settings
+npm run deploy:dev -- --context imageRetentionCount=10 --context scanOnPush=true
+
+# Deploy with specific Authentik version
+npm run deploy:prod -- --context authentikVersion=2025.7.1
+
+# Use generic branding instead of TAK-NZ
+npm run deploy:dev -- --context branding=generic
 ```

@@ -53,6 +53,10 @@
         "branding": "tak-nz",
         "authentikVersion": "2025.6.2"
       },
+      "ecr": {
+        "imageRetentionCount": 5,
+        "scanOnPush": false
+      },
       "general": {
         "removalPolicy": "DESTROY",
         "enableDetailedLogging": true,
@@ -95,9 +99,9 @@
         "branding": "tak-nz",
         "authentikVersion": "2025.6.2"
       },
-      "docker": {
-        "branding": "tak-nz",
-        "authentikVersion": "2025.6.2"
+      "ecr": {
+        "imageRetentionCount": 20,
+        "scanOnPush": true
       },
       "general": {
         "removalPolicy": "RETAIN",

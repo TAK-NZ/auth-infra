@@ -42,6 +42,10 @@ describe('Context-Based Configuration Management', () => {
           branding: 'tak-nz',
           authentikVersion: '2025.6.2'
         },
+        ecr: {
+          imageRetentionCount: 5,
+          scanOnPush: false
+        },
         general: {
           removalPolicy: 'DESTROY',
           enableDetailedLogging: true,
@@ -87,6 +91,10 @@ describe('Context-Based Configuration Management', () => {
           ldapBaseDn: 'dc=tak,dc=nz',
           branding: 'tak-nz',
           authentikVersion: '2025.6.2'
+        },
+        ecr: {
+          imageRetentionCount: 20,
+          scanOnPush: true
         },
         general: {
           removalPolicy: 'RETAIN',

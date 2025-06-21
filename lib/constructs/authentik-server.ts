@@ -249,9 +249,9 @@ export class AuthentikServer extends Construct {
       }
     });
 
-    // Create ECR repository with environment-specific settings (migrated from BaseInfra)
-    const imageRetentionCount = isHighAvailability ? 20 : 5; // Prod: 20, Dev: 5
-    const scanOnPush = isHighAvailability; // Prod: true, Dev: false
+    // Create ECR repository with environment-specific settings (from configuration)
+    const imageRetentionCount = props.contextConfig.ecr.imageRetentionCount;
+    const scanOnPush = props.contextConfig.ecr.scanOnPush;
     
     const ecrRepository = new ecr.Repository(this, 'ServerECRRepo', {
       repositoryName: `${props.contextConfig.stackName.toLowerCase()}-authentik-server`,

@@ -224,9 +224,9 @@ export class Ldap extends Construct {
       taskRole
     });
 
-    // Create ECR repository with environment-specific settings (separate from server/worker)
-    const imageRetentionCount = isHighAvailability ? 20 : 5; // Prod: 20, Dev: 5
-    const scanOnPush = isHighAvailability; // Prod: true, Dev: false
+    // Create ECR repository with environment-specific settings (from configuration)
+    const imageRetentionCount = props.contextConfig.ecr.imageRetentionCount;
+    const scanOnPush = props.contextConfig.ecr.scanOnPush;
     
     const ecrRepository = new ecr.Repository(this, 'LdapECRRepo', {
       repositoryName: `${props.contextConfig.stackName.toLowerCase()}-authentik-ldap`,
