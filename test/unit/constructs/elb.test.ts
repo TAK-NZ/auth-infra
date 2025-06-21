@@ -4,11 +4,11 @@
 import { App, Stack } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
-import * as kms from 'aws-cdk-lib/aws-kms';
 import { Template } from 'aws-cdk-lib/assertions';
 import { Elb } from '../../../lib/constructs/elb';
 import type { ContextEnvironmentConfig } from '../../../lib/stack-config';
 import type { InfrastructureConfig, NetworkConfig } from '../../../lib/construct-configs';
+import { CDKTestHelper } from '../../__helpers__/cdk-test-utils';
 
 const TEST_CONFIG: ContextEnvironmentConfig = {
   stackName: 'Test',
@@ -28,19 +28,10 @@ describe('ELB Construct', () => {
   let networkConfig: NetworkConfig;
 
   beforeEach(() => {
-    app = new App();
-    stack = new Stack(app, 'TestStack');
-    
-    vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
-    const kmsKey = kms.Key.fromKeyArn(stack, 'TestKey', 'arn:aws:kms:us-west-2:123456789012:key/test-key');
-    const securityGroup = new ec2.SecurityGroup(stack, 'TestSG', { vpc });
-
-    infrastructureConfig = { vpc, ecsSecurityGroup: securityGroup, ecsCluster: {} as any, kmsKey };
-    networkConfig = { 
-      sslCertificateArn: 'arn:aws:acm:us-west-2:123456789012:certificate/test-cert',
-      hostedZoneId: 'Z123456789',
-      hostedZoneName: 'test.com'
-    };
+    ({ app, stack } = CDKTestHelper.createTestStack());
+    infrastructureConfig = CDKTestHelper.createMockInfrastructure(stack);
+    vpc = infrastructureConfig.vpc;
+    networkConfig = CDKTestHelper.createMockNetwork();
   });
 
   test('should create load balancer with correct properties', () => {

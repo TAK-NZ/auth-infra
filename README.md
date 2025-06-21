@@ -1,6 +1,6 @@
 # TAK Authentication Infrastructure
 
-<p align=center>Modern AWS CDK v2 authentication infrastructure for Team Awareness Kit (TAK) deployments using Authentik SSO & LDAP
+<p align=center>Modern AWS CDK v2 authentication infrastructure for Team Awareness Kit (TAK) deployments
 
 ## Overview
 

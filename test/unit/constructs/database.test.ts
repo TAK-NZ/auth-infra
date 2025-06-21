@@ -3,11 +3,11 @@
  */
 import { App, Stack } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as kms from 'aws-cdk-lib/aws-kms';
 import { Template } from 'aws-cdk-lib/assertions';
 import { Database } from '../../../lib/constructs/database';
 import type { ContextEnvironmentConfig } from '../../../lib/stack-config';
 import type { InfrastructureConfig } from '../../../lib/construct-configs';
+import { CDKTestHelper } from '../../__helpers__/cdk-test-utils';
 
 describe('Database Construct', () => {
   let app: App;
@@ -17,15 +17,10 @@ describe('Database Construct', () => {
   let securityGroups: ec2.SecurityGroup[];
 
   beforeEach(() => {
-    app = new App();
-    stack = new Stack(app, 'TestStack');
-    
-    vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
-    const kmsKey = kms.Key.fromKeyArn(stack, 'TestKey', 'arn:aws:kms:us-west-2:123456789012:key/test-key');
-    const securityGroup = new ec2.SecurityGroup(stack, 'TestSG', { vpc });
-    
-    infrastructureConfig = { vpc, ecsSecurityGroup: securityGroup, ecsCluster: {} as any, kmsKey };
-    securityGroups = [securityGroup];
+    ({ app, stack } = CDKTestHelper.createTestStack());
+    infrastructureConfig = CDKTestHelper.createMockInfrastructure(stack);
+    vpc = infrastructureConfig.vpc;
+    securityGroups = [infrastructureConfig.ecsSecurityGroup];
   });
 
   test('should throw error when database config is missing', () => {
@@ -119,7 +114,7 @@ describe('Database Construct', () => {
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
     };
 
-    const database = new Database(stack, 'TestDB', {
+    const database = new Database(stack, 'TestDB3', {
       environment: 'dev-test',
       stackName: 'TestStack',
       contextConfig: largeInstanceConfig,
@@ -130,6 +125,33 @@ describe('Database Construct', () => {
     expect(database.cluster).toBeDefined();
     expect(database.hostname).toBeDefined();
     expect(database.readerEndpoint).toBeDefined();
+    
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::RDS::DBCluster', {
+      Engine: 'aurora-postgresql'
+    });
+  });
+
+  test('should handle medium instance type (non-large)', () => {
+    const mediumInstanceConfig: ContextEnvironmentConfig = {
+      stackName: 'Test',
+      database: { instanceClass: 'db.t3.medium', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
+      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1, enableTransit: false, enableAtRest: false },
+      ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
+      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
+      ecr: { imageRetentionCount: 5, scanOnPush: false },
+      general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
+    };
+
+    const database = new Database(stack, 'TestDB5', {
+      environment: 'dev-test',
+      stackName: 'TestStack',
+      contextConfig: mediumInstanceConfig,
+      infrastructure: infrastructureConfig,
+      securityGroups
+    });
+
+    expect(database.cluster).toBeDefined();
   });
 
   test('should handle custom engine version', () => {

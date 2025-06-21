@@ -7,6 +7,7 @@ import * as kms from 'aws-cdk-lib/aws-kms';
 import { Template } from 'aws-cdk-lib/assertions';
 import { Efs } from '../../../lib/constructs/efs';
 import { MOCK_CONFIGS } from '../../__fixtures__/mock-configs';
+import { CDKTestHelper } from '../../__helpers__/cdk-test-utils';
 
 describe('EFS Construct', () => {
   let app: App;
@@ -16,12 +17,11 @@ describe('EFS Construct', () => {
   let securityGroup: ec2.SecurityGroup;
 
   beforeEach(() => {
-    app = new App();
-    stack = new Stack(app, 'TestStack');
-    
-    vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
-    kmsKey = kms.Key.fromKeyArn(stack, 'TestKey', 'arn:aws:kms:us-west-2:123456789012:key/test-key');
-    securityGroup = new ec2.SecurityGroup(stack, 'TestSG', { vpc });
+    ({ app, stack } = CDKTestHelper.createTestStack());
+    const infrastructure = CDKTestHelper.createMockInfrastructure(stack);
+    vpc = infrastructure.vpc;
+    kmsKey = infrastructure.kmsKey;
+    securityGroup = infrastructure.ecsSecurityGroup;
   });
 
   test('should create EFS with dev-test configuration', () => {
