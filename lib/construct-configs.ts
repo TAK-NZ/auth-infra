@@ -217,15 +217,7 @@ export interface NetworkConfig {
   loadBalancer?: elbv2.ILoadBalancerV2;
 }
 
-/**
- * Validation configuration for ECR images
- */
-export interface ValidationConfig {
-  /**
-   * List of required image tags to validate
-   */
-  requiredImageTags: string[];
-}
+
 
 /**
  * Token retrieval configuration for LDAP

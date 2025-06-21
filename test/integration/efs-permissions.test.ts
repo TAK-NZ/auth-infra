@@ -7,16 +7,16 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import { AuthentikServer } from '../lib/constructs/authentik-server';
-import { AuthentikWorker } from '../lib/constructs/authentik-worker';
+import { AuthentikServer } from '../../lib/constructs/authentik-server';
+import { AuthentikWorker } from '../../lib/constructs/authentik-worker';
 import type {
   InfrastructureConfig,
   SecretsConfig,
   StorageConfig,
   DeploymentConfig,
   AuthentikApplicationConfig
-} from '../lib/construct-configs';
-import type { ContextEnvironmentConfig } from '../lib/stack-config';
+} from '../../lib/construct-configs';
+import type { ContextEnvironmentConfig } from '../../lib/stack-config';
 
 // Test context configuration (matches reference pattern)
 const TEST_CONTEXT_CONFIG: ContextEnvironmentConfig = {

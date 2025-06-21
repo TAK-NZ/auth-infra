@@ -10,12 +10,16 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest",
+    "test:unit": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest test/unit",
+    "test:integration": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest test/integration",
+    "test:validation": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest test/validation",
+    "test:watch": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest --watch",
+    "test:coverage": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest --coverage",
+    "test:coverage:unit": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest test/unit --coverage",
     "cdk": "cdk",
     "clean": "rm -f bin/*.js bin/*.d.ts lib/*.js lib/*.d.ts lib/constructs/*.js lib/constructs/*.d.ts test/*.js test/*.d.ts; rm -rf cdk.out/*",
     
     "dev": "npm run build && npm run test",
-    "test:watch": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest --watch",
-    "test:coverage": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest --coverage",
     
     "deploy:dev": "npm run build && cdk deploy --context env=dev-test",
     "deploy:prod": "npm run build && cdk deploy --context env=prod",

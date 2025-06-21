@@ -4,6 +4,11 @@
   "testEnvironment": "node",
   "roots": ["<rootDir>/test"],
   "testMatch": ["**/*.test.ts"],
+  "testPathIgnorePatterns": [
+    "/node_modules/",
+    "/test/__fixtures__/",
+    "/test/__helpers__/"
+  ],
   "transform": {
     "^.+\\.ts$": ["ts-jest", {
       "useESM": true

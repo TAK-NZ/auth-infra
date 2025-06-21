@@ -81,34 +81,7 @@ export class AuthentikWorker extends Construct {
    */
   public readonly ecsService: ecs.FargateService;
 
-  /**
-   * Converts an ECR repository ARN to a proper ECR repository URI for Docker images
-   * @param ecrArn - ECR repository ARN (e.g., "arn:aws:ecr:region:account:repository/repo-name")
-   * @returns ECR repository URI (e.g., "account.dkr.ecr.region.amazonaws.com/repo-name")
-   */
-  private convertEcrArnToRepositoryUri(ecrArn: string): string {
-    // Handle CDK tokens (unresolved references)
-    if (Token.isUnresolved(ecrArn)) {
-      // For tokens, we need to use CDK's Fn.sub to perform the conversion at deploy time
-      return Fn.sub('${Account}.dkr.ecr.${Region}.amazonaws.com/${RepoName}', {
-        Account: Fn.select(4, Fn.split(':', ecrArn)),
-        Region: Fn.select(3, Fn.split(':', ecrArn)),
-        RepoName: Fn.select(1, Fn.split('/', Fn.select(5, Fn.split(':', ecrArn))))
-      });
-    }
-    
-    // Parse ARN: arn:aws:ecr:region:account:repository/repo-name
-    const arnParts = ecrArn.split(':');
-    if (arnParts.length !== 6 || !arnParts[5].startsWith('repository/')) {
-      throw new Error(`Invalid ECR repository ARN format: ${ecrArn}`);
-    }
-    
-    const region = arnParts[3];
-    const account = arnParts[4];
-    const repositoryName = arnParts[5].replace('repository/', '');
-    
-    return `${account}.dkr.ecr.${region}.amazonaws.com/${repositoryName}`;
-  }
+
 
   constructor(scope: Construct, id: string, props: AuthentikWorkerProps) {
     super(scope, id);

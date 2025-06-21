@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { AuthInfraStack } from '../lib/auth-infra-stack';
-import { applyContextOverrides } from '../lib/utils/context-overrides';
+import { AuthInfraStack } from '../../lib/auth-infra-stack';
+import { applyContextOverrides } from '../../lib/utils/context-overrides';
 
 describe('AuthInfraStack', () => {
   let app: cdk.App;

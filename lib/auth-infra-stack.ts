@@ -35,7 +35,7 @@ import type {
 import { registerOutputs } from './outputs';
 import { createBaseImportValue, BASE_EXPORT_NAMES } from './cloudformation-imports';
 import { ContextEnvironmentConfig } from './stack-config';
-import { DEFAULT_VPC_CIDR } from './utils/constants';
+
 
 export interface AuthInfraStackProps extends StackProps {
   environment: 'prod' | 'dev-test';

@@ -1,9 +1,9 @@
 /**
  * Test suite for context-based configuration
  */
-import { ContextEnvironmentConfig } from '../lib/stack-config';
-import { applyContextOverrides } from '../lib/utils/context-overrides';
-import { SECRET_NAMES } from '../lib/utils/constants';
+import { ContextEnvironmentConfig } from '../../lib/stack-config';
+import { applyContextOverrides } from '../../lib/utils/context-overrides';
+import { SECRET_NAMES } from '../../lib/utils/constants';
 import * as cdk from 'aws-cdk-lib';
 
 describe('Context-Based Configuration Management', () => {

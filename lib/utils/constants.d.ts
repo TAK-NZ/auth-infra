@@ -8,11 +8,8 @@ export declare const AWS_REGIONS: {
 };
 export declare const INFRASTRUCTURE_DEFAULTS: {
     readonly DEFAULT_AWS_REGION: "ap-southeast-2";
-    readonly DEFAULT_VPC_CIDR: "10.0.0.0/20";
-    readonly MAX_AZS: 2;
 };
 export declare const DEFAULT_AWS_REGION: "ap-southeast-2";
-export declare const DEFAULT_VPC_CIDR: "10.0.0.0/20";
 /**
  * Tag constants for resource tagging
  */

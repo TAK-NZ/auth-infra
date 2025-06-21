@@ -10,12 +10,11 @@ export const AWS_REGIONS = {
 
 export const INFRASTRUCTURE_DEFAULTS = {
   DEFAULT_AWS_REGION: AWS_REGIONS.AP_SOUTHEAST_2,
-  DEFAULT_VPC_CIDR: '10.0.0.0/20' as const,
-  MAX_AZS: 2 as const,
 } as const;
 
 export const DEFAULT_AWS_REGION = INFRASTRUCTURE_DEFAULTS.DEFAULT_AWS_REGION;
-export const DEFAULT_VPC_CIDR = INFRASTRUCTURE_DEFAULTS.DEFAULT_VPC_CIDR;
+
+
 
 /**
  * Tag constants for resource tagging

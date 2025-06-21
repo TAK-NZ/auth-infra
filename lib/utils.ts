@@ -35,29 +35,7 @@ export function validateAuthentikAdminUserEmail(authentikAdminUserEmail: string 
   }
 }
 
-/**
- * Validates optional ldapBaseDn parameter when used
- * Note: This is a utility function for optional parameter validation within the stack
- * @param ldapBaseDn - The LDAP base DN to validate
- * @throws Error if ldapBaseDn is provided but empty
- */
-export function validateLdapBaseDn(ldapBaseDn: string | undefined): void {
-  if (ldapBaseDn !== undefined && ldapBaseDn.trim() === '') {
-    throw new Error('ldapBaseDn cannot be empty when provided. Use --context ldapBaseDn=DC=example,DC=com');
-  }
-}
 
-/**
- * Validates optional useAuthentikConfigFile parameter when used  
- * Note: This is a utility function for optional parameter validation within the stack
- * @param useAuthentikConfigFile - The useAuthentikConfigFile setting to validate
- * @throws Error if useAuthentikConfigFile is provided but invalid
- */
-export function validateUseAuthentikConfigFile(useAuthentikConfigFile: string | undefined): void {
-  if (useAuthentikConfigFile !== undefined && useAuthentikConfigFile !== 'true' && useAuthentikConfigFile !== 'false') {
-    throw new Error('useAuthentikConfigFile must be either "true" or "false" when provided. Use --context useAuthentikConfigFile=true or --context useAuthentikConfigFile=false');
-  }
-}
 
 /**
  * Gets the current Git SHA for tagging resources

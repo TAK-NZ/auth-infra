@@ -5,10 +5,9 @@ import {
     validateEnvType,
     validateStackName,
     validateAuthentikAdminUserEmail,
-    validateLdapBaseDn,
     validateCdkContextParams,
     getGitSha
-} from '../lib/utils';
+} from '../../../lib/utils';
 
 describe('Utility Functions', () => {
     describe('validateEnvType', () => {
@@ -45,22 +44,6 @@ describe('Utility Functions', () => {
             expect(() => validateAuthentikAdminUserEmail(undefined)).toThrow('authentikAdminUserEmail is required. Use --context authentikAdminUserEmail=user@example.com');
             expect(() => validateAuthentikAdminUserEmail('')).toThrow();
             expect(() => validateAuthentikAdminUserEmail('   ')).toThrow();
-        });
-    });
-
-    describe('validateLdapBaseDn', () => {
-        test('should accept valid LDAP base DNs', () => {
-            expect(() => validateLdapBaseDn('DC=example,DC=com')).not.toThrow();
-            expect(() => validateLdapBaseDn('DC=corp,DC=company,DC=org')).not.toThrow();
-        });
-
-        test('should accept undefined (optional parameter)', () => {
-            expect(() => validateLdapBaseDn(undefined)).not.toThrow();
-        });
-
-        test('should reject empty LDAP base DNs when provided', () => {
-            expect(() => validateLdapBaseDn('')).toThrow('ldapBaseDn cannot be empty when provided');
-            expect(() => validateLdapBaseDn('   ')).toThrow('ldapBaseDn cannot be empty when provided');
         });
     });
 
