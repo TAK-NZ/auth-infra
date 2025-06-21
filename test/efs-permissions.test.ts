@@ -48,6 +48,8 @@ const TEST_CONTEXT_CONFIG: ContextEnvironmentConfig = {
     adminUserEmail: 'admin@test.example.com',
     ldapHostname: 'ldap',
     ldapBaseDn: 'dc=test,dc=example,dc=com',
+    branding: 'tak-nz',
+    authentikVersion: '2025.6.2'
   },
   general: {
     removalPolicy: 'DESTROY',
@@ -134,7 +136,6 @@ describe('EFS IAM Permissions', () => {
 
     const deploymentConfig: DeploymentConfig = {
       gitSha: 'test-sha',
-      ecrRepositoryArn: 'arn:aws:ecr:us-west-2:123456789012:repository/test-repo',
       enableExecute: false,
       useConfigFile: false
     };

@@ -132,11 +132,6 @@ export interface DeploymentConfig {
   gitSha: string;
 
   /**
-   * ECR repository ARN for ECR images
-   */
-  ecrRepositoryArn?: string;
-
-  /**
    * Allow SSH exec into container
    */
   enableExecute: boolean;

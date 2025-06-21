@@ -6,6 +6,7 @@ import {
   aws_ec2 as ec2,
   aws_ecs as ecs,
   aws_ecr as ecr,
+  aws_ecr_assets as ecrAssets,
   aws_elasticloadbalancingv2 as elbv2,
   aws_logs as logs,
   aws_secretsmanager as secretsmanager,
@@ -248,27 +249,32 @@ export class AuthentikServer extends Construct {
       }
     });
 
-    // Import existing ECR repository
-    if (!props.deployment.ecrRepositoryArn) {
-      throw new Error('ecrRepositoryArn is required for Authentik Server deployment');
-    }
+    // Create ECR repository with environment-specific settings (migrated from BaseInfra)
+    const imageRetentionCount = isHighAvailability ? 20 : 5; // Prod: 20, Dev: 5
+    const scanOnPush = isHighAvailability; // Prod: true, Dev: false
     
-    const ecrRepository = ecr.Repository.fromRepositoryArn(
-      this, 
-      'ECRRepo', 
-      props.deployment.ecrRepositoryArn
-    );
+    const ecrRepository = new ecr.Repository(this, 'ServerECRRepo', {
+      repositoryName: `${props.contextConfig.stackName.toLowerCase()}-authentik-server`,
+      imageScanOnPush: scanOnPush,
+      imageTagMutability: ecr.TagMutability.MUTABLE,
+      lifecycleRules: [{
+        maxImageCount: imageRetentionCount,
+        description: `Keep only ${imageRetentionCount} most recent images`
+      }],
+      removalPolicy: removalPolicy
+    });
 
     // Build Docker image with branding and version
     const dockerfileName = `Dockerfile.${props.contextConfig.authentik.branding}`;
-    const containerImage = ecs.ContainerImage.fromAsset('./docker/authentik-server', {
-      repository: ecrRepository,
-      tag: `auth-infra-server-${props.deployment.gitSha}`,
+    const dockerImageAsset = new ecrAssets.DockerImageAsset(this, 'ServerDockerAsset', {
+      directory: './docker/authentik-server',
       file: dockerfileName,
       buildArgs: {
         AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
       }
     });
+
+    const containerImage = ecs.ContainerImage.fromDockerImageAsset(dockerImageAsset);
 
     // Prepare container definition options
     let containerDefinitionOptions: ecs.ContainerDefinitionOptions = {
@@ -306,9 +312,7 @@ export class AuthentikServer extends Construct {
         retries: 3,
         startPeriod: Duration.seconds(60)
       },
-      restartPolicy: {
-        enabled: true
-      },
+
       essential: true
     };
 

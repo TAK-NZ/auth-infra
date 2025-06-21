@@ -130,8 +130,7 @@ export class AuthInfraStack extends cdk.Stack {
       Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.S3_BUCKET))
     );
 
-    // ECR
-    const ecrRepository = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECR_REPO));
+
 
     // Route53
     const hostedZoneId = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.HOSTED_ZONE_ID));
@@ -278,7 +277,6 @@ export class AuthInfraStack extends cdk.Stack {
 
     const deploymentConfig: DeploymentConfig = {
       gitSha: gitSha,
-      ecrRepositoryArn: ecrRepository,
       enableExecute: enableEcsExec,
       useConfigFile: useS3AuthentikConfigFile
     };
@@ -608,21 +606,4 @@ export class AuthInfraStack extends cdk.Stack {
   }
 }
 
-/**
- * Converts an ECR repository ARN to a proper ECR repository URI for Docker images
- * @param ecrArn - ECR repository ARN (e.g., "arn:aws:ecr:region:account:repository/repo-name")
- * @returns ECR repository URI (e.g., "account.dkr.ecr.region.amazonaws.com/repo-name")
- */
-function convertEcrArnToRepositoryUri(ecrArn: string): string {
-  // Parse ARN: arn:aws:ecr:region:account:repository/repo-name
-  const arnParts = ecrArn.split(':');
-  if (arnParts.length !== 6 || !arnParts[5].startsWith('repository/')) {
-    throw new Error(`Invalid ECR repository ARN format: ${ecrArn}`);
-  }
-  
-  const region = arnParts[3];
-  const account = arnParts[4];
-  const repositoryName = arnParts[5].replace('repository/', '');
-  
-  return `${account}.dkr.ecr.${region}.amazonaws.com/${repositoryName}`;
-}
+

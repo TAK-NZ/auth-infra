@@ -38,7 +38,9 @@ describe('Context-Based Configuration Management', () => {
           hostname: 'account',
           adminUserEmail: 'admin@tak.nz',
           ldapHostname: 'ldap',
-          ldapBaseDn: 'dc=tak,dc=nz'
+          ldapBaseDn: 'dc=tak,dc=nz',
+          branding: 'tak-nz',
+          authentikVersion: '2025.6.2'
         },
         general: {
           removalPolicy: 'DESTROY',
@@ -82,7 +84,9 @@ describe('Context-Based Configuration Management', () => {
           hostname: 'account',
           adminUserEmail: 'admin@tak.nz',
           ldapHostname: 'ldap',
-          ldapBaseDn: 'dc=tak,dc=nz'
+          ldapBaseDn: 'dc=tak,dc=nz',
+          branding: 'tak-nz',
+          authentikVersion: '2025.6.2'
         },
         general: {
           removalPolicy: 'RETAIN',

@@ -6,6 +6,7 @@ import {
   aws_ec2 as ec2,
   aws_ecs as ecs,
   aws_ecr as ecr,
+  aws_ecr_assets as ecrAssets,
   aws_elasticloadbalancingv2 as elbv2,
   aws_logs as logs,
   aws_secretsmanager as secretsmanager,
@@ -223,25 +224,30 @@ export class Ldap extends Construct {
       taskRole
     });
 
-    // Import existing ECR repository
-    if (!props.deployment.ecrRepositoryArn) {
-      throw new Error('ecrRepositoryArn is required for Authentik LDAP deployment');
-    }
+    // Create ECR repository with environment-specific settings (separate from server/worker)
+    const imageRetentionCount = isHighAvailability ? 20 : 5; // Prod: 20, Dev: 5
+    const scanOnPush = isHighAvailability; // Prod: true, Dev: false
     
-    const ecrRepository = ecr.Repository.fromRepositoryArn(
-      this, 
-      'ECRRepo', 
-      props.deployment.ecrRepositoryArn
-    );
+    const ecrRepository = new ecr.Repository(this, 'LdapECRRepo', {
+      repositoryName: `${props.contextConfig.stackName.toLowerCase()}-authentik-ldap`,
+      imageScanOnPush: scanOnPush,
+      imageTagMutability: ecr.TagMutability.MUTABLE,
+      lifecycleRules: [{
+        maxImageCount: imageRetentionCount,
+        description: `Keep only ${imageRetentionCount} most recent images`
+      }],
+      removalPolicy: removalPolicy
+    });
 
     // Build LDAP Docker image with version
-    const containerImage = ecs.ContainerImage.fromAsset('./docker/authentik-ldap', {
-      repository: ecrRepository,
-      tag: `auth-infra-ldap-${props.deployment.gitSha}`,
+    const dockerImageAsset = new ecrAssets.DockerImageAsset(this, 'LdapDockerAsset', {
+      directory: './docker/authentik-ldap',
       buildArgs: {
         AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
       }
     });
+
+    const containerImage = ecs.ContainerImage.fromDockerImageAsset(dockerImageAsset);
 
     // Create container definition
     const container = this.taskDefinition.addContainer('AuthentikLdap', {
