@@ -450,7 +450,7 @@ export class AuthInfraStack extends cdk.Stack {
     const authentikServerSecurityGroup = new ec2.SecurityGroup(this, 'AuthentikSecurityGroup', {
       vpc,
       description: 'Security group for Authentik Server ECS tasks',
-      allowAllOutbound: true
+      allowAllOutbound: false
     });
 
     // Allow Authentik application traffic (port 9000) from ALB only
@@ -458,6 +458,38 @@ export class AuthInfraStack extends cdk.Stack {
       ec2.Peer.securityGroupId(albSecurityGroup.securityGroupId),
       ec2.Port.tcp(9000),
       'Allow Authentik traffic from ALB'
+    );
+
+    // Outbound rules - principle of least privilege
+    authentikServerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(5432),
+      'Allow PostgreSQL access'
+    );
+    authentikServerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(6379),
+      'Allow Redis access'
+    );
+    authentikServerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(2049),
+      'Allow EFS access'
+    );
+    authentikServerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      'Allow HTTPS access'
+    );
+    authentikServerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(53),
+      'Allow DNS access'
+    );
+    authentikServerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.udp(53),
+      'Allow DNS access'
     );
 
     return authentikServerSecurityGroup;
@@ -472,11 +504,41 @@ export class AuthInfraStack extends cdk.Stack {
     const authentikWorkerSecurityGroup = new ec2.SecurityGroup(this, 'AuthentikWorkerSecurityGroup', {
       vpc,
       description: 'Security group for Authentik Worker ECS tasks',
-      allowAllOutbound: true
+      allowAllOutbound: false
     });
 
     // Worker doesn't need any inbound connections
-    // Only outbound connections for database, redis, etc.
+    // Outbound rules - principle of least privilege
+    authentikWorkerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(5432),
+      'Allow PostgreSQL access'
+    );
+    authentikWorkerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(6379),
+      'Allow Redis access'
+    );
+    authentikWorkerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(2049),
+      'Allow EFS access'
+    );
+    authentikWorkerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      'Allow HTTPS access'
+    );
+    authentikWorkerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(53),
+      'Allow DNS access'
+    );
+    authentikWorkerSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.udp(53),
+      'Allow DNS access'
+    );
 
     return authentikWorkerSecurityGroup;
   }
@@ -491,7 +553,7 @@ export class AuthInfraStack extends cdk.Stack {
     const ldapSecurityGroup = new ec2.SecurityGroup(this, 'LdapSecurityGroup', {
       vpc,
       description: 'Security group for LDAP ECS tasks',
-      allowAllOutbound: true
+      allowAllOutbound: false
     });
 
     // Allow LDAP traffic (port 3389) from NLB only
@@ -506,6 +568,23 @@ export class AuthInfraStack extends cdk.Stack {
       ec2.Peer.securityGroupId(nlbSecurityGroup.securityGroupId),
       ec2.Port.tcp(6636),
       'Allow LDAPS traffic from NLB'
+    );
+
+    // Outbound rules - principle of least privilege
+    ldapSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      'Allow HTTPS access to Authentik server'
+    );
+    ldapSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(53),
+      'Allow DNS access'
+    );
+    ldapSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.udp(53),
+      'Allow DNS access'
     );
 
     return ldapSecurityGroup;

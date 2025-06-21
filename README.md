@@ -10,13 +10,49 @@ This repository deploys the authentication layer infrastructure for a complete T
 
 ### Architecture Layers
 
-This authentication infrastructure requires the base infrastructure and supports additional application layers:
+This authentication infrastructure requires the base infrastructure and is the foundation of additional higher level layers. Layers can be deployed in multiple independent environments. As an example:
+
+```
+        PRODUCTION ENVIRONMENT                DEVELOPMENT ENVIRONMENT
+        Domain: tak.nz                        Domain: dev.tak.nz
+
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│          Layer 4                │    │          Layer 4                │
+│        VideoInfra               │    │        VideoInfra               │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+                │                                        │
+                ▼                                        ▼
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│          Layer 3                │    │          Layer 3                │
+│         TakInfra                │    │         TakInfra                │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+                │                                        │
+                ▼                                        ▼
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│          Layer 2                │    │          Layer 2                │
+│        AuthInfra                │    │        AuthInfra                │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+│      (This Repository)          │    │      (This Repository)          │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+                │                                        │
+                ▼                                        ▼
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│          Layer 1                │    │          Layer 1                │
+│        BaseInfra                │    │        BaseInfra                │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+```
 
 | Layer | Repository | Description |
 |-------|------------|-------------|
-| **Base Infrastructure** | [`base-infra`](https://github.com/TAK-NZ/base-infra) | VPC, ECS, ECR, S3, KMS, ACM |
-| **Authentication Layer** | `auth-infra` (this repo) | Authentik SSO and LDAP |
-| **TAK Server Layer** | [`tak-infra`](https://github.com/TAK-NZ/tak-infra) | TAK Server deployment |
+| **BaseInfra** | [`base-infra`](https://github.com/TAK-NZ/base-infra)  | Foundation: VPC, ECS, S3, KMS, ACM |
+| **AuthInfra** | `auth-infra` (this repo) | SSO via Authentik, LDAP |
+| **TAKInfra** | [`tak-infra`](https://github.com/TAK-NZ/tak-infra) | TAK Server |
+| **VideoInfra** | [`video-infra`](https://github.com/TAK-NZ/video-infra) | Video Server based on Mediamtx |
+
+**Deployment Order**: BaseInfra must be deployed first, followed by AuthInfra, TakInfra, and finally VideoInfra. Each layer imports outputs from the layer below via CloudFormation exports.
 
 ## Quick Start
 
