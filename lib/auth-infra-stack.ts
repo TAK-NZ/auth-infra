@@ -11,6 +11,7 @@ import { Database } from './constructs/database';
 import { Redis } from './constructs/redis';
 import { Efs } from './constructs/efs';
 import { SecretsManager } from './constructs/secrets-manager';
+import { SecurityGroups } from './constructs/security-groups';
 import { Elb } from './constructs/elb';
 import { AuthentikServer } from './constructs/authentik-server';
 import { AuthentikWorker } from './constructs/authentik-worker';
@@ -172,13 +173,12 @@ export class AuthInfraStack extends cdk.Stack {
     // SECURITY GROUPS
     // =================
 
-    // Security Groups (ALB security group now available)
-    const authentikServerSecurityGroup = this.createAuthentikServerSecurityGroup(vpc, authentikELB.loadBalancer.connections.securityGroups[0]);
-    const authentikWorkerSecurityGroup = this.createAuthentikWorkerSecurityGroup(vpc);
-    const ldapNlbSecurityGroup = this.createLdapNlbSecurityGroup(vpc, stackNameComponent);
-    const ldapSecurityGroup = this.createLdapSecurityGroup(vpc, ldapNlbSecurityGroup);
-    const dbSecurityGroup = this.createDbSecurityGroup(vpc, [authentikServerSecurityGroup, authentikWorkerSecurityGroup]);
-    const redisSecurityGroup = this.createRedisSecurityGroup(vpc, [authentikServerSecurityGroup, authentikWorkerSecurityGroup]);
+    // Create all security groups using dedicated construct
+    const securityGroups = new SecurityGroups(this, 'SecurityGroups', {
+      vpc,
+      stackNameComponent,
+      albSecurityGroup: authentikELB.loadBalancer.connections.securityGroups[0]
+    });
 
     // =================
     // BUILD CONFIGURATION OBJECTS
@@ -187,7 +187,7 @@ export class AuthInfraStack extends cdk.Stack {
     // Build infrastructure config for Authentik Server
     const authentikServerInfrastructureConfig: InfrastructureConfig = {
       vpc,
-      ecsSecurityGroup: authentikServerSecurityGroup,
+      ecsSecurityGroup: securityGroups.authentikServer,
       ecsCluster,
       kmsKey
     };
@@ -195,7 +195,7 @@ export class AuthInfraStack extends cdk.Stack {
     // Build infrastructure config for Authentik Worker
     const authentikWorkerInfrastructureConfig: InfrastructureConfig = {
       vpc,
-      ecsSecurityGroup: authentikWorkerSecurityGroup,
+      ecsSecurityGroup: securityGroups.authentikWorker,
       ecsCluster,
       kmsKey
     };
@@ -203,7 +203,7 @@ export class AuthInfraStack extends cdk.Stack {
     // Build shared infrastructure config for LDAP Outpost services
     const ldapInfrastructureConfig: InfrastructureConfig = {
       vpc,
-      ecsSecurityGroup: ldapSecurityGroup,
+      ecsSecurityGroup: securityGroups.ldap,
       ecsCluster,
       kmsKey
     };
@@ -225,7 +225,7 @@ export class AuthInfraStack extends cdk.Stack {
       stackName: resolvedStackName,
       contextConfig: envConfig,
       infrastructure: authentikServerInfrastructureConfig,
-      securityGroups: [dbSecurityGroup]
+      securityGroups: [securityGroups.database]
     });
 
     // Redis
@@ -234,7 +234,7 @@ export class AuthInfraStack extends cdk.Stack {
       stackName: resolvedStackName,
       contextConfig: envConfig,
       infrastructure: authentikServerInfrastructureConfig,
-      securityGroups: [redisSecurityGroup]
+      securityGroups: [securityGroups.redis]
     });
 
     // EFS
@@ -242,7 +242,7 @@ export class AuthInfraStack extends cdk.Stack {
       environment: props.environment,
       contextConfig: envConfig,
       infrastructure: authentikServerInfrastructureConfig,
-      allowAccessFrom: [authentikServerSecurityGroup, authentikWorkerSecurityGroup]
+      allowAccessFrom: [securityGroups.authentikServer, securityGroups.authentikWorker]
     });
 
     // =================
@@ -383,7 +383,7 @@ export class AuthInfraStack extends cdk.Stack {
       network: ldapNetworkConfig,
       application: ldapApplicationConfig,
       ldapToken: secretsManager.ldapToken,
-      nlbSecurityGroup: ldapNlbSecurityGroup
+      nlbSecurityGroup: securityGroups.ldapNlb
     });
 
     // Ensure LDAP waits for the token to be retrieved
@@ -436,253 +436,7 @@ export class AuthInfraStack extends cdk.Stack {
     });
   }
 
-  // =================
-  // HELPER METHODS
-  // =================
 
-  /**
-   * Create security group for Authentik Server ECS tasks
-   * @param vpc The VPC to create the security group in
-   * @param albSecurityGroup The ALB security group to allow traffic from
-   * @returns The created security group
-   */
-  private createAuthentikServerSecurityGroup(vpc: ec2.IVpc, albSecurityGroup: ec2.ISecurityGroup): ec2.SecurityGroup {
-    const authentikServerSecurityGroup = new ec2.SecurityGroup(this, 'AuthentikSecurityGroup', {
-      vpc,
-      description: 'Security group for Authentik Server ECS tasks',
-      allowAllOutbound: false
-    });
-
-    // Allow Authentik application traffic (port 9000) from ALB only
-    authentikServerSecurityGroup.addIngressRule(
-      ec2.Peer.securityGroupId(albSecurityGroup.securityGroupId),
-      ec2.Port.tcp(9000),
-      'Allow Authentik traffic from ALB'
-    );
-
-    // Outbound rules - principle of least privilege
-    authentikServerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(5432),
-      'Allow PostgreSQL access'
-    );
-    authentikServerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(6379),
-      'Allow Redis access'
-    );
-    authentikServerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(2049),
-      'Allow EFS access'
-    );
-    authentikServerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(443),
-      'Allow HTTPS access'
-    );
-    authentikServerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(53),
-      'Allow DNS access'
-    );
-    authentikServerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.udp(53),
-      'Allow DNS access'
-    );
-
-    return authentikServerSecurityGroup;
-  }
-
-  /**
-   * Create security group for Authentik Worker ECS tasks
-   * @param vpc The VPC to create the security group in
-   * @returns The created security group
-   */
-  private createAuthentikWorkerSecurityGroup(vpc: ec2.IVpc): ec2.SecurityGroup {
-    const authentikWorkerSecurityGroup = new ec2.SecurityGroup(this, 'AuthentikWorkerSecurityGroup', {
-      vpc,
-      description: 'Security group for Authentik Worker ECS tasks',
-      allowAllOutbound: false
-    });
-
-    // Worker doesn't need any inbound connections
-    // Outbound rules - principle of least privilege
-    authentikWorkerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(5432),
-      'Allow PostgreSQL access'
-    );
-    authentikWorkerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(6379),
-      'Allow Redis access'
-    );
-    authentikWorkerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(2049),
-      'Allow EFS access'
-    );
-    authentikWorkerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(443),
-      'Allow HTTPS access'
-    );
-    authentikWorkerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(53),
-      'Allow DNS access'
-    );
-    authentikWorkerSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.udp(53),
-      'Allow DNS access'
-    );
-
-    return authentikWorkerSecurityGroup;
-  }
-
-  /**
-   * Create security group for LDAP Outpost ECS tasks
-   * @param vpc The VPC to create the security group in
-   * @param nlbSecurityGroup The NLB security group to allow traffic from
-   * @returns The created security group
-   */
-  private createLdapSecurityGroup(vpc: ec2.IVpc, nlbSecurityGroup: ec2.SecurityGroup): ec2.SecurityGroup {
-    const ldapSecurityGroup = new ec2.SecurityGroup(this, 'LdapSecurityGroup', {
-      vpc,
-      description: 'Security group for LDAP ECS tasks',
-      allowAllOutbound: false
-    });
-
-    // Allow LDAP traffic (port 3389) from NLB only
-    ldapSecurityGroup.addIngressRule(
-      ec2.Peer.securityGroupId(nlbSecurityGroup.securityGroupId),
-      ec2.Port.tcp(3389),
-      'Allow LDAP traffic from NLB'
-    );
-
-    // Allow LDAPS traffic (port 6636) from NLB only
-    ldapSecurityGroup.addIngressRule(
-      ec2.Peer.securityGroupId(nlbSecurityGroup.securityGroupId),
-      ec2.Port.tcp(6636),
-      'Allow LDAPS traffic from NLB'
-    );
-
-    // Outbound rules - principle of least privilege
-    ldapSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(443),
-      'Allow HTTPS access to Authentik server'
-    );
-    ldapSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(53),
-      'Allow DNS access'
-    );
-    ldapSecurityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.udp(53),
-      'Allow DNS access'
-    );
-
-    return ldapSecurityGroup;
-  }
-
-  /**
-   * Create security group for LDAP Network Load Balancer
-   * @param vpc The VPC to create the security group in
-   * @param stackNameComponent The stack name component for imports
-   * @returns The created security group
-   */
-  private createLdapNlbSecurityGroup(vpc: ec2.IVpc, stackNameComponent: string): ec2.SecurityGroup {
-    const nlbSecurityGroup = new ec2.SecurityGroup(this, 'LDAPNLBSecurityGroup', {
-      vpc,
-      description: 'Security group for LDAP Network Load Balancer',
-      allowAllOutbound: false
-    });
-
-    // Allow LDAP traffic (port 389) from VPC CIDR (IPv4)
-    nlbSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
-      ec2.Port.tcp(389),
-      'Allow LDAP access from VPC IPv4'
-    );
-
-    // Allow LDAPS traffic (port 636) from VPC CIDR (IPv4)
-    nlbSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
-      ec2.Port.tcp(636),
-      'Allow LDAPS access from VPC IPv4'
-    );
-
-    // Allow LDAP traffic (port 389) from VPC CIDR (IPv6)
-    nlbSecurityGroup.addIngressRule(
-      ec2.Peer.ipv6(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV6))),
-      ec2.Port.tcp(389),
-      'Allow LDAP access from VPC IPv6'
-    );
-
-    // Allow LDAPS traffic (port 636) from VPC CIDR (IPv6)
-    nlbSecurityGroup.addIngressRule(
-      ec2.Peer.ipv6(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV6))),
-      ec2.Port.tcp(636),
-      'Allow LDAPS access from VPC IPv6'
-    );
-
-    return nlbSecurityGroup;
-  }
-
-  /**
-   * Create security group for database access
-   * @param vpc The VPC to create the security group in
-   * @param ecsSecurityGroups The ECS security groups to allow access from
-   * @returns The created security group
-   */
-  private createDbSecurityGroup(vpc: ec2.IVpc, ecsSecurityGroups: ec2.SecurityGroup[]): ec2.SecurityGroup {
-    const dbSecurityGroup = new ec2.SecurityGroup(this, 'DBSecurityGroup', {
-      vpc,
-      description: 'Security group for database',
-      allowAllOutbound: false
-    });
-
-    // Allow PostgreSQL access from both AuthentikServer and Worker
-    ecsSecurityGroups.forEach(sg => {
-      dbSecurityGroup.addIngressRule(
-        ec2.Peer.securityGroupId(sg.securityGroupId),
-        ec2.Port.tcp(5432),
-        'Allow PostgreSQL access from ECS tasks'
-      );
-    });
-
-    return dbSecurityGroup;
-  }
-
-  /**
-   * Create security group for Redis access
-   * @param vpc The VPC to create the security group in
-   * @param ecsSecurityGroups The ECS security groups to allow access from
-   * @returns The created security group
-   */
-  private createRedisSecurityGroup(vpc: ec2.IVpc, ecsSecurityGroups: ec2.SecurityGroup[]): ec2.SecurityGroup {
-    const redisSecurityGroup = new ec2.SecurityGroup(this, 'RedisSecurityGroup', {
-      vpc,
-      description: 'Security group for Redis',
-      allowAllOutbound: false
-    });
-
-    // Allow Redis access from both Authentik Server and Worker
-    ecsSecurityGroups.forEach(sg => {
-      redisSecurityGroup.addIngressRule(
-        ec2.Peer.securityGroupId(sg.securityGroupId),
-        ec2.Port.tcp(6379),
-        'Allow Redis access from ECS tasks'
-      );
-    });
-
-    return redisSecurityGroup;
-  }
 }
 
 
