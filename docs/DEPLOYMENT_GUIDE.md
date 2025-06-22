@@ -47,11 +47,11 @@ npm run deploy:prod -- --context stackName=Enterprise
 ### **Database Configuration Overrides**
 ```bash
 # Custom database settings
-npm run deploy:dev -- --context database.instanceClass=db.t4g.small
-npm run deploy:prod -- --context database.instanceCount=1
+npm run deploy:dev -- --context instanceClass=db.t4g.small
+npm run deploy:prod -- --context instanceCount=1
 
 # Redis configuration
-npm run deploy:dev -- --context redis.nodeType=cache.t3.small
+npm run deploy:dev -- --context nodeType=cache.t3.small
 ```
 
 ### **Infrastructure Preview**
@@ -78,11 +78,11 @@ All settings are stored in [`cdk.json`](../cdk.json) under the `context` section
     "dev-test": {
       "stackName": "Dev",
       "database": {
-        "instanceClass": "db.t3.micro",
+        "instanceClass": "db.serverless",
         "instanceCount": 1
       },
       "authentik": {
-        "domain": "account.dev.tak.nz",
+        "hostname": "account",
         "adminUserEmail": "admin@tak.nz"
       }
     }
@@ -95,13 +95,13 @@ Override any configuration value using CDK's built-in `--context` flag:
 
 ```bash
 # Custom admin email
-npm run deploy:dev -- --context authentik.adminUserEmail=admin@company.com
+npm run deploy:dev -- --context adminUserEmail=admin@company.com
 
 # Database scaling
-npm run deploy:dev -- --context database.instanceClass=db.t3.small
+npm run deploy:dev -- --context instanceClass=db.t3.small
 
 # Enable detailed logging
-npm run deploy:dev -- --context general.enableDetailedLogging=true
+npm run deploy:dev -- --context enableDetailedLogging=true
 ```
 
 ---
@@ -143,18 +143,18 @@ Error: Cannot import value TAK-Demo-BaseInfra-VPC-ID
 
 #### **Missing Admin Email**
 ```
-Error: authentik.adminUserEmail is required
+Error: adminUserEmail is required
 ```
 **Solution:** Set admin email in context or via override:
 ```bash
-npm run deploy:dev -- --context authentik.adminUserEmail=admin@company.com
+npm run deploy:dev -- --context adminUserEmail=admin@company.com
 ```
 
-#### **ECR Image Missing**
+#### **Docker Build Issues**
 ```
-Error: Missing required ECR images
+Error: Docker build failed
 ```
-**Solution:** Build and push Docker images to ECR before deployment.
+**Solution:** Ensure Docker is running and Dockerfiles exist in docker/ directory.
 
 ### **Debug Commands**
 ```bash

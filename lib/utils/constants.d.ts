@@ -11,7 +11,7 @@ export declare const REDIS_CONSTANTS: {
     readonly ENGINE_VERSION: "7.2";
 };
 export declare const AUTHENTIK_CONSTANTS: {
-    readonly SERVER_PORT: 9000;
+    readonly SERVER_PORT: 9443;
     readonly LDAP_PORT: 389;
     readonly LDAPS_PORT: 636;
     readonly NLB_LDAP_PORT: 3389;

@@ -13,7 +13,7 @@ export const REDIS_CONSTANTS = {
 } as const;
 
 export const AUTHENTIK_CONSTANTS = {
-  SERVER_PORT: 9000,
+  SERVER_PORT: 9443,
   LDAP_PORT: 389,
   LDAPS_PORT: 636,
   NLB_LDAP_PORT: 3389,

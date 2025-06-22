@@ -50,7 +50,7 @@ npx cdk destroy --context env=dev-test
 # Minimal required parameters
 npm run deploy:dev -- \
   --context stackName=Demo \
-  --context authentik.adminUserEmail=admin@company.com
+  --context adminUserEmail=admin@company.com
 ```
 
 ### **Custom Database**
@@ -58,8 +58,8 @@ npm run deploy:dev -- \
 # Upgrade database instance
 npm run deploy:dev -- \
   --context stackName=Demo \
-  --context authentik.adminUserEmail=admin@company.com \
-  --context database.instanceClass=db.t4g.small
+  --context adminUserEmail=admin@company.com \
+  --context instanceClass=db.t4g.small
 ```
 
 ### **Production Deployment**
@@ -67,7 +67,7 @@ npm run deploy:dev -- \
 # Full production setup
 npm run deploy:prod -- \
   --context stackName=Prod \
-  --context authentik.adminUserEmail=admin@company.com
+  --context adminUserEmail=admin@company.com
 ```
 
 ### **High-Performance Development**
@@ -75,10 +75,10 @@ npm run deploy:prod -- \
 # Development with production-like resources
 npm run deploy:dev -- \
   --context stackName=Staging \
-  --context authentik.adminUserEmail=admin@company.com \
-  --context ecs.taskCpu=1024 \
-  --context ecs.taskMemory=2048 \
-  --context database.instanceClass=db.t4g.small
+  --context adminUserEmail=admin@company.com \
+  --context taskCpu=1024 \
+  --context taskMemory=2048 \
+  --context instanceClass=db.t4g.small
 ```
 
 ## Environment Defaults
@@ -118,10 +118,14 @@ aws cloudformation describe-stacks \
 aws cloudformation describe-stacks --stack-name TAK-Demo-BaseInfra
 ```
 
-### **ECR Images Missing**
+### **Docker Build Issues**
 ```bash
-# List available images
-aws ecr describe-images --repository-name TAK-Demo-BaseInfra
+# Check Docker daemon is running
+docker info
+
+# Verify Dockerfiles exist
+ls -la docker/authentik-server/
+ls -la docker/authentik-ldap/
 ```
 
 ### **Parameter Validation Errors**
@@ -149,13 +153,13 @@ After successful deployment:
 ## Cost Optimization Tips
 
 ### **Development**
-- Use `env=dev-test` for cost-optimized defaults
-- Single database instance (`database.instanceCount=1`)
-- Smaller instance types (`db.t3.micro`, `cache.t3.micro`)
+- Use `npm run deploy:dev` for cost-optimized defaults
+- Single database instance (`instanceCount=1`)
+- Smaller instance types (`instanceClass=db.serverless`, `nodeType=cache.t3.micro`)
 - Disable encryption for non-sensitive data
 
 ### **Production**
-- Use `env=prod` for high-availability defaults
+- Use `npm run deploy:prod` for high-availability defaults
 - Enable all security features
 - Monitor costs with AWS Cost Explorer
 - Use Reserved Instances for predictable workloads

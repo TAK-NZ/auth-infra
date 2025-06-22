@@ -91,49 +91,35 @@ This AWS CDK project provisions the following resources:
 - **Security Groups**: Fine-grained network access controls
 - **DNS Records**: Route 53 records for service endpoints
 
-## ECR Image Validation
+## Docker Image Handling
 
-This stack includes **automatic ECR image validation** to ensure required Docker images are available before deployment. The validation occurs during the CDK deployment process and will **fail the deployment** if required images are missing.
-
-### Required Images
-
-The stack requires the following Docker images to be present in your ECR repository:
-
-1. **`auth-infra-server-<git-sha>`** - Used by both Authentik Server and Worker containers
-2. **`auth-infra-ldap-<git-sha>`** - Used by the LDAP Outpost container
-
-Where `<git-sha>` is the short Git SHA of your current commit (automatically detected).
+This stack uses **AWS CDK's built-in Docker image assets** for automatic container image management. CDK handles all Docker image building, ECR repository creation, and image pushing automatically during deployment.
 
 ### How It Works
 
-- **Pre-deployment Check**: Before any ECS services are created, the stack validates image availability
-- **Automatic Git SHA Detection**: Uses `git rev-parse --short HEAD` to determine the current commit
-- **CloudFormation Integration**: Implemented as a CloudFormation custom resource
-- **Deployment Dependencies**: All ECS services depend on successful image validation
+- **Automatic Building**: CDK builds Docker images from local Dockerfiles during deployment
+- **ECR Integration**: CDK automatically creates ECR repositories and pushes images
+- **Version Management**: Images are tagged with CDK-generated hashes for consistency
+- **No Manual Steps**: No need to manually build or push Docker images
 
-### Example Error Messages
+### Docker Images Used
 
-If images are missing, you'll see clear error messages:
+1. **Authentik Server & Worker**: Built from `docker/authentik-server/Dockerfile.{branding}`
+2. **LDAP Outpost**: Built from `docker/authentik-ldap/Dockerfile`
 
-```
-Missing required ECR images in repository 'my-repo': 
-['auth-infra-server-abc1234', 'auth-infra-ldap-abc1234']
-Available tags: ['latest', 'auth-infra-server-xyz5678']
-```
+### Branding Support
 
-### Building and Pushing Images
+The stack supports different Docker image variants via the `branding` configuration:
+- **`tak-nz`**: TAK-NZ branded images (default)
+- **`generic`**: Generic Authentik images
 
-Ensure your Docker images are built and pushed to ECR before deployment:
+### Authentik Version
 
-```bash
-# Example build and push commands
-docker build -t auth-infra-server .
-docker tag auth-infra-server:latest $ECR_URI:auth-infra-server-$(git rev-parse --short HEAD)
-docker push $ECR_URI:auth-infra-server-$(git rev-parse --short HEAD)
-
-docker build -f Dockerfile.ldap -t auth-infra-ldap .
-docker tag auth-infra-ldap:latest $ECR_URI:auth-infra-ldap-$(git rev-parse --short HEAD)
-docker push $ECR_URI:auth-infra-ldap-$(git rev-parse --short HEAD)
+Docker images are built with the Authentik version specified in configuration:
+```json
+"authentik": {
+  "authentikVersion": "2025.6.2"
+}
 ```
 
 ## AWS Deployment
@@ -147,7 +133,7 @@ The following parameters are **mandatory** for deployment:
   - Must match the `<name>` part of your base infrastructure stack name `TAK-<name>-BaseInfra`
   - Example: If your base stack is `TAK-Demo-BaseInfra`, use `stackName=Demo`
 
-- **`authentikAdminUserEmail`**: Email address for the Authentik administrator account
+- **`adminUserEmail`**: Email address for the Authentik administrator account (override via `--context adminUserEmail=email@domain.com`)
 
 ## Development
 
@@ -186,16 +172,20 @@ npm run test:coverage
 ### CDK Commands
 ```bash
 # Synthesize CloudFormation template
-npm run synth
+npm run synth:dev     # Development environment
+npm run synth:prod    # Production environment
 
 # Deploy to AWS
-npm run deploy
-
-# Destroy infrastructure
-npm run destroy
+npm run deploy:dev    # Development environment
+npm run deploy:prod   # Production environment
 
 # Show differences
-npm run diff
+npm run cdk:diff:dev  # Development environment
+npm run cdk:diff:prod # Production environment
+
+# Destroy infrastructure (use CDK directly)
+npx cdk destroy --context env=dev-test
+npx cdk destroy --context env=prod
 ```
 
 ## Configuration
@@ -206,20 +196,18 @@ Deploy the stack with CDK context parameters (no environment variables needed fo
 
 ```bash
 # Deploy with required parameters via CDK context
-npm run deploy -- --context envType=dev-test \
-                   --context stackName=MyFirstStack \
-                   --context adminUserEmail=admin@company.com
+npm run deploy:dev -- --context stackName=MyFirstStack \
+                       --context adminUserEmail=admin@company.com
 ```
 
 ### Production Deployment
 
-For production deployments, use `envType=prod` which automatically applies production-optimized defaults:
+For production deployments, use the `deploy:prod` script which automatically applies production-optimized defaults:
 
 ```bash
 # Production deployment with enhanced security and availability
-npm run deploy -- --context envType=prod \
-                   --context stackName=ProdStack \
-                   --context adminUserEmail=admin@company.com
+npm run deploy:prod -- --context stackName=ProdStack \
+                        --context adminUserEmail=admin@company.com
 ```
 
 ### Custom Configuration
@@ -228,78 +216,43 @@ Override specific settings using additional context parameters:
 
 ```bash
 # Example: Custom database and Redis settings
-npm run deploy -- --context envType=dev-test \
-                   --context stackName=TestStack \
-                   --context adminUserEmail=admin@company.com \
-                   --context instanceClass=db.t4g.small \
-                   --context nodeType=cache.t4g.small \
-                   --context enableDetailedLogging=true
+npm run deploy:dev -- --context stackName=TestStack \
+                       --context adminUserEmail=admin@company.com \
+                       --context instanceClass=db.t4g.small \
+                       --context nodeType=cache.t4g.small \
+                       --context enableDetailedLogging=true
 ```
 
-### Available Context Parameters
+### Configuration Structure
 
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `envType` | No | `dev-test` | Environment type: `prod` or `dev-test` |
-| `stackName` | **Yes** | None | Stack identifier (forms `TAK-{stackName}-AuthInfra`) |
-| `instanceClass` | No | env-based* | RDS PostgreSQL instance class |
-| `instanceCount` | No | env-based* | Number of RDS instances (1 or 2) |
-| `nodeType` | No | env-based* | ElastiCache Redis node type |
-| `adminUserEmail` | **Yes** | None | Authentik administrator email |
-| `taskCpu` | No | env-based* | ECS task CPU units |
-| `taskMemory` | No | env-based* | ECS task memory (MB) |
-| `desiredCount` | No | env-based* | Number of ECS tasks |
-| `enableDetailedLogging` | No | env-based* | Enable detailed application logging |
-| `redisNodeType` | No | env-based* | ElastiCache Redis node type |
-| `ecsTaskCpu` | No | env-based* | ECS task CPU units (512, 1024, 2048, 4096) |
-| `ecsTaskMemory` | No | env-based* | ECS task memory in MB |
-| `enableDetailedLogging` | No | `true` | Enable detailed CloudWatch logging |
-| `gitSha` | No | auto-detected | Git SHA for resource tagging |
-| `enableExecute` | No | `false` | Enable ECS exec for debugging |
-| `authentikAdminUserEmail` | **Yes** | None | Admin user email for Authentik setup |
-| `authentikLdapBaseDn` | No | `DC=example,DC=com` | LDAP base DN for directory structure |
-| `hostnameAuthentik` | No | `account` | Hostname for Authentik service (creates DNS A/AAAA records) |
-| `hostnameLdap` | No | `ldap` | Hostname for LDAP service (creates DNS A record) |
-| `branding` | No | `tak-nz` | Docker image branding variant (`tak-nz`, `generic`) |
-| `authentikVersion` | No | `2025.6.2` | Authentik version for Docker images |
-| `imageRetentionCount` | No | env-based* | Number of ECR images to retain |
-| `scanOnPush` | No | env-based* | Enable ECR vulnerability scanning |
+Configuration is managed through CDK context in `cdk.json`. Runtime overrides use **flat parameter names**. See [PARAMETERS.md](docs/PARAMETERS.md) for complete configuration reference.
 
-*Environment-based defaults: `prod` = high-availability, `dev-test` = cost-optimized
+**Common Override Parameters:**
+- `stackName` - Stack identifier
+- `adminUserEmail` - Authentik admin email
+- `instanceClass` - Database instance class
+- `nodeType` - Redis node type
+- `taskCpu` - ECS task CPU
+- `taskMemory` - ECS task memory
+- `enableDetailedLogging` - Enable detailed logging
 
 ### Environment-Specific Defaults
 
-The stack uses environment-based defaults for optimal configuration:
+The stack uses environment-based defaults defined in `cdk.json`:
 
-**Development/Test (`envType=dev-test`)**:
-- `dbInstanceClass`: `db.t4g.micro`
-- `dbInstanceCount`: `1` 
-- `redisNodeType`: `cache.t4g.micro`
-- `ecsTaskCpu`: `512`
-- `ecsTaskMemory`: `1024`
-- `imageRetentionCount`: `5` (ECR images)
-- `scanOnPush`: `false` (ECR vulnerability scanning)
+**Development/Test (`dev-test`)**:
+- Database: `db.serverless` (Aurora Serverless v2, single instance)
+- Redis: `cache.t3.micro` (single node)
+- ECS: `512 CPU, 1024 MB memory`
+- Removal Policy: `DESTROY`
 - Cost-optimized for development/testing
-- Resources can be destroyed (`RemovalPolicy.DESTROY`)
 
-**Production (`envType=prod`)**:
-- `dbInstanceClass`: `db.t4g.small`
-- `dbInstanceCount`: `2` (high availability)
-- `redisNodeType`: `cache.t4g.small` 
-- `ecsTaskCpu`: `1024`
-- `ecsTaskMemory`: `2048`
-- `imageRetentionCount`: `20` (ECR images)
-- `scanOnPush`: `true` (ECR vulnerability scanning)
+**Production (`prod`)**:
+- Database: `db.t4g.large` (2 instances, high availability)
+- Redis: `cache.t3.small` (2 nodes)
+- ECS: `1024 CPU, 2048 MB memory`
+- Removal Policy: `RETAIN`
 - High-availability configuration with redundancy
-- Resources protected from deletion (`RemovalPolicy.RETAIN`)
-
-**Hierarchical Parameter System:**
-The stack uses a cascading configuration system:
-1. **Environment Type** (`envType`) provides defaults for resource sizing and availability:
-   - `prod`: Multi-AZ deployment, larger instances, high availability enabled
-   - `dev-test`: Single-AZ deployment, smaller instances, cost-optimized
-2. **Individual context parameters** override environment defaults when specified
-3. **Example**: `--context envType=prod --context dbInstanceCount=1` creates production environment with single database instance
 
 **Required AWS Environment Variables (for AWS SDK only):**
 - `CDK_DEFAULT_ACCOUNT` - Your AWS account ID (auto-set with: `aws sts get-caller-identity --query Account --output text --profile tak`)
@@ -334,68 +287,38 @@ export CDK_DEFAULT_REGION=$(aws configure get region)
    npx cdk bootstrap --profile tak
    ```
 
-### 3. (Optional) Authentik Configuration
+### 3. Deploy the Auth Infrastructure Stack
 
-The base infrastructure stack creates an S3 bucket which can be used for advanced [Authentik configuration](https://docs.goauthentik.io/docs/install-config/configuration/) via an .env configuration file.
-You can use the CDK context parameter `--context useEnvironmentFile=true` to instruct CDK to use this file. 
+The stack uses CDK context parameters for all configuration:
 
-> [!NOTE] 
-> The deployment automatically creates an empty `authentik-config.env` file in the S3 bucket if it doesn't already exist. The most common item that you might want to configure in Authentik are the [E-Mail provider settings](https://docs.goauthentik.io/docs/install-config/configuration/#authentik_email).
-
-### 4. Deploy the Auth Infrastructure Stack
-
-The stack uses CDK context parameters for all configuration (no environment variables needed):
-
-#### Basic Development Deployment
 ```bash
-# Set AWS credentials (auto-detectable)
-export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text --profile tak)
-export CDK_DEFAULT_REGION=$(aws configure get region --profile tak || echo "ap-southeast-2")
+# Development deployment
+npm run deploy:dev -- --context stackName=Demo --context adminUserEmail=admin@company.com
 
-# Deploy with minimal required parameters
-npm run deploy -- --context envType=dev-test \
-                   --context stackName=MyFirstStack \
-                   --context adminUserEmail=admin@example.com
+# Production deployment
+npm run deploy:prod -- --context stackName=Prod --context adminUserEmail=admin@company.com
 ```
 
-#### Production Deployment
-```bash
-# Production deployment with admin email
-npm run deploy -- --context envType=prod \
-                   --context stackName=ProdStack \
-                   --context adminUserEmail=admin@company.com
-```
+### 4. Configure DNS Records
 
-#### Custom Configuration Deployment
-```bash
-# Development with custom settings
-npm run deploy -- --context envType=dev-test \
-                   --context stackName=TestStack \
-                   --context adminUserEmail=admin@company.com \
-                   --context instanceClass=db.t4g.small \
-                   --context enableDetailedLogging=true
-```
-
-**Stack Naming**: The final AWS stack name follows the pattern `TAK-<stackName>-AuthInfra`
-
-**Docker Images**: Automatically sourced from ECR using the pattern `${account}.dkr.ecr.${region}.amazonaws.com/TAK-${stackName}-BaseInfra:auth-infra-*-${gitSha}`
-
-### 5. Configure DNS Records
-
-The stacks automatically create Route 53 records for the following endpoints:
+The stack automatically creates Route 53 records for:
 - **account.{domain}**: Authentik web interface (SSO portal)
 - **ldap.{domain}**: LDAP endpoint for TAK server authentication
 
-No manual DNS configuration is required if using Route 53 hosted zones.
+### 5. Configure Authentik LDAP Provider
 
-### 8. Configure Authentik LDAP Provider
-
-After deployment, configure the Authentik LDAP provider:
-
+After deployment:
 1. Access the Authentik admin interface at `https://account.{your-domain}`
 2. Use the admin credentials created during deployment
 3. The LDAP provider is automatically configured via blueprints
 4. Verify the LDAP outpost is connected and healthy
+
+## (Optional) Authentik Configuration
+
+The base infrastructure stack creates an S3 bucket which can be used for advanced [Authentik configuration](https://docs.goauthentik.io/docs/install-config/configuration/) via an .env configuration file.
+
+> [!NOTE] 
+> The deployment automatically creates an empty `authentik-config.env` file in the S3 bucket if it doesn't already exist. The most common item that you might want to configure in Authentik are the [E-Mail provider settings](https://docs.goauthentik.io/docs/install-config/configuration/#authentik_email).
 
 ## SSL Certificate Integration
 
@@ -448,10 +371,6 @@ Cross-stack references are automatically resolved using CloudFormation exports.
 - **Security Groups** - Fine-grained network access controls
 - **DNS Records** - Route 53 records for service endpoints
 
-## Available Environments
-
-
-
 ## Development Workflow
 
 ### New NPM Scripts (Enhanced Developer Experience)
@@ -493,23 +412,4 @@ The following parameters are **mandatory** for deployment:
 
 - **`adminUserEmail`**: Email address for the Authentik administrator account
 
-#### Configuration Override Examples
-```bash
-# Override admin email for custom deployment
-npm run deploy:dev -- --context authentik.adminUserEmail=admin@company.com
 
-# Deploy with custom database settings
-npm run deploy:dev -- --context database.instanceClass=db.t4g.small --context redis.nodeType=cache.t4g.small
-
-# Enable detailed logging for debugging
-npm run deploy:dev -- --context general.enableDetailedLogging=true
-
-# Override ECR settings
-npm run deploy:dev -- --context ecr.imageRetentionCount=10 --context ecr.scanOnPush=true
-
-# Deploy with specific Authentik version
-npm run deploy:prod -- --context authentik.authentikVersion=2025.7.1
-
-# Use generic branding instead of TAK-NZ
-npm run deploy:dev -- --context authentik.branding=generic
-```

@@ -11,8 +11,8 @@ npm run deploy:dev     # Development environment
 npm run deploy:prod    # Production environment
 
 # Deploy with configuration overrides
-npm run deploy:dev -- --context authentik.adminUserEmail=admin@company.com
-npm run deploy:prod -- --context database.instanceClass=db.t4g.large
+npm run deploy:dev -- --context adminUserEmail=admin@company.com
+npm run deploy:prod -- --context instanceClass=db.t4g.large
 ```
 
 ## Configuration System Architecture
@@ -101,7 +101,7 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
         "ldapHostname": "ldap",
         "ldapBaseDn": "dc=tak,dc=nz",
         "useS3AuthentikConfigFile": true,
-        "enablePostgresReadReplicas": true,
+        "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
         "authentikVersion": "2025.6.2"
       },
@@ -150,49 +150,49 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
 
 ## **Runtime Configuration Overrides**
 
-Use CDK's built-in `--context` flag with **dot notation parameter names** to override any configuration value:
+Use CDK's built-in `--context` flag with **flat parameter names** to override any configuration value. The actual implementation uses flat parameters, not dot notation:
 
 ### **Database Configuration**
 | Parameter | Description | dev-test | prod |
 |-----------|-------------|----------|------|
-| `database.instanceClass` | RDS instance class | `db.serverless` | `db.t4g.large` |
-| `database.instanceCount` | Number of database instances | `1` | `2` |
-| `database.engineVersion` | PostgreSQL engine version | `17.4` | `17.4` |
-| `database.allocatedStorage` | Initial storage allocation (GB) | `20` | `100` |
-| `database.maxAllocatedStorage` | Maximum storage allocation (GB) | `100` | `1000` |
-| `database.enablePerformanceInsights` | Enable performance insights | `false` | `true` |
-| `database.monitoringInterval` | Enhanced monitoring interval (seconds) | `0` | `60` |
-| `database.backupRetentionDays` | Backup retention period (days) | `7` | `30` |
-| `database.deleteProtection` | Enable deletion protection | `false` | `true` |
+| `instanceClass` | RDS instance class | `db.serverless` | `db.t4g.large` |
+| `instanceCount` | Number of database instances | `1` | `2` |
+| `engineVersion` | PostgreSQL engine version | `17.4` | `17.4` |
+| `allocatedStorage` | Initial storage allocation (GB) | `20` | `100` |
+| `maxAllocatedStorage` | Maximum storage allocation (GB) | `100` | `1000` |
+| `enablePerformanceInsights` | Enable performance insights | `false` | `true` |
+| `monitoringInterval` | Enhanced monitoring interval (seconds) | `0` | `60` |
+| `backupRetentionDays` | Backup retention period (days) | `7` | `30` |
+| `deleteProtection` | Enable deletion protection | `false` | `true` |
 
 ### **Redis Configuration**
 | Parameter | Description | dev-test | prod |
 |-----------|-------------|----------|------|
-| `redis.nodeType` | ElastiCache node type | `cache.t3.micro` | `cache.t3.small` |
-| `redis.numCacheNodes` | Number of cache nodes | `1` | `2` |
-| `redis.enableTransit` | Enable encryption in transit | `false` | `true` |
-| `redis.enableAtRest` | Enable encryption at rest | `false` | `true` |
+| `nodeType` | ElastiCache node type | `cache.t3.micro` | `cache.t3.small` |
+| `numCacheNodes` | Number of cache nodes | `1` | `2` |
+| `enableTransit` | Enable encryption in transit | `false` | `true` |
+| `enableAtRest` | Enable encryption at rest | `false` | `true` |
 
 ### **ECS Configuration**
 | Parameter | Description | dev-test | prod |
 |-----------|-------------|----------|------|
-| `ecs.taskCpu` | CPU units for ECS tasks | `512` | `1024` |
-| `ecs.taskMemory` | Memory (MB) for ECS tasks | `1024` | `2048` |
-| `ecs.desiredCount` | Desired number of running tasks | `1` | `2` |
-| `ecs.enableDetailedLogging` | Enable detailed application logging | `true` | `false` |
-| `ecs.enableEcsExec` | Enable ECS exec for debugging | `true` | `false` |
+| `taskCpu` | CPU units for ECS tasks | `512` | `1024` |
+| `taskMemory` | Memory (MB) for ECS tasks | `1024` | `2048` |
+| `desiredCount` | Desired number of running tasks | `1` | `2` |
+| `enableDetailedLogging` | Enable detailed application logging | `true` | `false` |
+| `enableEcsExec` | Enable ECS exec for debugging | `true` | `false` |
 
 ### **Authentik Configuration**
 | Parameter | Description | dev-test | prod |
 |-----------|-------------|----------|------|
-| `authentik.hostname` | Hostname for Authentik service | `account` | `account` |
-| `authentik.adminUserEmail` | Administrator email address | `admin@tak.nz` | `admin@tak.nz` |
-| `authentik.ldapHostname` | Hostname for LDAP service | `ldap` | `ldap` |
-| `authentik.ldapBaseDn` | LDAP base DN | `dc=tak,dc=nz` | `dc=tak,dc=nz` |
-| `authentik.useS3AuthentikConfigFile` | Use S3 configuration file | `false` | `true` |
-| `authentik.enablePostgresReadReplicas` | Enable read replicas (currently disabled) | `false` | `false` |
-| `authentik.branding` | Docker image branding variant | `tak-nz` | `tak-nz` |
-| `authentik.authentikVersion` | Authentik version | `2025.6.2` | `2025.6.2` |
+| `authentikHostname` | Hostname for Authentik service | `account` | `account` |
+| `adminUserEmail` | Administrator email address | `admin@tak.nz` | `admin@tak.nz` |
+| `ldapHostname` | Hostname for LDAP service | `ldap` | `ldap` |
+| `ldapBaseDn` | LDAP base DN | `dc=tak,dc=nz` | `dc=tak,dc=nz` |
+| `useS3AuthentikConfigFile` | Use S3 configuration file | `false` | `true` |
+| `enablePostgresReadReplicas` | Enable read replicas (currently disabled) | `false` | `false` |
+| `branding` | Docker image branding variant | `tak-nz` | `tak-nz` |
+| `authentikVersion` | Authentik version | `2025.6.2` | `2025.6.2` |
 
 ### **ECR Configuration**
 | Parameter | Description | dev-test | prod |
@@ -203,9 +203,9 @@ Use CDK's built-in `--context` flag with **dot notation parameter names** to ove
 ### **General Configuration**
 | Parameter | Description | dev-test | prod |
 |-----------|-------------|----------|------|
-| `general.removalPolicy` | Resource cleanup policy | `DESTROY` | `RETAIN` |
-| `general.enableDetailedLogging` | Enable detailed CloudWatch logging | `true` | `false` |
-| `general.enableContainerInsights` | Enable ECS Container Insights | `false` | `true` |
+| `removalPolicy` | Resource cleanup policy | `DESTROY` | `RETAIN` |
+| `enableDetailedLogging` | Enable detailed CloudWatch logging | `true` | `false` |
+| `enableContainerInsights` | Enable ECS Container Insights | `false` | `true` |
 
 ---
 
@@ -277,43 +277,43 @@ npm run synth:dev
 npm run synth:prod
 
 # Validate specific overrides
-npm run synth:dev -- --context database.instanceClass=db.t4g.small
+npm run synth:dev -- --context instanceClass=db.t4g.small
 ```
 
 ### **Parameter Override Examples**
 ```bash
 # Custom admin email
-npm run deploy:dev -- --context authentik.adminUserEmail=admin@company.com
+npm run deploy:dev -- --context adminUserEmail=admin@company.com
 
 # Database scaling
-npm run deploy:dev -- --context database.instanceClass=db.t4g.small
+npm run deploy:dev -- --context instanceClass=db.t4g.small
 
 # Enable production features in development
 npm run deploy:dev -- \
-  --context redis.enableTransit=true \
-  --context redis.enableAtRest=true \
-  --context database.enablePerformanceInsights=true
+  --context enableTransit=true \
+  --context enableAtRest=true \
+  --context enablePerformanceInsights=true
 
 # Custom stack name
 npm run deploy:dev -- --context stackName=Demo
 
 # Override ECS resources
 npm run deploy:dev -- \
-  --context ecs.taskCpu=1024 \
-  --context ecs.taskMemory=2048 \
-  --context ecs.desiredCount=2
+  --context taskCpu=1024 \
+  --context taskMemory=2048 \
+  --context desiredCount=2
 
 # Enable S3 configuration in development
-npm run deploy:dev -- --context authentik.useS3AuthentikConfigFile=true
+npm run deploy:dev -- --context useS3AuthentikConfigFile=true
 
 # Custom branding and version
 npm run deploy:prod -- \
-  --context authentik.branding=generic \
-  --context authentik.authentikVersion=2025.7.1
+  --context branding=generic \
+  --context authentikVersion=2025.7.1
 ```
 
 ### **Override Syntax Rules**
-- Use **dot notation parameter names**: `database.instanceClass=value`
+- Use **flat parameter names**: `instanceClass=value` (NOT `database.instanceClass=value`)
 - **Command-line context always takes precedence** over `cdk.json` values
 - Can override **any configuration property** defined in the environment config
 - Boolean values: `true`/`false` (not `True`/`False`)
@@ -351,34 +351,34 @@ All AWS resources are automatically tagged with:
 | Parameter | Description | Example |
 |-----------|-------------|----------|
 | `stackName` | Stack identifier for CloudFormation exports | `Dev`, `Prod`, `Demo` |
-| `authentik.adminUserEmail` | Administrator email for Authentik | `admin@company.com` |
+| `adminUserEmail` | Administrator email for Authentik | `admin@company.com` |
 
 ### **Database Configuration**
 | Parameter | Type | Description | Valid Values |
 |-----------|------|-------------|-------------|
-| `database.instanceClass` | string | RDS instance class | `db.serverless`, `db.t4g.micro`, `db.t4g.small`, `db.t4g.medium`, `db.t4g.large` |
-| `database.instanceCount` | number | Number of database instances | `1`, `2` |
-| `database.engineVersion` | string | PostgreSQL engine version | `17.4` |
-| `database.allocatedStorage` | number | Initial storage allocation (GB) | `20-65536` |
-| `database.maxAllocatedStorage` | number | Maximum storage allocation (GB) | `100-65536` |
-| `database.enablePerformanceInsights` | boolean | Enable performance insights | `true`, `false` |
-| `database.monitoringInterval` | number | Enhanced monitoring interval (seconds) | `0`, `15`, `30`, `60` |
-| `database.backupRetentionDays` | number | Backup retention period (days) | `1-35` |
-| `database.deleteProtection` | boolean | Enable deletion protection | `true`, `false` |
+| `instanceClass` | string | RDS instance class | `db.serverless`, `db.t4g.micro`, `db.t4g.small`, `db.t4g.medium`, `db.t4g.large` |
+| `instanceCount` | number | Number of database instances | `1`, `2` |
+| `engineVersion` | string | PostgreSQL engine version | `17.4` |
+| `allocatedStorage` | number | Initial storage allocation (GB) | `20-65536` |
+| `maxAllocatedStorage` | number | Maximum storage allocation (GB) | `100-65536` |
+| `enablePerformanceInsights` | boolean | Enable performance insights | `true`, `false` |
+| `monitoringInterval` | number | Enhanced monitoring interval (seconds) | `0`, `15`, `30`, `60` |
+| `backupRetentionDays` | number | Backup retention period (days) | `1-35` |
+| `deleteProtection` | boolean | Enable deletion protection | `true`, `false` |
 
 ### **Redis Configuration**
 | Parameter | Type | Description | Valid Values |
 |-----------|------|-------------|-------------|
-| `redis.nodeType` | string | ElastiCache node type | `cache.t3.micro`, `cache.t3.small`, `cache.t3.medium` |
-| `redis.numCacheNodes` | number | Number of cache nodes | `1`, `2` |
-| `redis.enableTransit` | boolean | Enable encryption in transit | `true`, `false` |
-| `redis.enableAtRest` | boolean | Enable encryption at rest | `true`, `false` |
+| `nodeType` | string | ElastiCache node type | `cache.t3.micro`, `cache.t3.small`, `cache.t3.medium` |
+| `numCacheNodes` | number | Number of cache nodes | `1`, `2` |
+| `enableTransit` | boolean | Enable encryption in transit | `true`, `false` |
+| `enableAtRest` | boolean | Enable encryption at rest | `true`, `false` |
 
 ### **ECS Configuration**
 | Parameter | Type | Description | Valid Values |
 |-----------|------|-------------|-------------|
-| `ecs.taskCpu` | number | CPU units for ECS tasks | `256`, `512`, `1024`, `2048`, `4096` |
-| `ecs.taskMemory` | number | Memory (MB) for ECS tasks | `512`, `1024`, `2048`, `4096`, `8192` |
-| `ecs.desiredCount` | number | Desired number of running tasks | `1-10` |
-| `ecs.enableDetailedLogging` | boolean | Enable detailed application logging | `true`, `false` |
-| `ecs.enableEcsExec` | boolean | Enable ECS exec for debugging | `true`, `false` |
+| `taskCpu` | number | CPU units for ECS tasks | `256`, `512`, `1024`, `2048`, `4096` |
+| `taskMemory` | number | Memory (MB) for ECS tasks | `512`, `1024`, `2048`, `4096`, `8192` |
+| `desiredCount` | number | Desired number of running tasks | `1-10` |
+| `enableDetailedLogging` | boolean | Enable detailed application logging | `true`, `false` |
+| `enableEcsExec` | boolean | Enable ECS exec for debugging | `true`, `false` |

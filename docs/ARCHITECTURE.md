@@ -133,39 +133,39 @@ The infrastructure implements a layered security model with dedicated security g
 
 #### Internet-Facing Services
 
-**AuthentikELBALBSecurityGroup** (Application Load Balancer)
+**ALB Security Group** (Application Load Balancer)
 - **Port 80/TCP** from `0.0.0.0/0` (IPv4) and `::/0` (IPv6) - HTTP redirects to HTTPS
 - **Port 443/TCP** from `0.0.0.0/0` (IPv4) and `::/0` (IPv6) - HTTPS web interface
 
-**LDAPNLBSecurityGroup** (Network Load Balancer)
+**LDAPNLB Security Group** (Network Load Balancer)
 - **Port 389/TCP** from VPC CIDR (IPv4/IPv6) - LDAP access
 - **Port 636/TCP** from VPC CIDR (IPv4/IPv6) - LDAPS access
 
 #### Application Services
 
-**AuthentikSecurityGroup** (Server)
-- **Port 9000/TCP** from `AuthentikELBALBSecurityGroup` only - ALB to application traffic
+**AuthentikServer Security Group** (Server)
+- **Port 9443/TCP** from ALB Security Group only - HTTPS application traffic from ALB
 
-**AuthentikWorkerSecurityGroup** (Worker)
+**AuthentikWorker Security Group** (Worker)
 - **No inbound rules** - Worker processes background tasks, no incoming connections required
 
-**LdapSecurityGroup** (LDAP Outpost)
-- **Port 3389/TCP** from `LDAPNLBSecurityGroup` - LDAP traffic from NLB
-- **Port 6636/TCP** from `LDAPNLBSecurityGroup` - LDAPS traffic from NLB
+**AuthentikLdap Security Group** (LDAP Outpost)
+- **Port 3389/TCP** from LDAPNLB Security Group - LDAP traffic from NLB
+- **Port 6636/TCP** from LDAPNLB Security Group - LDAPS traffic from NLB
 
 #### Data Layer Services
 
-**DBSecurityGroup** (Aurora PostgreSQL)
-- **Port 5432/TCP** from `AuthentikSecurityGroup` - Database access from Server
-- **Port 5432/TCP** from `AuthentikWorkerSecurityGroup` - Database access from Worker
+**AuroraDB Security Group** (Aurora PostgreSQL)
+- **Port 5432/TCP** from AuthentikServer Security Group - Database access from Server
+- **Port 5432/TCP** from AuthentikWorker Security Group - Database access from Worker
 
-**RedisSecurityGroup** (ElastiCache)
-- **Port 6379/TCP** from `AuthentikSecurityGroup` - Redis access from Server
-- **Port 6379/TCP** from `AuthentikWorkerSecurityGroup` - Redis access from Worker
+**Redis Security Group** (ElastiCache)
+- **Port 6379/TCP** from AuthentikServer Security Group - Redis access from Server
+- **Port 6379/TCP** from AuthentikWorker Security Group - Redis access from Worker
 
-**EFSMountTargetSecurityGroup** (Elastic File System)
-- **Port 2049/TCP** from `AuthentikSecurityGroup` - NFS access from Server
-- **Port 2049/TCP** from `AuthentikWorkerSecurityGroup` - NFS access from Worker
+**EFS Security Group** (Elastic File System)
+- **Port 2049/TCP** from AuthentikServer Security Group - NFS access from Server
+- **Port 2049/TCP** from AuthentikWorker Security Group - NFS access from Worker
 
 #### Security Design Principles
 
