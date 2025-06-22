@@ -382,3 +382,76 @@ All AWS resources are automatically tagged with:
 | `desiredCount` | number | Desired number of running tasks | `1-10` |
 | `enableDetailedLogging` | boolean | Enable detailed application logging | `true`, `false` |
 | `enableEcsExec` | boolean | Enable ECS exec for debugging | `true`, `false` |
+
+## 📋 Deployment Examples
+
+### Basic Deployments
+```bash
+# Development environment
+npm run deploy:dev
+
+# Production environment
+npm run deploy:prod
+```
+
+### Advanced Deployments
+```bash
+# Production with custom domain
+npm run deploy:prod -- --context r53ZoneName=company.com
+
+# Development with production-like database
+npm run deploy:dev -- \
+  --context instanceClass=db.t4g.small \
+  --context enablePerformanceInsights=true
+
+# Custom environment for feature testing
+npm run deploy:dev -- \
+  --context stackName=FeatureX \
+  --context r53ZoneName=feature.tak.nz
+
+# High-performance development environment
+npm run deploy:dev -- \
+  --context taskCpu=1024 \
+  --context taskMemory=2048 \
+  --context desiredCount=2
+```
+
+### Environment-Specific Overrides
+```bash
+# Development with enhanced security
+npm run deploy:dev -- \
+  --context enableTransit=true \
+  --context enableAtRest=true \
+  --context deleteProtection=true
+
+# Production with cost optimization
+npm run deploy:prod -- \
+  --context instanceCount=1 \
+  --context numCacheNodes=1
+
+# Custom admin configuration
+npm run deploy:dev -- \
+  --context adminUserEmail=admin@company.com \
+  --context authentikHostname=sso
+```
+
+## Required Environment Variables
+
+```bash
+# Set AWS credentials and region
+export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+export CDK_DEFAULT_REGION=$(aws configure get region || echo "ap-southeast-2")
+
+# Deploy with environment variables set
+npm run deploy:prod
+```
+
+### Using AWS Profiles
+```bash
+# Set profile-specific environment variables
+export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text --profile your-profile)
+export CDK_DEFAULT_REGION=$(aws configure get region --profile your-profile)
+
+# Deploy using specific profile
+AWS_PROFILE=your-profile npm run deploy:prod
+```

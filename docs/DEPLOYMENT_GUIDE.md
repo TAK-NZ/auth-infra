@@ -131,6 +131,68 @@ npm run deploy:dev -- --context stackName=YourStackName
 
 ---
 
+## **🔄 Environment Transformation**
+
+### **Switching Between Environment Types**
+
+One of the powerful features of this CDK stack is the ability to transform deployed environments between different configuration profiles (dev-test ↔ prod) without recreating resources from scratch.
+
+### **Initial Deployment with Custom Configuration**
+You can deploy a stack with custom naming and domain configuration that doesn't follow the standard dev-test or prod patterns:
+
+```bash
+# Deploy a demo environment with dev-test configuration
+npm run deploy:dev -- --context stackName=Demo --context r53ZoneName=demo.tak.nz
+```
+
+This creates a stack named `TAK-Demo-AuthInfra` with:
+- **Aurora Serverless v2** (cost-optimized)
+- **Single AZ deployment** (basic availability)
+- **Development-grade settings** for logging and monitoring
+- **Minimal Redis configuration**
+
+### **Environment Upgrade (dev-test → prod)**
+Later, you can upgrade the same stack to production-grade configuration:
+
+```bash
+# Transform to production configuration
+npm run deploy:prod -- --context stackName=Demo --context r53ZoneName=demo.tak.nz
+```
+
+This **upgrades the existing** `TAK-Demo-AuthInfra` stack to:
+- **Aurora with dedicated instances** (high performance)
+- **Multi-AZ deployment** (high availability)
+- **Production-grade monitoring** and logging
+- **Enhanced Redis configuration** with clustering
+- **Resource retention policies** (data protection)
+
+### **Environment Downgrade (prod → dev-test)**
+You can also downgrade for cost optimization during development phases:
+
+```bash
+# Scale back to development configuration
+npm run deploy:dev -- --context stackName=Demo --context r53ZoneName=demo.tak.nz
+```
+
+### **⚠️ Important Considerations**
+
+1. **Database Changes**: When switching between Aurora Serverless v2 and dedicated instances, there may be brief connection interruptions during the transition.
+
+2. **Removal Policies**: When downgrading from prod to dev-test, resources with `RETAIN` policies will switch to `DESTROY` policies, but existing resources retain their original policy until replaced.
+
+3. **Cost Impact**: Upgrading to prod configuration will significantly increase costs due to dedicated database instances, multi-AZ deployment, and enhanced monitoring.
+
+4. **Incremental Updates**: CDK intelligently updates only the resources that need to change, minimizing disruption to running applications.
+
+### **Best Practices**
+- **Test transformations** in a non-critical environment first
+- **Plan for brief downtime** during database configuration changes
+- **Monitor costs** when upgrading to production configurations
+- **Use consistent domain names** across transformations to avoid certificate recreation
+- **Backup data** before major configuration changes
+
+---
+
 ## **🛠️ Troubleshooting**
 
 ### **Common Issues**
@@ -196,6 +258,8 @@ npm run cdk:destroy -- --context env=dev-test
 # Destroy production environment (use with caution!)
 npm run cdk:destroy -- --context env=prod
 ```
+
+---
 
 ---
 
