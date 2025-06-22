@@ -59,7 +59,7 @@ npm run deploy:dev -- \
 npm run deploy:dev -- \
   --context stackName=Demo \
   --context authentik.adminUserEmail=admin@company.com \
-  --context database.instanceClass=db.t3.small
+  --context database.instanceClass=db.t4g.small
 ```
 
 ### **Production Deployment**
@@ -78,18 +78,19 @@ npm run deploy:dev -- \
   --context authentik.adminUserEmail=admin@company.com \
   --context ecs.taskCpu=1024 \
   --context ecs.taskMemory=2048 \
-  --context database.instanceClass=db.t3.small
+  --context database.instanceClass=db.t4g.small
 ```
 
 ## Environment Defaults
 
 | Setting | dev-test | prod |
 |---------|----------|------|
-| **Database** | db.t3.micro (1 instance) | db.t3.small (2 instances) |
+| **Database** | db.serverless (1 instance) | db.t4g.large (2 instances) |
 | **Redis** | cache.t3.micro (1 node) | cache.t3.small (2 nodes) |
 | **ECS** | 512 CPU, 1024 MB | 1024 CPU, 2048 MB |
 | **Encryption** | Disabled | Enabled |
 | **Monitoring** | Basic | Enhanced |
+| **ECS Exec** | Enabled | Disabled |
 | **Cleanup** | DESTROY | RETAIN |
 
 ## Stack Outputs

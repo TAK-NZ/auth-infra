@@ -28,10 +28,10 @@ npm run deploy:prod
 
 | Environment | Stack Name | Domain | Cost/Month* | Features |
 |-------------|------------|--------|-------------|----------|
-| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | ~$106 | Cost-optimized, single DB instance |
+| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | ~$106 | Cost-optimized, Aurora Serverless v2 |
 | **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | ~$367 | High availability, multi-AZ deployment |
 
-*Estimated AWS costs excluding data transfer and usage
+*Estimated AWS costs for ap-southeast-2, excluding data transfer and usage
 
 ---
 
@@ -47,7 +47,7 @@ npm run deploy:prod -- --context stackName=Enterprise
 ### **Database Configuration Overrides**
 ```bash
 # Custom database settings
-npm run deploy:dev -- --context database.instanceClass=db.t3.small
+npm run deploy:dev -- --context database.instanceClass=db.t4g.small
 npm run deploy:prod -- --context database.instanceCount=1
 
 # Redis configuration

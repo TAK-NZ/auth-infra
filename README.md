@@ -423,14 +423,14 @@ Cross-stack references are automatically resolved using CloudFormation exports.
 - SSL certificates are automatically imported from the base stack
 - All resources are encrypted using the KMS key from the base stack
 
-## Estimated Cost
+## Available Environments
 
-The estimated AWS cost for this authentication layer without data transfer or processing-based usage is:
+| Environment | Stack Name | Description | Domain | Monthly Cost* |
+|-------------|------------|-------------|--------|---------------|
+| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | `account.dev.tak.nz` | ~$106 |
+| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `account.tak.nz` | ~$367 |
 
-| Environment type | Estimated monthly cost | Estimated yearly cost |
-| ---------------- | ---------------------- | -------------------- |
-| Prod            | $366.87 USD           | $4,402.44 USD        |
-| Dev-Test        | $106.25 USD           | $1,275.00 USD        |
+*Estimated AWS costs for ap-southeast-2, excluding data processing and storage usage
 
 ## Infrastructure Resources
 
@@ -450,12 +450,7 @@ The estimated AWS cost for this authentication layer without data transfer or pr
 
 ## Available Environments
 
-| Environment | Stack Name | Description | Domain | Monthly Cost* |
-|-------------|------------|-------------|--------|---------------|
-| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | `account.dev.tak.nz` | ~$85 |
-| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `account.tak.nz` | ~$245 |
 
-*Estimated AWS costs for ap-southeast-2, excluding data processing and storage usage
 
 ## Development Workflow
 
@@ -501,20 +496,20 @@ The following parameters are **mandatory** for deployment:
 #### Configuration Override Examples
 ```bash
 # Override admin email for custom deployment
-npm run deploy:dev -- --context adminUserEmail=admin@company.com
+npm run deploy:dev -- --context authentik.adminUserEmail=admin@company.com
 
 # Deploy with custom database settings
-npm run deploy:dev -- --context instanceClass=db.t4g.small --context nodeType=cache.t4g.small
+npm run deploy:dev -- --context database.instanceClass=db.t4g.small --context redis.nodeType=cache.t4g.small
 
 # Enable detailed logging for debugging
-npm run deploy:dev -- --context enableDetailedLogging=true
+npm run deploy:dev -- --context general.enableDetailedLogging=true
 
 # Override ECR settings
-npm run deploy:dev -- --context imageRetentionCount=10 --context scanOnPush=true
+npm run deploy:dev -- --context ecr.imageRetentionCount=10 --context ecr.scanOnPush=true
 
 # Deploy with specific Authentik version
-npm run deploy:prod -- --context authentikVersion=2025.7.1
+npm run deploy:prod -- --context authentik.authentikVersion=2025.7.1
 
 # Use generic branding instead of TAK-NZ
-npm run deploy:dev -- --context branding=generic
+npm run deploy:dev -- --context authentik.branding=generic
 ```

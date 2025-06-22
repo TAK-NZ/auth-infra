@@ -21,8 +21,8 @@
     
     "dev": "npm run build && npm run test",
     
-    "deploy:dev": "npm run build && cdk deploy --context env=dev-test",
-    "deploy:prod": "npm run build && cdk deploy --context env=prod",
+    "deploy:dev": "npm run build && cdk deploy --context env=dev-test --no-warnings",
+    "deploy:prod": "npm run build && cdk deploy --context env=prod --no-warnings",
     "synth:dev": "npm run build && cdk synth --context env=dev-test",
     "synth:prod": "npm run build && cdk synth --context env=prod",
     

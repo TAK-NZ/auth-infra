@@ -99,33 +99,25 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 
 #### **dev-test** (Default)
 - **Focus**: Cost optimization and development efficiency
-- **NAT Gateways**: Single NAT Gateway (AZ-A only)
-- **VPC Endpoints**: S3 gateway endpoint only
-- **Certificate Transparency**: Disabled
+- **Database**: Aurora Serverless v2 (single instance, auto-scaling)
+- **Redis**: Single node, no encryption
+- **ECS**: Minimal CPU/memory allocation (512/1024)
 - **Container Insights**: Disabled
-- **KMS Key Rotation**: Disabled
-- **S3 Versioning**: Disabled
+- **ECS Exec**: Enabled (debugging access)
+- **S3 Config File**: Disabled (uses environment variables)
+- **ECR**: 5 image retention, no vulnerability scanning
 - **Resource Removal**: DESTROY policy (allows cleanup)
 
 #### **prod**
 - **Focus**: High availability, security, and production readiness
-- **NAT Gateways**: Redundant NAT Gateways (both AZs)
-- **VPC Endpoints**: Full interface endpoints (ECR, KMS, Secrets Manager, CloudWatch)
-- **Certificate Transparency**: Enabled (compliance requirement)
+- **Database**: Aurora PostgreSQL (2 instances, multi-AZ)
+- **Redis**: Multi-node cluster with encryption
+- **ECS**: Higher resource allocation (1024/2048)
 - **Container Insights**: Enabled (monitoring and observability)
-- **KMS Key Rotation**: Enabled (annual rotation)
-- **S3 Versioning**: Enabled (data protection)
+- **ECS Exec**: Disabled (security)
+- **S3 Config File**: Enabled (advanced configuration)
+- **ECR**: 20 image retention, vulnerability scanning enabled
 - **Resource Removal**: RETAIN policy (protects production resources)
-
-#### **staging**
-- **Focus**: Production-like testing with cost optimizations
-- **NAT Gateways**: Redundant NAT Gateways (test HA setup)
-- **VPC Endpoints**: S3 gateway only (cost optimization)
-- **Certificate Transparency**: Enabled (test production certificate setup)
-- **Container Insights**: Enabled (test monitoring setup)
-- **KMS Key Rotation**: Disabled (cost optimization)
-- **S3 Versioning**: Enabled (test data protection)
-- **Resource Removal**: DESTROY policy (allows staging cleanup)
 
 ### 2. Parameter Override System
 - **Environment Variables**: Highest precedence override mechanism
@@ -235,19 +227,21 @@ The infrastructure implements a layered security model with dedicated security g
 ## Disaster Recovery and High Availability
 
 ### 1. Multi-AZ Deployment
-- **Database**: Aurora PostgreSQL cluster with primary instance, secondary instance for production environments
+- **Database**: Aurora PostgreSQL cluster with writer and reader instances (production)
+- **Redis**: Multi-node replication group with automatic failover (production)
 - **Services**: ECS services deployed across multiple availability zones
 - **Load Balancers**: ALB and NLB distribute traffic across AZs
 
 ### 2. Backup Configuration
-- **Database**: Aurora automated backups with 10-day retention period
-- **Database Snapshots**: Manual snapshots taken before stack deletion (RemovalPolicy.SNAPSHOT)
-- **EFS Storage**: Backups disabled (optimized for cost over recovery)
+- **Database**: Aurora automated backups (7 days dev, 30 days prod)
+- **Database Snapshots**: Automatic snapshots with configurable retention
+- **EFS Storage**: Persistent storage for Authentik media and certificates
 - **Infrastructure**: All infrastructure defined as code in version control
 
 ### 3. Auto-Recovery Features
 - **ECS Services**: Automatic container replacement on failure
-- **Aurora**: Built-in failover to secondary instance in production
+- **Aurora**: Built-in failover to reader instance in production
+- **Redis**: Automatic failover in multi-node configuration
 - **Auto Scaling**: ECS services scale based on CPU and memory utilization
 
 ## Performance Considerations

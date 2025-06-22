@@ -208,26 +208,13 @@ export class AuthentikWorker extends Construct {
       }
     });
 
-    // Create ECR repository with environment-specific settings (from configuration)
-    const imageRetentionCount = props.contextConfig.ecr.imageRetentionCount;
-    const scanOnPush = props.contextConfig.ecr.scanOnPush;
-    
-    const ecrRepository = new ecr.Repository(this, 'WorkerECRRepo', {
-      repositoryName: `${props.contextConfig.stackName.toLowerCase()}-authentik-server`,
-      imageScanOnPush: scanOnPush,
-      imageTagMutability: ecr.TagMutability.MUTABLE,
-      lifecycleRules: [{
-        maxImageCount: imageRetentionCount,
-        description: `Keep only ${imageRetentionCount} most recent images`
-      }],
-      removalPolicy: removalPolicy
-    });
+
 
     // Build Docker image with branding and version (same as server)
     const dockerfileName = `Dockerfile.${props.contextConfig.authentik.branding}`;
     const dockerImageAsset = new ecrAssets.DockerImageAsset(this, 'WorkerDockerAsset', {
-      directory: './docker/authentik-server',
-      file: dockerfileName,
+      directory: '.',
+      file: `docker/authentik-server/${dockerfileName}`,
       buildArgs: {
         AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
       }

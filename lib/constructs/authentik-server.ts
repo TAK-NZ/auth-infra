@@ -240,8 +240,8 @@ export class AuthentikServer extends Construct {
     // Build Docker image with branding and version
     const dockerfileName = `Dockerfile.${props.contextConfig.authentik.branding}`;
     const dockerImageAsset = new ecrAssets.DockerImageAsset(this, 'ServerDockerAsset', {
-      directory: './docker/authentik-server',
-      file: dockerfileName,
+      directory: '.',
+      file: `docker/authentik-server/${dockerfileName}`,
       buildArgs: {
         AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
       }
