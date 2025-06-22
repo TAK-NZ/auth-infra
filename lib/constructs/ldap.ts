@@ -126,7 +126,7 @@ export class Ldap extends Construct {
 
     // Create network load balancer
     this.loadBalancer = new elbv2.NetworkLoadBalancer(this, 'NLB', {
-      loadBalancerName: 'ldap',
+      loadBalancerName: `${props.contextConfig.stackName.toLowerCase()}-ldap`,
       vpc: props.infrastructure.vpc,
       internetFacing: false,
       ipAddressType: elbv2.IpAddressType.DUAL_STACK,
