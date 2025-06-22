@@ -222,20 +222,7 @@ export class AuthentikServer extends Construct {
       }
     });
 
-    // Create ECR repository with environment-specific settings (from configuration)
-    const imageRetentionCount = props.contextConfig.ecr.imageRetentionCount;
-    const scanOnPush = props.contextConfig.ecr.scanOnPush;
-    
-    const ecrRepository = new ecr.Repository(this, 'ServerECRRepo', {
-      repositoryName: `${props.contextConfig.stackName.toLowerCase()}-authentik-server`,
-      imageScanOnPush: scanOnPush,
-      imageTagMutability: ecr.TagMutability.MUTABLE,
-      lifecycleRules: [{
-        maxImageCount: imageRetentionCount,
-        description: `Keep only ${imageRetentionCount} most recent images`
-      }],
-      removalPolicy: removalPolicy
-    });
+
 
     // Build Docker image with branding and version
     const dockerfileName = `Dockerfile.${props.contextConfig.authentik.branding}`;
@@ -303,8 +290,8 @@ export class AuthentikServer extends Construct {
 
     // Add port mappings
     container.addPortMappings({
-      containerPort: 9000,
-      hostPort: 9000,
+      containerPort: 9443,
+      hostPort: 9443,
       protocol: ecs.Protocol.TCP
     });
 
@@ -358,10 +345,12 @@ export class AuthentikServer extends Construct {
     const targetGroup = new elbv2.ApplicationTargetGroup(this, 'TargetGroup', {
       vpc: vpc,
       targetType: elbv2.TargetType.IP,
-      port: 9000,
-      protocol: elbv2.ApplicationProtocol.HTTP,
+      port: 9443,
+      protocol: elbv2.ApplicationProtocol.HTTPS,
       healthCheck: {
-        path: '/-/health/live/',
+        path: '/-/health/ready/',
+        protocol: elbv2.Protocol.HTTPS,
+        port: '9443',
         interval: Duration.seconds(30),
         healthyHttpCodes: '200-299'
       }

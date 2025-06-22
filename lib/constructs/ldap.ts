@@ -132,7 +132,8 @@ export class Ldap extends Construct {
       ipAddressType: elbv2.IpAddressType.DUAL_STACK,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
-      }
+      },
+      securityGroups: [nlbSecurityGroup]
     });
 
     // Create listeners for LDAP and LDAPS
@@ -197,20 +198,7 @@ export class Ldap extends Construct {
       taskRole
     });
 
-    // Create ECR repository with environment-specific settings (from configuration)
-    const imageRetentionCount = props.contextConfig.ecr.imageRetentionCount;
-    const scanOnPush = props.contextConfig.ecr.scanOnPush;
-    
-    const ecrRepository = new ecr.Repository(this, 'LdapECRRepo', {
-      repositoryName: `${props.contextConfig.stackName.toLowerCase()}-authentik-ldap`,
-      imageScanOnPush: scanOnPush,
-      imageTagMutability: ecr.TagMutability.MUTABLE,
-      lifecycleRules: [{
-        maxImageCount: imageRetentionCount,
-        description: `Keep only ${imageRetentionCount} most recent images`
-      }],
-      removalPolicy: removalPolicy
-    });
+
 
     // Build LDAP Docker image with version
     const dockerImageAsset = new ecrAssets.DockerImageAsset(this, 'LdapDockerAsset', {

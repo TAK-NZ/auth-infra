@@ -85,21 +85,8 @@ export class Redis extends Construct {
       subnetIds: props.infrastructure.vpc.privateSubnets.map(subnet => subnet.subnetId)
     });
 
-    // Create security group
-    const securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {
-      vpc: props.infrastructure.vpc,
-      description: `${id} Security Group`,
-      allowAllOutbound: false
-    });
-
-    // Allow Redis port from other security groups
-    props.securityGroups.forEach(sg => {
-      securityGroup.addIngressRule(
-        ec2.Peer.securityGroupId(sg.securityGroupId),
-        ec2.Port.tcp(6379),
-        'Allow Redis access from ECS tasks'
-      );
-    });
+    // Use the provided security groups
+    const securityGroupIds = props.securityGroups.map(sg => sg.securityGroupId);
 
     // Create the Redis replication group
     this.replicationGroup = new elasticache.CfnReplicationGroup(this, 'Redis', {
@@ -116,7 +103,7 @@ export class Redis extends Construct {
       engineVersion: '7.2',
       autoMinorVersionUpgrade: true,
       numCacheClusters: props.contextConfig.redis.numCacheNodes,
-      securityGroupIds: [securityGroup.securityGroupId]
+      securityGroupIds: securityGroupIds
     });
 
     // Set dependencies

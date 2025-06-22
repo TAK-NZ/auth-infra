@@ -75,8 +75,8 @@ export class SecurityGroups extends Construct {
     // Allow Authentik application traffic from ALB
     this.authentikServer.addIngressRule(
       ec2.Peer.securityGroupId(props.albSecurityGroup.securityGroupId),
-      ec2.Port.tcp(9000),
-      'Allow Authentik traffic from ALB'
+      ec2.Port.tcp(9443),
+      'Allow Authentik HTTPS traffic from ALB'
     );
 
     // Authentik Server outbound rules
