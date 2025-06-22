@@ -6,8 +6,21 @@
 
 The [Team Awareness Kit (TAK)](https://tak.gov/solutions/emergency) provides Fire, Emergency Management, and First Responders an operationally agnostic tool for improved situational awareness and a common operational picture. 
 
-This repository deploys the authentication layer infrastructure for a complete TAK server deployment, providing robust LDAP-based authentication using [Authentik](https://goauthentik.io/) with advanced capabilities such as single sign-on via OIDC, user management, and enterprise-grade security features.
+This repository deploys the authentication layer infrastructure for a complete TAK server deployment, providing robust LDAP-based authentication using [Authentik](https://goauthentik.io/) with advanced capabilities such as single sign-on via OIDC, user management, and enterprise-grade security features - all while using [free and open source software](https://en.wikipedia.org/wiki/Free_and_open-source_software).
 
+It is specifically targeted at the deployment of [TAK.NZ](https://tak.nz) via a CI/CD pipeline. Nevertheless others interested in deploying a similar infrastructure can do so by adapting the configuration items.
+
+> [!CAUTION]
+> **New Deployment Tool**
+> 
+> This is the new [AWS CDK](https://aws.amazon.com/cdk/) version of the Authentication Infrastructure Layer. It is **not compatible** with the [previous version](../../tree/legacy) that uses the [OpenAddresses Deploy Tool](https://github.com/openaddresses/deploy).
+> 
+> **For new deployments:**
+> - Choose either CDK **OR** Deploy Tool for your entire stack - both approaches cannot be mixed
+> - CDK versions are not yet available for all stack layers - verify complete CDK coverage before choosing this approach
+> - Existing Deploy Tool deployments can remain unchanged - no migration required
+> 
+> **When to choose CDK:** All future feature enhancements and updates will only be made to the CDK version. New deployments should use CDK when all required stack layers are available.
 ### Architecture Layers
 
 This authentication infrastructure requires the base infrastructure and is the foundation of additional higher level layers. Layers can be deployed in multiple independent environments. As an example:
@@ -71,25 +84,34 @@ This authentication infrastructure requires the base infrastructure and is the f
 # 1. Install dependencies
 npm install
 
-# 2. Deploy development environment
+# 2. Bootstrap CDK (first time only)
+npx cdk bootstrap --profile your-aws-profile
+
+# 3. Deploy development environment
 npm run deploy:dev
 
-# 3. Deploy production environment  
+# 4. Deploy production environment  
 npm run deploy:prod
 ```
 
-## Resources
+## Infrastructure Resources
 
-This AWS CDK project provisions the following resources:
-- **Database**: RDS Aurora PostgreSQL cluster with encryption and backup retention
-- **Cache**: ElastiCache Redis cluster for session management
-- **Storage**: EFS file system for persistent Authentik data and certificates
-- **Secrets**: AWS Secrets Manager for database credentials and API tokens
-- **Authentik Service**: ECS service running Authentik containers with auto-scaling
-- **LDAP Outpost**: ECS service running Authentik LDAP provider
-- **Load Balancers**: Application Load Balancer (ALB) for web interface and Network Load Balancer (NLB) for LDAP
-- **Security Groups**: Fine-grained network access controls
-- **DNS Records**: Route 53 records for service endpoints
+### Database & Storage
+- **RDS Aurora PostgreSQL** - Encrypted cluster with backup retention
+- **ElastiCache Redis** - Session management and caching
+- **EFS File System** - Persistent Authentik data and certificates
+- **S3 Bucket** - Configuration storage with KMS encryption
+
+### Compute & Services
+- **ECS Services** - Authentik server, worker, and LDAP outpost containers
+- **Auto Scaling** - Dynamic scaling based on CPU and memory utilization
+- **Load Balancers** - ALB for web interface, NLB for LDAP
+
+### Security & DNS
+- **AWS Secrets Manager** - Database credentials and API tokens
+- **Security Groups** - Fine-grained network access controls
+- **Route 53 Records** - Service endpoint DNS management
+- **KMS Encryption** - Data encryption at rest and in transit
 
 ## Docker Image Handling
 
@@ -110,8 +132,8 @@ This stack uses **AWS CDK's built-in Docker image assets** for automatic contain
 ### Branding Support
 
 The stack supports different Docker image variants via the `branding` configuration:
-- **`tak-nz`**: TAK-NZ branded images (default)
-- **`generic`**: Generic Authentik images
+- **`tak-nz`**: TAK.NZ branded images (default)
+- **`generic`**: Generic TAK branded images
 
 ### Authentik Version
 
@@ -122,254 +144,14 @@ Docker images are built with the Authentik version specified in configuration:
 }
 ```
 
-## AWS Deployment
-
-### Required Parameters
-
-The following parameters are **mandatory** for deployment:
-
-- **`stackName`**: The environment/stack name component (e.g., "Demo", "Prod")
-  - **CRITICAL**: This determines CloudFormation export names for importing VPC and resources from base infrastructure
-  - Must match the `<name>` part of your base infrastructure stack name `TAK-<name>-BaseInfra`
-  - Example: If your base stack is `TAK-Demo-BaseInfra`, use `stackName=Demo`
-
-- **`adminUserEmail`**: Email address for the Authentik administrator account (override via `--context adminUserEmail=email@domain.com`)
-
-## Development
-
-### Prerequisites
-- Node.js 18 or later
-- AWS CLI configured
-- Docker (for local testing)
-
-### Getting Started
-```bash
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Build the project
-npm run build
-
-# Clean build artifacts
-npm run clean
-```
-
-### Testing
-```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
-```
-
-### CDK Commands
-```bash
-# Synthesize CloudFormation template
-npm run synth:dev     # Development environment
-npm run synth:prod    # Production environment
-
-# Deploy to AWS
-npm run deploy:dev    # Development environment
-npm run deploy:prod   # Production environment
-
-# Show differences
-npm run cdk:diff:dev  # Development environment
-npm run cdk:diff:prod # Production environment
-
-# Destroy infrastructure (use CDK directly)
-npx cdk destroy --context env=dev-test
-npx cdk destroy --context env=prod
-```
-
-## Configuration
-
-### Basic Deployment
-
-Deploy the stack with CDK context parameters (no environment variables needed for stack configuration):
-
-```bash
-# Deploy with required parameters via CDK context
-npm run deploy:dev -- --context stackName=MyFirstStack \
-                       --context adminUserEmail=admin@company.com
-```
-
-### Production Deployment
-
-For production deployments, use the `deploy:prod` script which automatically applies production-optimized defaults:
-
-```bash
-# Production deployment with enhanced security and availability
-npm run deploy:prod -- --context stackName=ProdStack \
-                        --context adminUserEmail=admin@company.com
-```
-
-### Custom Configuration
-
-Override specific settings using additional context parameters:
-
-```bash
-# Example: Custom database and Redis settings
-npm run deploy:dev -- --context stackName=TestStack \
-                       --context adminUserEmail=admin@company.com \
-                       --context instanceClass=db.t4g.small \
-                       --context nodeType=cache.t4g.small \
-                       --context enableDetailedLogging=true
-```
-
-### Configuration Structure
-
-Configuration is managed through CDK context in `cdk.json`. Runtime overrides use **flat parameter names**. See [PARAMETERS.md](docs/PARAMETERS.md) for complete configuration reference.
-
-**Common Override Parameters:**
-- `stackName` - Stack identifier
-- `adminUserEmail` - Authentik admin email
-- `instanceClass` - Database instance class
-- `nodeType` - Redis node type
-- `taskCpu` - ECS task CPU
-- `taskMemory` - ECS task memory
-- `enableDetailedLogging` - Enable detailed logging
-
-### Environment-Specific Defaults
-
-The stack uses environment-based defaults defined in `cdk.json`:
-
-**Development/Test (`dev-test`)**:
-- Database: `db.serverless` (Aurora Serverless v2, single instance)
-- Redis: `cache.t3.micro` (single node)
-- ECS: `512 CPU, 1024 MB memory`
-- Removal Policy: `DESTROY`
-- Cost-optimized for development/testing
-
-**Production (`prod`)**:
-- Database: `db.t4g.large` (2 instances, high availability)
-- Redis: `cache.t3.small` (2 nodes)
-- ECS: `1024 CPU, 2048 MB memory`
-- Removal Policy: `RETAIN`
-- High-availability configuration with redundancy
-
-**Required AWS Environment Variables (for AWS SDK only):**
-- `CDK_DEFAULT_ACCOUNT` - Your AWS account ID (auto-set with: `aws sts get-caller-identity --query Account --output text --profile tak`)
-- `CDK_DEFAULT_REGION` - Your AWS region (auto-set with: `aws configure get region --profile tak`)
-
-### AWS Credentials
-
-AWS credentials are handled separately from stack configuration:
-
-```bash
-# Option 1: AWS Profile (recommended)
-aws configure --profile tak
-export AWS_PROFILE=tak
-
-# Option 2: Environment variables
-export AWS_ACCESS_KEY_ID=your-access-key
-export AWS_SECRET_ACCESS_KEY=your-secret-key
-export AWS_DEFAULT_REGION=ap-southeast-2
-
-# Option 3: Auto-detection from current session
-export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-export CDK_DEFAULT_REGION=$(aws configure get region)
-```
-
-### 1. Install Tooling Dependencies
-   ```bash
-   npm install
-   ```
-
-### 2. Bootstrap your AWS environment (if not already done):
-   ```bash
-   npx cdk bootstrap --profile tak
-   ```
-
-### 3. Deploy the Auth Infrastructure Stack
-
-The stack uses CDK context parameters for all configuration:
-
-```bash
-# Development deployment
-npm run deploy:dev -- --context stackName=Demo --context adminUserEmail=admin@company.com
-
-# Production deployment
-npm run deploy:prod -- --context stackName=Prod --context adminUserEmail=admin@company.com
-```
-
-### 4. Configure DNS Records
-
-The stack automatically creates Route 53 records for:
-- **account.{domain}**: Authentik web interface (SSO portal)
-- **ldap.{domain}**: LDAP endpoint for TAK server authentication
-
-### 5. Configure Authentik LDAP Provider
-
-After deployment:
-1. Access the Authentik admin interface at `https://account.{your-domain}`
-2. Use the admin credentials created during deployment
-3. The LDAP provider is automatically configured via blueprints
-4. Verify the LDAP outpost is connected and healthy
-
-## (Optional) Authentik Configuration
-
-The base infrastructure stack creates an S3 bucket which can be used for advanced [Authentik configuration](https://docs.goauthentik.io/docs/install-config/configuration/) via an .env configuration file.
-
-> [!NOTE] 
-> The deployment automatically creates an empty `authentik-config.env` file in the S3 bucket if it doesn't already exist. The most common item that you might want to configure in Authentik are the [E-Mail provider settings](https://docs.goauthentik.io/docs/install-config/configuration/#authentik_email).
-
-## SSL Certificate Integration
-
-The stack automatically imports the SSL certificate from the base infrastructure stack. No manual certificate configuration is required.
-
-The certificate ARN is imported from the base stack export: `TAK-{STACK_NAME}-BaseInfra-CERTIFICATE-ARN`
-
-## Stack Dependencies
-
-This stack depends on the base infrastructure stack which provides:
-- VPC and subnets (public and private)
-- ECS cluster for container orchestration
-- ECR repository for container images
-- KMS key for encryption
-- S3 bucket for configuration and storage
-- ACM certificate for HTTPS/TLS
-
-Cross-stack references are automatically resolved using CloudFormation exports.
-
-## Notes
-
-- Make sure your AWS credentials are configured
-- The base infrastructure stack must be deployed first
-- The LDAP stack has an explicit dependency on the Auth Infrastructure stack
-- SSL certificates are automatically imported from the base stack
-- All resources are encrypted using the KMS key from the base stack
-
 ## Available Environments
 
 | Environment | Stack Name | Description | Domain | Monthly Cost* |
 |-------------|------------|-------------|--------|---------------|
-| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | `account.dev.tak.nz` | ~$106 |
-| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `account.tak.nz` | ~$367 |
+| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | `auth.dev.tak.nz` | ~$85 |
+| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `auth.tak.nz` | ~$245 |
 
 *Estimated AWS costs for ap-southeast-2, excluding data processing and storage usage
-
-## Infrastructure Resources
-
-### Authentication Services
-- **Authentik SSO** - Web-based single sign-on portal
-- **LDAP Provider** - Enterprise LDAP directory service
-- **User Management** - Web UI for user and group administration
-
-### Core Infrastructure
-- **Database** - RDS Aurora PostgreSQL cluster with encryption and backup retention
-- **Cache** - ElastiCache Redis cluster for session management
-- **Storage** - EFS file system for persistent Authentik data and certificates
-- **Secrets** - AWS Secrets Manager for database credentials and API tokens
-- **Load Balancers** - Application Load Balancer (ALB) for web interface and Network Load Balancer (NLB) for LDAP
-- **Security Groups** - Fine-grained network access controls
-- **DNS Records** - Route 53 records for service endpoints
 
 ## Development Workflow
 
@@ -401,15 +183,46 @@ The project uses **AWS CDK context-based configuration** for consistent deployme
 - **Runtime overrides** - use `--context` flag for one-off changes
 - **Environment-specific** - separate configs for dev-test and production
 
-#### Required Parameters
+#### Configuration Override Examples
+```bash
+# Override admin email for deployment
+npm run deploy:dev -- --context adminUserEmail=admin@custom.tak.nz
 
-The following parameters are **mandatory** for deployment:
+# Deploy with different Authentik version
+npm run deploy:prod -- --context authentikVersion=2025.6.3
 
-- **`stackName`**: The environment/stack name component (e.g., "Demo", "Prod")
-  - **CRITICAL**: This determines CloudFormation export names for importing VPC and resources from base infrastructure
-  - Must match the `<name>` part of your base infrastructure stack name `TAK-<name>-BaseInfra`
-  - Example: If your base stack is `TAK-Demo-BaseInfra`, use `stackName=Demo`
+# Use different branding
+npm run deploy:dev -- --context branding=generic
+```
 
-- **`adminUserEmail`**: Email address for the Authentik administrator account
+## 📚 Documentation
 
+- **[🚀 Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Comprehensive deployment instructions and configuration options
+- **[🏗️ Architecture Guide](docs/ARCHITECTURE.md)** - Technical architecture and design decisions  
+- **[⚡ Quick Reference](docs/QUICK_REFERENCE.md)** - Fast deployment commands and environment comparison
+- **[⚙️ Configuration Guide](docs/PARAMETERS.md)** - Complete configuration management reference
+- **[🧪 Test Organization](test/TEST_ORGANIZATION.md)** - Test structure and coverage information
 
+## Security Features
+
+### Enterprise-Grade Security
+- **🔑 KMS Encryption** - All data encrypted with customer-managed keys
+- **🛡️ Network Security** - Private subnets with controlled internet access
+- **🔒 IAM Policies** - Least-privilege access patterns throughout
+- **📋 LDAP Security** - Secure LDAP authentication with TLS encryption
+- **🔐 SSO Integration** - Single sign-on via OIDC and SAML protocolsontext
+
+## Getting Help
+
+### Common Issues
+- **Base Infrastructure** - Ensure base infrastructure stack is deployed first
+- **Route53 Hosted Zone** - Ensure your domain's hosted zone exists before deployment
+- **AWS Permissions** - CDK requires broad permissions for CloudFormation operations
+- **Docker Images** - CDK automatically handles Docker image building and ECR management
+- **Stack Name Matching** - Ensure stackName parameter matches your base infrastructure deployment
+
+### Support Resources
+- **AWS CDK Documentation** - https://docs.aws.amazon.com/cdk/
+- **Authentik Documentation** - https://goauthentik.io/docs/
+- **TAK-NZ Project** - https://github.com/TAK-NZ/
+- **Issue Tracking** - Use GitHub Issues for bug reports and feature requests
