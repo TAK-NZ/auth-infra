@@ -97,7 +97,7 @@ export class AuthentikServer extends Construct {
     const logGroup = new logs.LogGroup(this, 'ServerLogs', {
       logGroupName: `${id}-server`,
       retention: logRetentionDays,
-      removalPolicy: removalPolicy
+      removalPolicy: RemovalPolicy.DESTROY
     });
 
     // Create config bucket if using config file

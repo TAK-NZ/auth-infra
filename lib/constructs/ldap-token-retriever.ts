@@ -85,7 +85,6 @@ export class LdapTokenRetriever extends Construct {
 
     // Create CloudWatch log group for the Lambda function
     const logGroup = new logs.LogGroup(this, 'LogGroup', {
-      logGroupName: `/aws/lambda/TAK-${props.contextConfig.stackName}-AuthInfra-update-ldap-token`,
       retention: logRetention,
       removalPolicy: removalPolicy
     });

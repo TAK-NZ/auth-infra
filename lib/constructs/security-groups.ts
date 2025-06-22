@@ -129,6 +129,9 @@ export class SecurityGroups extends Construct {
     );
     this.addDnsRules(this.ldap);
 
+    // LDAP NLB outbound rules for health checks
+    this.addLdapNlbOutboundRules(this.ldapNlb, props.stackNameComponent);
+
     // Create database security group
     this.database = new ec2.SecurityGroup(this, 'AuroraDB', {
       vpc: props.vpc,
@@ -237,6 +240,35 @@ export class SecurityGroups extends Construct {
       ec2.Peer.ipv6(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV6))),
       ec2.Port.tcp(636),
       'Allow LDAPS access from VPC IPv6'
+    );
+  }
+
+  /**
+   * Add LDAP NLB outbound rules for health checks
+   */
+  private addLdapNlbOutboundRules(securityGroup: ec2.SecurityGroup, stackNameComponent: string): void {
+    // IPv4 rules for health checks
+    securityGroup.addEgressRule(
+      ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
+      ec2.Port.tcp(3389),
+      'Allow health check to LDAP container IPv4'
+    );
+    securityGroup.addEgressRule(
+      ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
+      ec2.Port.tcp(6636),
+      'Allow health check to LDAPS container IPv4'
+    );
+
+    // IPv6 rules for health checks
+    securityGroup.addEgressRule(
+      ec2.Peer.ipv6(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV6))),
+      ec2.Port.tcp(3389),
+      'Allow health check to LDAP container IPv6'
+    );
+    securityGroup.addEgressRule(
+      ec2.Peer.ipv6(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV6))),
+      ec2.Port.tcp(6636),
+      'Allow health check to LDAPS container IPv6'
     );
   }
 }
