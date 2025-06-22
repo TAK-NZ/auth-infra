@@ -127,6 +127,18 @@ export class LdapTokenRetriever extends Construct {
                 'kms:DescribeKey'
               ],
               resources: [props.infrastructure.kmsKey.keyArn]
+            }),
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'logs:CreateLogStream',
+                'logs:PutLogEvents',
+                'logs:DescribeLogGroups',
+                'logs:DescribeLogStreams'
+              ],
+              resources: [
+                `arn:aws:logs:${Stack.of(this).region}:${Stack.of(this).account}:log-group:/aws/lambda/TAK-${props.contextConfig.stackName}-AuthInfra-update-ldap-token*`
+              ]
             })
           ]
         })
@@ -139,10 +151,15 @@ export class LdapTokenRetriever extends Construct {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       role: lambdaRole,
-      timeout: Duration.minutes(5),
+      timeout: Duration.minutes(10), // Increased timeout for retry logic
       logGroup: logGroup,
       environment: {
-        NODE_OPTIONS: '--enable-source-maps'
+        NODE_OPTIONS: '--enable-source-maps',
+        // Retry configuration (can be overridden via environment)
+        MAX_RETRIES: '5',
+        BASE_DELAY_MS: '1000',
+        MAX_DELAY_MS: '30000',
+        BACKOFF_MULTIPLIER: '2'
       },
       code: lambda.Code.fromInline(`
 const { SecretsManagerClient, GetSecretValueCommand, PutSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
@@ -151,6 +168,95 @@ const http = require('http');
 const { URL } = require('url');
 
 const secretsManager = new SecretsManagerClient({});
+
+// Retry configuration from environment variables with defaults
+const RETRY_CONFIG = {
+    maxRetries: parseInt(process.env.MAX_RETRIES || '5'),
+    baseDelayMs: parseInt(process.env.BASE_DELAY_MS || '1000'),
+    maxDelayMs: parseInt(process.env.MAX_DELAY_MS || '30000'),
+    backoffMultiplier: parseFloat(process.env.BACKOFF_MULTIPLIER || '2')
+};
+
+// Enhanced logging utility
+function logWithTimestamp(level, message, details = {}) {
+    const timestamp = new Date().toISOString();
+    const logEntry = {
+        timestamp,
+        level: level.toUpperCase(),
+        message,
+        ...details
+    };
+    console.log(JSON.stringify(logEntry));
+}
+
+// Sleep utility for retry delays
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Calculate exponential backoff delay
+function calculateDelay(attempt) {
+    const delay = Math.min(
+        RETRY_CONFIG.baseDelayMs * Math.pow(RETRY_CONFIG.backoffMultiplier, attempt),
+        RETRY_CONFIG.maxDelayMs
+    );
+    // Add jitter to prevent thundering herd
+    return delay + Math.random() * 1000;
+}
+
+// Retry wrapper with exponential backoff
+async function withRetry(operation, operationName, context = {}) {
+    let lastError;
+    
+    for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+        try {
+            logWithTimestamp('info', \`Attempting \${operationName}\`, {
+                attempt: attempt + 1,
+                maxRetries: RETRY_CONFIG.maxRetries + 1,
+                ...context
+            });
+            
+            const result = await operation();
+            
+            if (attempt > 0) {
+                logWithTimestamp('info', \`\${operationName} succeeded after retries\`, {
+                    attempt: attempt + 1,
+                    ...context
+                });
+            }
+            
+            return result;
+        } catch (error) {
+            lastError = error;
+            
+            logWithTimestamp('warn', \`\${operationName} failed\`, {
+                attempt: attempt + 1,
+                error: error.message,
+                errorType: error.constructor.name,
+                ...context
+            });
+            
+            if (attempt < RETRY_CONFIG.maxRetries) {
+                const delay = calculateDelay(attempt);
+                logWithTimestamp('info', \`Retrying \${operationName} after delay\`, {
+                    delayMs: Math.round(delay),
+                    nextAttempt: attempt + 2,
+                    ...context
+                });
+                await sleep(delay);
+            }
+        }
+    }
+    
+    logWithTimestamp('error', \`\${operationName} failed after all retries\`, {
+        totalAttempts: RETRY_CONFIG.maxRetries + 1,
+        finalError: lastError.message,
+        errorType: lastError.constructor.name,
+        ...context
+    });
+    
+    throw lastError;
+}
 
 // Helper function to send CloudFormation response
 async function sendResponse(event, context, responseStatus, responseData = {}, physicalResourceId = null) {
@@ -178,12 +284,17 @@ async function sendResponse(event, context, responseStatus, responseData = {}, p
 
     return new Promise((resolve, reject) => {
         const request = https.request(options, (response) => {
-            console.log(\`Status code: \${response.statusCode}\`);
+            logWithTimestamp('info', 'CloudFormation response sent', {
+                statusCode: response.statusCode,
+                responseStatus
+            });
             resolve();
         });
         
         request.on('error', (error) => {
-            console.log(\`send(..) failed executing https.request(..):\`, error);
+            logWithTimestamp('error', 'Failed to send CloudFormation response', {
+                error: error.message
+            });
             reject(error);
         });
         
@@ -192,122 +303,212 @@ async function sendResponse(event, context, responseStatus, responseData = {}, p
     });
 }
 
-// Helper function to fetch JSON data
+// Enhanced HTTP client with detailed logging
 async function fetchJson(url, options) {
     return new Promise((resolve, reject) => {
         const urlObj = new URL(url);
         const lib = urlObj.protocol === 'https:' ? https : http;
         
+        logWithTimestamp('debug', 'Making HTTP request', {
+            url: url,
+            method: options.method || 'GET',
+            hasAuth: !!(options.headers && options.headers.Authorization)
+        });
+        
         const req = lib.request(url, {
             method: options.method || 'GET',
-            headers: options.headers || {}
+            headers: options.headers || {},
+            timeout: 30000 // 30 second timeout
         }, (res) => {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
+                logWithTimestamp('debug', 'HTTP response received', {
+                    statusCode: res.statusCode,
+                    contentLength: data.length,
+                    url: url
+                });
+                
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     try {
-                        resolve(JSON.parse(data));
+                        const jsonData = JSON.parse(data);
+                        resolve(jsonData);
                     } catch (e) {
+                        logWithTimestamp('error', 'Invalid JSON response', {
+                            error: e.message,
+                            responsePreview: data.substring(0, 200)
+                        });
                         reject(new Error(\`Invalid JSON response: \${e.message}\`));
                     }
                 } else {
-                    reject(new Error(\`HTTP error! status: \${res.statusCode}\`));
+                    logWithTimestamp('error', 'HTTP error response', {
+                        statusCode: res.statusCode,
+                        responsePreview: data.substring(0, 500)
+                    });
+                    reject(new Error(\`HTTP error! status: \${res.statusCode}, response: \${data.substring(0, 200)}\`));
                 }
             });
         });
         
-        req.on('error', reject);
+        req.on('error', (error) => {
+            logWithTimestamp('error', 'HTTP request failed', {
+                error: error.message,
+                url: url
+            });
+            reject(error);
+        });
+        
+        req.on('timeout', () => {
+            logWithTimestamp('error', 'HTTP request timeout', { url: url });
+            req.destroy();
+            reject(new Error('Request timeout'));
+        });
+        
         req.end();
     });
 }
 
 async function getAdminToken(adminSecretName) {
-    console.log('Getting admin token from secret:', adminSecretName);
+    logWithTimestamp('info', 'Retrieving admin token from Secrets Manager', {
+        secretName: adminSecretName
+    });
     
     const command = new GetSecretValueCommand({
         SecretId: adminSecretName
     });
     
     const response = await secretsManager.send(command);
+    
+    if (!response.SecretString) {
+        throw new Error('Admin token secret is empty or invalid');
+    }
+    
+    logWithTimestamp('info', 'Admin token retrieved successfully', {
+        tokenLength: response.SecretString.length
+    });
+    
     return response.SecretString;
 }
 
 async function retrieveToken(authentikHost, authentikApiToken, outpostName) {
     outpostName = outpostName || 'LDAP';
     
-    try {
-        // Fetch outpost instances from API
-        const outpostInstancesUrl = new URL('/api/v3/outposts/instances/', authentikHost);
-        outpostInstancesUrl.searchParams.append('name__iexact', outpostName);
+    logWithTimestamp('info', 'Starting token retrieval process', {
+        authentikHost,
+        outpostName,
+        tokenLength: authentikApiToken.length
+    });
+    
+    // Fetch outpost instances from API
+    const outpostInstancesUrl = new URL('/api/v3/outposts/instances/', authentikHost);
+    outpostInstancesUrl.searchParams.append('name__iexact', outpostName);
 
-        console.log('Fetching outpost instances from:', outpostInstancesUrl.toString());
-        
-        const outpostInstances = await fetchJson(outpostInstancesUrl.toString(), {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': \`Bearer \${authentikApiToken}\`
-            }
-        });
-
-        // Check if we found the outpost
-        const results = outpostInstances.results || [];
-        if (results.length === 0) {
-            throw new Error(\`Outpost with name \${outpostName} not found, aborting...\`);
+    logWithTimestamp('info', 'Fetching outpost instances', {
+        url: outpostInstancesUrl.toString()
+    });
+    
+    const outpostInstances = await fetchJson(outpostInstancesUrl.toString(), {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': \`Bearer \${authentikApiToken}\`
         }
+    });
 
-        // Extract the token identifier
-        const outpost = results.find((item) => item.name === outpostName);
-        if (!outpost || !outpost.token_identifier) {
-            throw new Error(\`Token identifier for outpost \${outpostName} not found, aborting...\`);
-        }
-
-        const tokenIdentifier = outpost.token_identifier;
-        console.log('Found token identifier:', tokenIdentifier);
-
-        // Fetch the token
-        const viewKeyUrl = new URL(\`/api/v3/core/tokens/\${tokenIdentifier}/view_key/\`, authentikHost);
-
-        const viewKeyResult = await fetchJson(viewKeyUrl.toString(), {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': \`Bearer \${authentikApiToken}\`
-            }
-        });
-
-        const outpostToken = viewKeyResult.key;
-        if (!outpostToken) {
-            throw new Error(\`Token for outpost \${outpostName} not found, aborting...\`);
-        }
-
-        return outpostToken;
-    } catch (error) {
-        console.error(\`Error retrieving token: \${error.message}\`);
-        throw error;
+    // Check if we found the outpost
+    const results = outpostInstances.results || [];
+    
+    logWithTimestamp('info', 'Outpost instances retrieved', {
+        totalResults: results.length,
+        outpostNames: results.map(r => r.name)
+    });
+    
+    if (results.length === 0) {
+        throw new Error(\`Outpost with name \${outpostName} not found. Available outposts: none\`);
     }
+
+    // Extract the token identifier
+    const outpost = results.find((item) => item.name === outpostName);
+    if (!outpost) {
+        const availableNames = results.map(r => r.name).join(', ');
+        throw new Error(\`Outpost with name \${outpostName} not found. Available outposts: \${availableNames}\`);
+    }
+    
+    if (!outpost.token_identifier) {
+        logWithTimestamp('error', 'Outpost found but missing token identifier', {
+            outpost: { ...outpost, token_identifier: undefined }
+        });
+        throw new Error(\`Token identifier for outpost \${outpostName} not found\`);
+    }
+
+    const tokenIdentifier = outpost.token_identifier;
+    logWithTimestamp('info', 'Found outpost and token identifier', {
+        outpostName,
+        tokenIdentifier,
+        outpostId: outpost.pk
+    });
+
+    // Fetch the token
+    const viewKeyUrl = new URL(\`/api/v3/core/tokens/\${tokenIdentifier}/view_key/\`, authentikHost);
+
+    logWithTimestamp('info', 'Fetching token key', {
+        url: viewKeyUrl.toString()
+    });
+
+    const viewKeyResult = await fetchJson(viewKeyUrl.toString(), {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': \`Bearer \${authentikApiToken}\`
+        }
+    });
+
+    const outpostToken = viewKeyResult.key;
+    if (!outpostToken) {
+        logWithTimestamp('error', 'Token key response invalid', {
+            responseKeys: Object.keys(viewKeyResult)
+        });
+        throw new Error(\`Token for outpost \${outpostName} not found in response\`);
+    }
+
+    logWithTimestamp('info', 'Token retrieved successfully', {
+        tokenLength: outpostToken.length,
+        tokenPrefix: outpostToken.substring(0, 8) + '...'
+    });
+
+    return outpostToken;
 }
 
 async function putLDAPSecret(secretName, secretValue) {
-    console.log('Updating LDAP token secret:', secretName);
+    logWithTimestamp('info', 'Updating LDAP token secret', {
+        secretName,
+        tokenLength: secretValue.length
+    });
     
     const command = new PutSecretValueCommand({
         SecretId: secretName,
         SecretString: secretValue
     });
     
-    try {
-        await secretsManager.send(command);
-        console.log('LDAP token secret updated successfully');
-    } catch (error) {
-        console.error('Error updating secret:', error);
-        throw error;
-    }
+    await secretsManager.send(command);
+    
+    logWithTimestamp('info', 'LDAP token secret updated successfully', {
+        secretName
+    });
 }
 
 exports.handler = async (event, context) => {
-    console.log('Event:', JSON.stringify(event, null, 2));
+    const startTime = Date.now();
+    
+    logWithTimestamp('info', 'Lambda function started', {
+        requestId: context.awsRequestId,
+        functionName: context.functionName,
+        remainingTimeMs: context.getRemainingTimeInMillis()
+    });
+    
+    logWithTimestamp('debug', 'Received event', {
+        event: JSON.stringify(event, null, 2)
+    });
     
     const { RequestType, ResourceProperties } = event;
     const { 
@@ -320,36 +521,73 @@ exports.handler = async (event, context) => {
     
     try {
         if (RequestType === 'Create' || RequestType === 'Update') {
-            console.log('Processing LDAP token retrieval...');
-            console.log('Environment:', Environment);
-            console.log('Authentik URL:', AuthentikHost);
-            console.log('Outpost Name:', OutpostName);
-            console.log('Admin Secret Name:', AdminSecretName);
-            console.log('LDAP Secret Name:', LDAPSecretName);
+            logWithTimestamp('info', 'Processing LDAP token retrieval', {
+                requestType: RequestType,
+                environment: Environment,
+                authentikHost: AuthentikHost,
+                outpostName: OutpostName,
+                adminSecretName: AdminSecretName,
+                ldapSecretName: LDAPSecretName
+            });
             
-            // Get the admin token from AWS Secrets Manager
-            const adminToken = await getAdminToken(AdminSecretName);
+            // Get the admin token from AWS Secrets Manager with retry
+            const adminToken = await withRetry(
+                () => getAdminToken(AdminSecretName),
+                'getAdminToken',
+                { secretName: AdminSecretName }
+            );
             
-            // Retrieve the LDAP token from Authentik
-            const ldapToken = await retrieveToken(AuthentikHost, adminToken, OutpostName);
+            // Retrieve the LDAP token from Authentik with retry
+            const ldapToken = await withRetry(
+                () => retrieveToken(AuthentikHost, adminToken, OutpostName),
+                'retrieveToken',
+                { authentikHost: AuthentikHost, outpostName: OutpostName }
+            );
             
-            // Store the LDAP token back in AWS Secrets Manager
-            await putLDAPSecret(LDAPSecretName, ldapToken);
+            // Store the LDAP token back in AWS Secrets Manager with retry
+            await withRetry(
+                () => putLDAPSecret(LDAPSecretName, ldapToken),
+                'putLDAPSecret',
+                { secretName: LDAPSecretName }
+            );
+            
+            const executionTime = Date.now() - startTime;
+            
+            logWithTimestamp('info', 'LDAP token retrieval completed successfully', {
+                executionTimeMs: executionTime,
+                tokenLength: ldapToken.length
+            });
             
             await sendResponse(event, context, 'SUCCESS', {
                 Message: 'LDAP token retrieved and updated successfully',
-                LDAPToken: ldapToken.substring(0, 10) + '...' // Log only first 10 chars for security
+                ExecutionTimeMs: executionTime,
+                TokenLength: ldapToken.length,
+                LDAPTokenPrefix: ldapToken.substring(0, 10) + '...'
             });
         } else if (RequestType === 'Delete') {
-            console.log('Delete request - no action needed for LDAP token retrieval');
+            logWithTimestamp('info', 'Processing delete request', {
+                requestType: RequestType
+            });
+            
             await sendResponse(event, context, 'SUCCESS', {
-                Message: 'Delete completed'
+                Message: 'Delete completed - no action needed for LDAP token retrieval'
             });
         }
     } catch (error) {
-        console.error('Error:', error);
+        const executionTime = Date.now() - startTime;
+        
+        logWithTimestamp('error', 'Lambda function failed', {
+            error: error.message,
+            errorType: error.constructor.name,
+            stack: error.stack,
+            executionTimeMs: executionTime,
+            remainingTimeMs: context.getRemainingTimeInMillis()
+        });
+        
         await sendResponse(event, context, 'FAILED', {
-            Message: error.message
+            Message: error.message,
+            ErrorType: error.constructor.name,
+            ExecutionTimeMs: executionTime
         });
     }
 };

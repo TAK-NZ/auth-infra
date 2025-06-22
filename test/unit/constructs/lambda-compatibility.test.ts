@@ -114,7 +114,7 @@ describe('Lambda Node.js Compatibility', () => {
       expect(ldapTokenRetriever.lambdaFunction.runtime).toBe(lambda.Runtime.NODEJS_22_X);
       
       // Verify timeout is appropriate for async operations
-      expect(ldapTokenRetriever.lambdaFunction.timeout?.toMinutes()).toBe(5);
+      expect(ldapTokenRetriever.lambdaFunction.timeout?.toMinutes()).toBe(10);
     });
 
     test('Lambda code syntax is valid JavaScript', () => {
@@ -130,8 +130,8 @@ describe('Lambda Node.js Compatibility', () => {
     });
 
     test('Lambda timeout is appropriate for async operations', () => {
-      // 5 minutes should be sufficient for HTTP calls and secret operations
-      expect(ldapTokenRetriever.lambdaFunction.timeout?.toMinutes()).toBe(5);
+      // 10 minutes should be sufficient for HTTP calls and secret operations with retry logic
+      expect(ldapTokenRetriever.lambdaFunction.timeout?.toMinutes()).toBe(10);
     });
   });
 
