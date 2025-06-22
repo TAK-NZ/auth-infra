@@ -66,7 +66,7 @@ export class Efs extends Construct {
     const throughputMode = efs.ThroughputMode.BURSTING; // Use bursting mode for cost optimization
 
     // Create security group for EFS
-    const efsSecurityGroup = new ec2.SecurityGroup(this, 'MountTargetSecurityGroup', {
+    const efsSecurityGroup = new ec2.SecurityGroup(this, 'MountTarget', {
       vpc: props.infrastructure.vpc,
       description: 'EFS to Auth ECS Service',
       allowAllOutbound: false

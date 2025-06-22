@@ -66,7 +66,7 @@ export class SecurityGroups extends Construct {
     super(scope, id);
 
     // Create Authentik Server security group
-    this.authentikServer = new ec2.SecurityGroup(this, 'AuthentikSecurityGroup', {
+    this.authentikServer = new ec2.SecurityGroup(this, 'AuthentikServer', {
       vpc: props.vpc,
       description: 'Security group for Authentik Server ECS tasks',
       allowAllOutbound: false
@@ -83,7 +83,7 @@ export class SecurityGroups extends Construct {
     this.addEcsOutboundRules(this.authentikServer);
 
     // Create Authentik Worker security group
-    this.authentikWorker = new ec2.SecurityGroup(this, 'AuthentikWorkerSecurityGroup', {
+    this.authentikWorker = new ec2.SecurityGroup(this, 'AuthentikWorker', {
       vpc: props.vpc,
       description: 'Security group for Authentik Worker ECS tasks',
       allowAllOutbound: false
@@ -93,7 +93,7 @@ export class SecurityGroups extends Construct {
     this.addEcsOutboundRules(this.authentikWorker);
 
     // Create LDAP NLB security group
-    this.ldapNlb = new ec2.SecurityGroup(this, 'LDAPNLBSecurityGroup', {
+    this.ldapNlb = new ec2.SecurityGroup(this, 'LDAPNLB', {
       vpc: props.vpc,
       description: 'Security group for LDAP Network Load Balancer',
       allowAllOutbound: false
@@ -103,7 +103,7 @@ export class SecurityGroups extends Construct {
     this.addLdapNlbInboundRules(this.ldapNlb, props.stackNameComponent);
 
     // Create LDAP security group
-    this.ldap = new ec2.SecurityGroup(this, 'LdapSecurityGroup', {
+    this.ldap = new ec2.SecurityGroup(this, 'AuthentikLdap', {
       vpc: props.vpc,
       description: 'Security group for LDAP ECS tasks',
       allowAllOutbound: false
@@ -130,7 +130,7 @@ export class SecurityGroups extends Construct {
     this.addDnsRules(this.ldap);
 
     // Create database security group
-    this.database = new ec2.SecurityGroup(this, 'DBSecurityGroup', {
+    this.database = new ec2.SecurityGroup(this, 'AuroraDB', {
       vpc: props.vpc,
       description: 'Security group for database',
       allowAllOutbound: false
@@ -149,7 +149,7 @@ export class SecurityGroups extends Construct {
     );
 
     // Create Redis security group
-    this.redis = new ec2.SecurityGroup(this, 'RedisSecurityGroup', {
+    this.redis = new ec2.SecurityGroup(this, 'Redis', {
       vpc: props.vpc,
       description: 'Security group for Redis',
       allowAllOutbound: false
