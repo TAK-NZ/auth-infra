@@ -1,38 +1,49 @@
 {
-    "name": "@TAK-NZ/auth-infra",
-    "type": "module",
-    "private": true,
-    "version": "1.0.0",
-    "description": "TAK Authentication Layer using Authentik",
-    "scripts": {
-        "lint": "eslint *.js cloudformation/",
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "node ./bin/build.js",
-        "retrieve": "node ./bin/retrieveLDAPToken.js"
-    },
-    "engines": {
-        "node": ">= 18"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/TAK-NZ/auth-infra.git"
-    },
-    "author": "TAK.NZ - https://tak.nz",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/TAK-NZ/auth-infra/issues"
-    },
-    "homepage": "https://github.com/TAK-NZ/auth-infra#readme",
-    "dependencies": {
-        "@openaddresses/cfn-config": "^7.5.0",
-        "@openaddresses/cloudfriend": "^7.0.0",
-        "@openaddresses/deploy": "^9.0.0",
-        "node-fetch": "^3.3.2"
-    },
-    "devDependencies": {
-        "@types/xml2js": "^0.4.11",
-        "eslint": "^9.0.0",
-        "eslint-plugin-n": "^17.11.1",
-        "eslint-plugin-node": "^11.1.0"
-    }
+  "name": "@tak-nz/auth-infra",
+  "version": "0.1.0",
+  "description": "Authentication infrastructure for TAK-NZ projects using AWS CDK",
+  "private": true,
+  "bin": {
+    "cdk": "bin/cdk.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest",
+    "test:unit": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest test/unit",
+    "test:integration": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest test/integration",
+    "test:validation": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest test/validation",
+    "test:watch": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest --watch",
+    "test:coverage": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest --coverage",
+    "test:coverage:unit": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest test/unit --coverage",
+    "cdk": "cdk",
+    "clean": "rm -f bin/*.js bin/*.d.ts lib/*.js lib/*.d.ts lib/constructs/*.js lib/constructs/*.d.ts test/*.js test/*.d.ts; rm -rf cdk.out/*",
+    
+    "dev": "npm run build && npm run test",
+    
+    "deploy:dev": "npm run build && cdk deploy --context env=dev-test --no-warnings",
+    "deploy:prod": "npm run build && cdk deploy --context env=prod --no-warnings",
+    "synth:dev": "npm run build && cdk synth --context env=dev-test",
+    "synth:prod": "npm run build && cdk synth --context env=prod",
+    
+    "cdk:diff:dev": "npm run build && cdk diff --context env=dev-test",
+    "cdk:diff:prod": "npm run build && cdk diff --context env=prod",
+    "cdk:bootstrap": "cdk bootstrap"
+  },  
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "22.7.9",
+    "aws-cdk": "2.1017.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.0.0",
+    "aws-cdk-lib": "^2.167.0",
+    "constructs": "^10.0.0",
+    "node-fetch": "^3.3.2",
+    "source-map-support": "^0.5.21"
+  }
 }

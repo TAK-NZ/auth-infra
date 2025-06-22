@@ -1,0 +1,20 @@
+{
+  "availability-zones:account=814704514736:region=ap-southeast-2": [
+    "ap-southeast-2a",
+    "ap-southeast-2b",
+    "ap-southeast-2c"
+  ],
+  "availability-zones:account=453572736517:region=us-west-2": [
+    "us-west-2a",
+    "us-west-2b",
+    "us-west-2c",
+    "us-west-2d",
+    "us-west-2-den-1a",
+    "us-west-2-las-1a",
+    "us-west-2-lax-1a",
+    "us-west-2-lax-1b",
+    "us-west-2-pdx-1a",
+    "us-west-2-phx-1a",
+    "us-west-2-sea-1a"
+  ]
+}

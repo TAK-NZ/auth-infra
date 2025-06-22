@@ -1,135 +1,228 @@
-<h1 align=center>TAK Auth Infra</h1>
+# TAK Authentication Infrastructure
 
-<p align=center>Infrastructure to support LDAP based auth in TAK via <a href="https://goauthentik.io/">Authentik</a></p>
+<p align=center>Modern AWS CDK v2 authentication infrastructure for Team Awareness Kit (TAK) deployments
 
-## Background
+## Overview
 
 The [Team Awareness Kit (TAK)](https://tak.gov/solutions/emergency) provides Fire, Emergency Management, and First Responders an operationally agnostic tool for improved situational awareness and a common operational picture. 
-This repo deploys [Authentik](https://goauthentik.io/) as the LDAP based authentication layer for a [TAK server](https://tak.gov/solutions/emergency) on AWS.
-While a TAK sever supports build-in file based authentication mechanism, this approach is very limited. Also almost any other LDAP based authentication provider could be used, but Authentic here is a good choice to provide all the necessary functionality of an LDAP provider as well as advanced capabilities such as single-sign on via OIDC. 
 
-The following additional layers are required after deploying this `coe-base-<name>` layer:
+This repository deploys the authentication layer infrastructure for a complete TAK server deployment, providing robust LDAP-based authentication using [Authentik](https://goauthentik.io/) with advanced capabilities such as single sign-on via OIDC, user management, and enterprise-grade security features - all while using [free and open source software](https://en.wikipedia.org/wiki/Free_and_open-source_software).
 
-| Name                  | Notes |
-| --------------------- | ----- |
-| `coe-tak-<name>`      | TAK Server layer - [repo](https://github.com/TAK-NZ/tak-infra)      |
+It is specifically targeted at the deployment of [TAK.NZ](https://tak.nz) via a CI/CD pipeline. Nevertheless others interested in deploying a similar infrastructure can do so by adapting the configuration items.
 
+> [!CAUTION]
+> **New Deployment Tool**
+> 
+> This is the new [AWS CDK](https://aws.amazon.com/cdk/) version of the Authentication Infrastructure Layer. It is **not compatible** with the [previous version](../../tree/legacy) that uses the [OpenAddresses Deploy Tool](https://github.com/openaddresses/deploy).
+> 
+> **For new deployments:**
+> - Choose either CDK **OR** Deploy Tool for your entire stack - both approaches cannot be mixed
+> - CDK versions are not yet available for all stack layers - verify complete CDK coverage before choosing this approach
+> - Existing Deploy Tool deployments can remain unchanged - no migration required
+> 
+> **When to choose CDK:** All future feature enhancements and updates will only be made to the CDK version. New deployments should use CDK when all required stack layers are available.
+### Architecture Layers
 
-## Pre-Reqs
+This authentication infrastructure requires the base infrastructure and is the foundation of additional higher level layers. Layers can be deployed in multiple independent environments. As an example:
 
-> [!IMPORTANT]
-> The Auth-Infra service assumes some pre-requisite dependencies are deployed before
-> initial deployment.
+```
+        PRODUCTION ENVIRONMENT                DEVELOPMENT ENVIRONMENT
+        Domain: tak.nz                        Domain: dev.tak.nz
 
-The following dependencies must be fulfilled:
-- An [AWS Account](https://signin.aws.amazon.com/signup?request_type=register).
-- A Domain Name under which the TAK server is made available, e.g. `tak.nz` in the example here.
-- An [AWS ACM certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs.html) certificate.
-  - This certificate should cover the main domain - e.g. `tak.nz`, as well as the wildcard subdomain, e.g. `*.tak.nz`.
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│         CloudTAK                │    │         CloudTAK                │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+                │                                        │
+                ▼                                        ▼
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│        VideoInfra               │    │        VideoInfra               │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+                │                                        │
+                ▼                                        ▼
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│         TakInfra                │    │         TakInfra                │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+                │                                        │
+                ▼                                        ▼
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│        AuthInfra                │    │        AuthInfra                │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+│      (This Repository)          │    │      (This Repository)          │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+                │                                        │
+                ▼                                        ▼
+┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│        BaseInfra                │    │        BaseInfra                │
+│    CloudFormation Stack         │    │    CloudFormation Stack         │
+└─────────────────────────────────┘    └─────────────────────────────────┘
+```
 
-The following stack layers need to be created before deploying this layer:
+| Layer | Repository | Description |
+|-------|------------|-------------|
+| **BaseInfra** | [`base-infra`](https://github.com/TAK-NZ/base-infra)  | Foundation: VPC, ECS, S3, KMS, ACM |
+| **AuthInfra** | `auth-infra` (this repo) | SSO via Authentik, LDAP |
+| **TAKInfra** | [`tak-infra`](https://github.com/TAK-NZ/tak-infra) | TAK Server |
+| **VideoInfra** | [`video-infra`](https://github.com/TAK-NZ/video-infra) | Video Server based on Mediamtx |
+| **CloudTAK** | [`CloudTAK`](https://github.com/TAK-NZ/CloudTAK) | CloudTAK web interface and ETL |
 
-| Name                  | Notes |
-| --------------------- | ----- |
-| `coe-base-<name>`      | VPC, ECS cluster, and ECR repository - [repo](https://github.com/TAK-NZ/base-infra)      |
+**Deployment Order**: BaseInfra must be deployed first, followed by AuthInfra, TakInfra, VideoInfra, and finally CloudTAK. Each layer imports outputs from the layer below via CloudFormation exports.
 
+## Quick Start
 
-## AWS Deployment
+### Prerequisites
+- [AWS Account](https://signin.aws.amazon.com/signup) with configured credentials
+- Base infrastructure stack (`TAK-<name>-BaseInfra`) must be deployed first
+- Public Route 53 hosted zone (e.g., `tak.nz`)
+- [Node.js](https://nodejs.org/) and npm installed
 
-### 1. Install Tooling Dependencies
+### Installation & Deployment
 
-From the root directory, install the deploy dependencies
-
-```sh
+```bash
+# 1. Install dependencies
 npm install
+
+# 2. Bootstrap CDK (first time only)
+npx cdk bootstrap --profile your-aws-profile
+
+# 3. Deploy development environment
+npm run deploy:dev
+
+# 4. Deploy production environment  
+npm run deploy:prod
 ```
 
-### 2.(Optional) Authentik configuration
+## Infrastructure Resources
 
-The `coe-base-<name>` layer creates an S3 bucket with the name `coe-auth-config-s3-<name>-<region>-env-config` which can be used for advanced [Authentik configuration](https://docs.goauthentik.io/docs/install-config/configuration/) via an .env configuration file.
-An example configuration file with the name [authentik-config.env.example] is provided in this repo. Adjust this file based on your needs and store it in the created S3 bucket as `authentik-config.env`.
+### Database & Storage
+- **RDS Aurora PostgreSQL** - Encrypted cluster with backup retention
+- **ElastiCache Redis** - Session management and caching
+- **EFS File System** - Persistent Authentik data and certificates
+- **S3 Bucket** - Configuration storage with KMS encryption
 
-### 3. Authentik Server Deployment
+### Compute & Services
+- **ECS Services** - Authentik server, worker, and LDAP outpost containers
+- **Auto Scaling** - Dynamic scaling based on CPU and memory utilization
+- **Load Balancers** - ALB for web interface, NLB for LDAP
 
-Deployment to AWS is handled via AWS Cloudformation. The template can be found in the `./cloudformation`
-directory. The deployment itself is performed by [Deploy](https://github.com/openaddresses/deploy) which
-was installed in the previous step.
+### Security & DNS
+- **AWS Secrets Manager** - Database credentials and API tokens
+- **Security Groups** - Fine-grained network access controls
+- **Route 53 Records** - Service endpoint DNS management
+- **KMS Encryption** - Data encryption at rest and in transit
 
-It is important that this layer is deployed into an existing `base-infra` stack.
+## Docker Image Handling
 
-Use the command `npx deploy create <stack>` to create the main Authentik Server portion. For example: 
+This stack uses **AWS CDK's built-in Docker image assets** for automatic container image management. CDK handles all Docker image building, ECR repository creation, and image pushing automatically during deployment.
 
-```
-npx deploy create staging 
-```
+### How It Works
 
-### 4. Setup a DNS CNAME for the web interface
+- **Automatic Building**: CDK builds Docker images from local Dockerfiles during deployment
+- **ECR Integration**: CDK automatically creates ECR repositories and pushes images
+- **Version Management**: Images are tagged with CDK-generated hashes for consistency
+- **No Manual Steps**: No need to manually build or push Docker images
 
-Create a DNS CNAME from your desired hostname for the Authentik server to the ALB hostname. The ALB hostname is one of the CloudFormation template outputs. An example would be:
-- Name: `auth.tak.nz`
-- Type: `CNAME`
-- Value: `coe-auth-staging-123456789.us-gov-west-1.elb.amazonaws.com`
+### Docker Images Used
 
-End-users and admins will communicate with this endpoint to manage user accounts. 
+1. **Authentik Server & Worker**: Built from `docker/authentik-server/Dockerfile.{branding}`
+2. **LDAP Outpost**: Built from `docker/authentik-ldap/Dockerfile`
 
-### 5. Configure the Authentik LDAP Provider
+### Branding Support
 
-While the Authentik LDAP setup is mostly completed automatically based on the Authentik documentation to [create and LDAP provider](https://docs.goauthentik.io/docs/add-secure-apps/providers/ldap/generic_setup), it is necessary to store the Authentik LDAP Token in AWS Secrets Manager. 
+The stack supports different Docker image variants via the `branding` configuration:
+- **`tak-nz`**: TAK.NZ branded images (default)
+- **`generic`**: Generic TAK branded images
 
-Use the command `node ./bin/retrieveLDAPToken.js --env <name> --authurl <url>` to do so. As an example:
+### Authentik Version
 
-```
-node ./bin/retrieveLDAPToken.js --env staging --authurl https://auth.tak.nz 
-```
-
-### 6. Create the Authentik LDAP Outpost
-
-Use the command `npx deploy create <stack> --template ./cloudformation/ldap.template.js` to create the LDAP Outpost into the same stack. For example: 
-```
-npx deploy create staging --template ./cloudformation/ldap.template.js
-```
-
-### 7. Setup a DNS CNAME for the LDAPS interface
-
-Create a DNS CNAME from your desired hostname for the LDAPS service to the internal NLB hostname. The NLB hostname is one of the CloudFormation template outputs. An example would be:
-- Name: `ldap.tak.nz`
-- Type: `CNAME`
-- Value: `coe-auth-ldap-staging-123456789.us-gov-west-1.elb.amazonaws.com`
-
-The TAK server will communicate with this endpoint to authenticate and authorize users over LDAPs. 
-
-## About the deploy tool
-
-The deploy tool can be run via the `npx deploy` command.
-
-To install it globally - view the deploy [README](https://github.com/openaddresses/deploy)
-
-Deploy uses your existing AWS credentials. Ensure that your `~/.aws/credentials` has an entry like:
- 
-```
-[coe]
-aws_access_key_id = <redacted>
-aws_secret_access_key = <redacted>
+Docker images are built with the Authentik version specified in configuration:
+```json
+"authentik": {
+  "authentikVersion": "2025.6.2"
+}
 ```
 
-Stacks can be created, deleted, cancelled, etc all via the deploy tool. For further information
-information about `deploy` functionality run the following for help.
- 
-```sh
-npx deploy
+## Available Environments
+
+| Environment | Stack Name | Description | Domain | Monthly Cost* |
+|-------------|------------|-------------|--------|---------------|
+| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | `auth.dev.tak.nz` | ~$85 |
+| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `auth.tak.nz` | ~$245 |
+
+*Estimated AWS costs for ap-southeast-2, excluding data processing and storage usage
+
+## Development Workflow
+
+### New NPM Scripts (Enhanced Developer Experience)
+```bash
+# Development and Testing
+npm run dev                    # Build and test
+npm run test:watch            # Run tests in watch mode
+npm run test:coverage         # Generate coverage report
+
+# Environment-Specific Deployment
+npm run deploy:dev            # Deploy to dev-test
+npm run deploy:prod           # Deploy to production
+npm run synth:dev             # Preview dev infrastructure
+npm run synth:prod            # Preview prod infrastructure
+
+# Infrastructure Management
+npm run cdk:diff:dev          # Show what would change in dev
+npm run cdk:diff:prod         # Show what would change in prod
+npm run cdk:bootstrap         # Bootstrap CDK in account
 ```
- 
-Further help about a specific command can be obtained via something like:
 
-```sh
-npx deploy info --help
+### Configuration System
+
+The project uses **AWS CDK context-based configuration** for consistent deployments:
+
+- **All settings** stored in [`cdk.json`](cdk.json) under `context` section
+- **Version controlled** - consistent deployments across team members
+- **Runtime overrides** - use `--context` flag for one-off changes
+- **Environment-specific** - separate configs for dev-test and production
+
+#### Configuration Override Examples
+```bash
+# Override admin email for deployment
+npm run deploy:dev -- --context adminUserEmail=admin@custom.tak.nz
+
+# Deploy with different Authentik version
+npm run deploy:prod -- --context authentikVersion=2025.6.3
+
+# Use different branding
+npm run deploy:dev -- --context branding=generic
 ```
 
-## Estimated Cost
+## 📚 Documentation
 
-The estimated AWS cost for this layer of the stack without data transfer or data processing based usage is:
+- **[🚀 Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Comprehensive deployment instructions and configuration options
+- **[🏗️ Architecture Guide](docs/ARCHITECTURE.md)** - Technical architecture and design decisions  
+- **[⚡ Quick Reference](docs/QUICK_REFERENCE.md)** - Fast deployment commands and environment comparison
+- **[⚙️ Configuration Guide](docs/PARAMETERS.md)** - Complete configuration management reference
+- **[🧪 Test Organization](test/TEST_ORGANIZATION.md)** - Test structure and coverage information
 
-| Environment type      | Estimated monthly cost | Estimated yearly cost |
-| --------------------- | ----- | ----- |
-| Prod                  | 366.87 USD | 4,402.44 USD |
-| Dev-Test              | 106.25 USD | 1,275.00 USD |
+## Security Features
+
+### Enterprise-Grade Security
+- **🔑 KMS Encryption** - All data encrypted with customer-managed keys
+- **🛡️ Network Security** - Private subnets with controlled internet access
+- **🔒 IAM Policies** - Least-privilege access patterns throughout
+- **📋 LDAP Security** - Secure LDAP authentication with TLS encryption
+- **🔐 SSO Integration** - Single sign-on via OIDC and SAML protocolsontext
+
+## Getting Help
+
+### Common Issues
+- **Base Infrastructure** - Ensure base infrastructure stack is deployed first
+- **Route53 Hosted Zone** - Ensure your domain's hosted zone exists before deployment
+- **AWS Permissions** - CDK requires broad permissions for CloudFormation operations
+- **Docker Images** - CDK automatically handles Docker image building and ECR management
+- **Stack Name Matching** - Ensure stackName parameter matches your base infrastructure deployment
+
+### Support Resources
+- **AWS CDK Documentation** - https://docs.aws.amazon.com/cdk/
+- **Authentik Documentation** - https://goauthentik.io/docs/
+- **TAK-NZ Project** - https://github.com/TAK-NZ/
+- **Issue Tracking** - Use GitHub Issues for bug reports and feature requests

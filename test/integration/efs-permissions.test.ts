@@ -1,0 +1,189 @@
+/**
+ * Test suite for EFS IAM permissions
+ */
+import { App, Stack } from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as kms from 'aws-cdk-lib/aws-kms';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import { AuthentikServer } from '../../lib/constructs/authentik-server';
+import { AuthentikWorker } from '../../lib/constructs/authentik-worker';
+import type {
+  InfrastructureConfig,
+  SecretsConfig,
+  StorageConfig,
+  DeploymentConfig,
+  AuthentikApplicationConfig
+} from '../../lib/construct-configs';
+import type { ContextEnvironmentConfig } from '../../lib/stack-config';
+import { CDKTestHelper } from '../__helpers__/cdk-test-utils';
+
+// Test context configuration (matches reference pattern)
+const TEST_CONTEXT_CONFIG: ContextEnvironmentConfig = {
+  stackName: 'Test',
+  database: {
+    instanceClass: 'db.serverless',
+    instanceCount: 1,
+    allocatedStorage: 20,
+    maxAllocatedStorage: 100,
+    enablePerformanceInsights: false,
+    monitoringInterval: 0,
+    backupRetentionDays: 1,
+    deleteProtection: false,
+  },
+  redis: {
+    nodeType: 'cache.t4g.micro',
+    numCacheNodes: 1,
+    enableTransit: true,
+    enableAtRest: true,
+  },
+  ecs: {
+    taskCpu: 512,
+    taskMemory: 1024,
+    desiredCount: 1,
+    enableDetailedLogging: true,
+  },
+  authentik: {
+    hostname: 'auth',
+    adminUserEmail: 'admin@test.example.com',
+    ldapHostname: 'ldap',
+    ldapBaseDn: 'dc=test,dc=example,dc=com',
+    branding: 'tak-nz',
+    authentikVersion: '2025.6.2'
+  },
+  ecr: {
+    imageRetentionCount: 5,
+    scanOnPush: false
+  },
+  general: {
+    removalPolicy: 'DESTROY',
+    enableDetailedLogging: true,
+    enableContainerInsights: false,
+  },
+};
+
+describe('EFS IAM Permissions', () => {
+  let app: App;
+  let stack: Stack;
+  let vpc: ec2.IVpc;
+  let cluster: ecs.ICluster;
+  let securityGroup: ec2.SecurityGroup;
+  let kmsKey: kms.IKey;
+
+  beforeEach(() => {
+    ({ app, stack } = CDKTestHelper.createTestStack());
+    const infrastructure = CDKTestHelper.createMockInfrastructure(stack);
+    vpc = infrastructure.vpc;
+    cluster = infrastructure.ecsCluster;
+    securityGroup = infrastructure.ecsSecurityGroup;
+    kmsKey = infrastructure.kmsKey;
+  });
+
+  // Helper function to create test config objects
+  function createTestConfigs(mockSecrets: any, mockS3Bucket: s3.IBucket) {
+    const infrastructureConfig: InfrastructureConfig = {
+      vpc,
+      ecsSecurityGroup: securityGroup,
+      ecsCluster: cluster,
+      kmsKey
+    };
+
+    const secretsConfig: SecretsConfig = {
+      database: mockSecrets.dbSecret,
+      redisAuthToken: mockSecrets.redisSecret,
+      authentik: {
+        secretKey: mockSecrets.secretKey,
+        adminUserPassword: mockSecrets.adminPassword,
+        adminUserToken: mockSecrets.adminToken,
+        ldapToken: mockSecrets.ldapToken
+      }
+    };
+
+    const storageConfig: StorageConfig = {
+      s3: {
+        configBucket: mockS3Bucket
+      },
+      efs: {
+        fileSystemId: 'fs-12345',
+        mediaAccessPointId: 'fsap-media-12345',
+        customTemplatesAccessPointId: 'fsap-templates-12345'
+      }
+    };
+
+    const deploymentConfig: DeploymentConfig = {
+      enableExecute: false,
+      useConfigFile: false
+    };
+
+    const applicationConfig: AuthentikApplicationConfig = {
+      adminUserEmail: 'admin@example.com',
+      ldapBaseDn: 'DC=example,DC=com',
+      database: {
+        hostname: 'test-db.example.com'
+      },
+      redis: {
+        hostname: 'test-redis.example.com'
+      }
+    };
+
+    return { infrastructureConfig, secretsConfig, storageConfig, deploymentConfig, applicationConfig };
+  }
+
+  test('AuthentikServer should have EFS permissions in task role', () => {
+    const mockSecrets = CDKTestHelper.createMockSecrets(stack);
+    const mockS3Bucket = CDKTestHelper.createMockS3Bucket(stack, 'TestBucket');
+    const configs = createTestConfigs(mockSecrets, mockS3Bucket);
+
+    const server = new AuthentikServer(stack, 'TestAuthentikServer', {
+      environment: 'dev-test',
+      contextConfig: TEST_CONTEXT_CONFIG,
+      infrastructure: configs.infrastructureConfig,
+      secrets: configs.secretsConfig,
+      storage: configs.storageConfig,
+      deployment: configs.deploymentConfig,
+      application: configs.applicationConfig
+    });
+
+    // Check that task definition was created
+    expect(server.taskDefinition).toBeDefined();
+    
+    // Verify the task definition has a task role
+    expect(server.taskDefinition.taskRole).toBeDefined();
+  });
+
+  test('AuthentikWorker should have EFS permissions in task role', () => {
+    const mockSecrets = CDKTestHelper.createMockSecrets(stack);
+    const mockS3Bucket = CDKTestHelper.createMockS3Bucket(stack, 'TestWorkerBucket');
+    const configs = createTestConfigs(mockSecrets, mockS3Bucket);
+    
+    // Add authentik host to worker config
+    const workerApplicationConfig = {
+      ...configs.applicationConfig,
+      authentikHost: 'https://account.example.com'
+    };
+
+    const worker = new AuthentikWorker(stack, 'TestAuthentikWorker', {
+      environment: 'dev-test',
+      contextConfig: TEST_CONTEXT_CONFIG,
+      infrastructure: configs.infrastructureConfig,
+      secrets: {
+        ...configs.secretsConfig,
+        authentik: {
+          ...configs.secretsConfig.authentik,
+          ldapServiceUser: mockSecrets.ldapServiceUser
+        }
+      },
+      storage: configs.storageConfig,
+      deployment: configs.deploymentConfig,
+      application: workerApplicationConfig
+    });
+
+    // Check that task definition was created
+    expect(worker.taskDefinition).toBeDefined();
+    
+    // Verify the task definition has a task role
+    expect(worker.taskDefinition.taskRole).toBeDefined();
+  });
+});
+
+

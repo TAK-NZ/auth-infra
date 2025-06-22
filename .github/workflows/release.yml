@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Only semantic version tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating releases
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+
+      - name: Generate CHANGELOG
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          echo "Extracting changelog for $TAG"
+          
+          # More robust changelog extraction with fallback
+          if grep -q "### $TAG" CHANGELOG.md; then
+            # Extract content between current tag and next tag/end
+            awk "/### $TAG/,/### [v0-9]/ {
+              if (/### [v0-9]/ && !/### $TAG/) exit;
+              if (!/### $TAG/) print
+            }" CHANGELOG.md | sed '/^$/d' > RELEASE
+            
+            # Check if we got content
+            if [[ ! -s RELEASE ]]; then
+              echo "No changelog content found for $TAG"
+              echo "## Release $TAG" > RELEASE
+              echo "See commit history for changes." >> RELEASE
+            fi
+          else
+            echo "Tag $TAG not found in CHANGELOG.md"
+            echo "## Release $TAG" > RELEASE
+            echo "See commit history for changes." >> RELEASE
+          fi
+
+      - name: Github Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: RELEASE
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
