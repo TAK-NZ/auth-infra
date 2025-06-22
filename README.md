@@ -14,6 +14,14 @@ The following additional layers are required after deploying this `coe-base-<nam
 | --------------------- | ----- |
 | `coe-tak-<name>`      | TAK Server layer - [repo](https://github.com/TAK-NZ/tak-infra)      |
 
+> [!CAUTION]
+> **Legacy Branch - Deploy Tool Version**
+> 
+> This branch contains the OpenAddresses Deploy Tool version of the base infrastructure.
+> 
+> - **Maintenance mode**: Critical bug fixes only
+> - **New features**: Only available in the [main branch (CDK version)](../../../tree/main)
+> - **New deployments**: Consider using the CDK version for future support
 
 ## Pre-Reqs
 
