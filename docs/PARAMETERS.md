@@ -101,7 +101,7 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
         "ldapHostname": "ldap",
         "ldapBaseDn": "dc=tak,dc=nz",
         "useS3AuthentikConfigFile": true,
-        "enablePostgresReadReplicas": false,
+        "enablePostgresReadReplicas": true,
         "branding": "tak-nz",
         "authentikVersion": "2025.6.2"
       },

@@ -24,7 +24,7 @@ describe('Lambda Version Mismatch Detection', () => {
         environment: 'dev-test',
         contextConfig: MOCK_CONFIGS.DEV_TEST,
         infrastructure,
-        deployment: { gitSha: 'test-sha', enableExecute: false, useConfigFile: false },
+        deployment: { enableExecute: false, useConfigFile: false },
         token: {
           outpostName: 'LDAP',
           adminTokenSecret: mockSecrets.adminToken,
@@ -85,7 +85,7 @@ describe('Lambda Version Mismatch Detection', () => {
         environment: 'dev-test',
         contextConfig: MOCK_CONFIGS.DEV_TEST,
         infrastructure,
-        deployment: { gitSha: 'test-sha', enableExecute: false, useConfigFile: false },
+        deployment: { enableExecute: false, useConfigFile: false },
         token: {
           outpostName: 'LDAP',
           adminTokenSecret: mockSecrets.adminToken,
@@ -140,7 +140,7 @@ describe('Lambda Version Mismatch Detection', () => {
         environment: 'dev-test',
         contextConfig: MOCK_CONFIGS.DEV_TEST,
         infrastructure,
-        deployment: { gitSha: 'test-sha', enableExecute: false, useConfigFile: false },
+        deployment: { enableExecute: false, useConfigFile: false },
         token: {
           outpostName: 'LDAP',
           adminTokenSecret: mockSecrets.adminToken,
@@ -190,7 +190,7 @@ describe('Lambda Version Mismatch Detection', () => {
         environment: 'dev-test',
         contextConfig: MOCK_CONFIGS.DEV_TEST,
         infrastructure,
-        deployment: { gitSha: 'test-sha', enableExecute: false, useConfigFile: false },
+        deployment: { enableExecute: false, useConfigFile: false },
         token: {
           outpostName: 'LDAP',
           adminTokenSecret: mockSecrets.adminToken,

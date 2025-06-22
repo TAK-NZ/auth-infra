@@ -27,7 +27,7 @@ describe('Lambda Node.js Compatibility', () => {
         environment: 'dev-test',
         contextConfig: MOCK_CONFIGS.DEV_TEST,
         infrastructure,
-        deployment: { gitSha: 'test-sha', enableExecute: false, useConfigFile: false },
+        deployment: { enableExecute: false, useConfigFile: false },
         token: {
           outpostName: 'LDAP',
           adminTokenSecret: mockSecrets.adminToken,

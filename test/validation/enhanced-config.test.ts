@@ -3,7 +3,6 @@
  */
 import { ContextEnvironmentConfig } from '../../lib/stack-config';
 import { applyContextOverrides } from '../../lib/utils/context-overrides';
-import { SECRET_NAMES } from '../../lib/utils/constants';
 import * as cdk from 'aws-cdk-lib';
 
 describe('Context-Based Configuration Management', () => {
@@ -110,15 +109,5 @@ describe('Context-Based Configuration Management', () => {
     });
   });
 
-  describe('Secret constants', () => {
-    test('should have all secret name constants', () => {
-      expect(SECRET_NAMES.AUTHENTIK_SECRET_KEY).toBe('authentik-secret-key');
-      expect(SECRET_NAMES.AUTHENTIK_POSTGRES_PASSWORD).toBe('authentik-postgres-password');
-      expect(SECRET_NAMES.AUTHENTIK_REDIS_PASSWORD).toBe('authentik-redis-password');
-      expect(SECRET_NAMES.LDAP_ADMIN_PASSWORD).toBe('ldap-admin-password');
-      expect(SECRET_NAMES.LDAP_CONFIG_PASSWORD).toBe('ldap-config-password');
-      expect(SECRET_NAMES.LDAP_READONLY_USER).toBe('readonly');
-      expect(SECRET_NAMES.LDAP_READONLY_PASSWORD).toBe('ldap-readonly-password');
-    });
-  });
+
 });

@@ -71,7 +71,7 @@ describe('Authentik Constructs - Edge Cases', () => {
         s3: { configBucket: mockS3Bucket },
         efs: { fileSystemId: 'fs-12345', mediaAccessPointId: 'fsap-media-12345', customTemplatesAccessPointId: 'fsap-templates-12345' }
       },
-      deployment: { gitSha: 'test-sha', enableExecute: true, useConfigFile: true },
+      deployment: { enableExecute: true, useConfigFile: true },
       application: {
         adminUserEmail: 'admin@example.com',
         ldapBaseDn: 'DC=example,DC=com',
@@ -106,7 +106,7 @@ describe('Authentik Constructs - Edge Cases', () => {
         s3: { configBucket: mockS3Bucket },
         efs: { fileSystemId: 'fs-12345', mediaAccessPointId: 'fsap-media-12345', customTemplatesAccessPointId: 'fsap-templates-12345' }
       },
-      deployment: { gitSha: 'test-sha', enableExecute: false, useConfigFile: false },
+      deployment: { enableExecute: false, useConfigFile: false },
       application: {
         adminUserEmail: 'admin@example.com',
         ldapBaseDn: 'DC=example,DC=com',
@@ -139,7 +139,7 @@ describe('Authentik Constructs - Edge Cases', () => {
         s3: { configBucket: mockS3Bucket, envFileKey: 'config.env' },
         efs: { fileSystemId: 'fs-12345', mediaAccessPointId: 'fsap-media-12345', customTemplatesAccessPointId: 'fsap-templates-12345' }
       },
-      deployment: { gitSha: 'test-sha', enableExecute: true, useConfigFile: true },
+      deployment: { enableExecute: true, useConfigFile: true },
       application: {
         adminUserEmail: 'admin@example.com',
         ldapBaseDn: 'DC=example,DC=com',
@@ -172,7 +172,7 @@ describe('Authentik Constructs - Edge Cases', () => {
         s3: { configBucket: mockS3Bucket, envFileKey: 'config.env' },
         efs: { fileSystemId: 'fs-12345', mediaAccessPointId: 'fsap-media-12345', customTemplatesAccessPointId: 'fsap-templates-12345' }
       },
-      deployment: { gitSha: 'test-sha', enableExecute: false, useConfigFile: true },
+      deployment: { enableExecute: false, useConfigFile: true },
       application: {
         adminUserEmail: 'admin@example.com',
         ldapBaseDn: 'DC=example,DC=com',

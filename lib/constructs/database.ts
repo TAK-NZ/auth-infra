@@ -14,6 +14,7 @@ import {
 } from 'aws-cdk-lib';
 import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig } from '../construct-configs';
+import { DATABASE_CONSTANTS } from '../utils/constants';
 
 /**
  * Properties for the Database construct
@@ -90,10 +91,10 @@ export class Database extends Construct {
       secretName: `${props.stackName}/Database/Master-Password`,
       encryptionKey: props.infrastructure.kmsKey,
       generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: 'authentik' }),
+        secretStringTemplate: JSON.stringify({ username: DATABASE_CONSTANTS.USERNAME }),
         generateStringKey: 'password',
         excludePunctuation: true,
-        passwordLength: 64
+        passwordLength: DATABASE_CONSTANTS.PASSWORD_LENGTH
       }
     });
 
@@ -144,8 +145,8 @@ export class Database extends Construct {
           version: engineVersion
         }),
         credentials: rds.Credentials.fromSecret(this.masterSecret),
-        defaultDatabaseName: 'authentik',
-        port: 5432,
+        defaultDatabaseName: DATABASE_CONSTANTS.DEFAULT_DATABASE_NAME,
+        port: DATABASE_CONSTANTS.PORT,
         serverlessV2MinCapacity: 0.5,
         serverlessV2MaxCapacity: 4,
         writer: rds.ClusterInstance.serverlessV2('writer'),
@@ -185,8 +186,8 @@ export class Database extends Construct {
           version: engineVersion
         }),
         credentials: rds.Credentials.fromSecret(this.masterSecret),
-        defaultDatabaseName: 'authentik',
-        port: 5432,
+        defaultDatabaseName: DATABASE_CONSTANTS.DEFAULT_DATABASE_NAME,
+        port: DATABASE_CONSTANTS.PORT,
         writer: rds.ClusterInstance.provisioned('writer', {
           instanceType,
           enablePerformanceInsights: dbConfig.enablePerformanceInsights,

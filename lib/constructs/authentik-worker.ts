@@ -268,7 +268,7 @@ export class AuthentikWorker extends Construct {
         interval: Duration.seconds(30),
         timeout: Duration.seconds(30),
         retries: 3,
-        startPeriod: Duration.seconds(60)
+        startPeriod: Duration.seconds(180)
       },
 
       essential: true

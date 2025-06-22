@@ -111,7 +111,6 @@ describe('EFS IAM Permissions', () => {
     };
 
     const deploymentConfig: DeploymentConfig = {
-      gitSha: 'test-sha',
       enableExecute: false,
       useConfigFile: false
     };

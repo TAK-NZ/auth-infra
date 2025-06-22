@@ -35,6 +35,8 @@ import type {
 import { registerOutputs } from './outputs';
 import { createBaseImportValue, BASE_EXPORT_NAMES } from './cloudformation-imports';
 import { ContextEnvironmentConfig } from './stack-config';
+import { ConfigValidator } from './utils/config-validator';
+import { TagHelper } from './utils/tag-helper';
 
 
 export interface AuthInfraStackProps extends StackProps {
@@ -51,6 +53,9 @@ export class AuthInfraStack extends cdk.Stack {
       ...props,
       description: 'TAK Authentication Layer - Authentik, LDAP Outpost',
     });
+
+    // Validate configuration early
+    ConfigValidator.validateEnvironmentConfig(props.envConfig, props.environment);
 
     // Use environment configuration directly (no complex transformations needed)
     const { envConfig } = props;
@@ -70,8 +75,12 @@ export class AuthInfraStack extends cdk.Stack {
     const enableHighAvailability = isHighAvailability;
     const enableDetailedMonitoring = envConfig.general.enableDetailedLogging;
 
-    // Add Environment Type tag to the stack
-    cdk.Tags.of(this).add('Environment Type', environmentLabel);
+    // Apply comprehensive tagging
+    const standardTags = TagHelper.createStandardTags(
+      envConfig.stackName,
+      this.region
+    );
+    TagHelper.applyStandardTags(this, standardTags);
 
     // Get runtime CloudFormation values for stack outputs and resource naming
     const stackName = Fn.ref('AWS::StackName');
@@ -79,13 +88,11 @@ export class AuthInfraStack extends cdk.Stack {
 
     // Configuration-based parameter resolution
     const authentikAdminUserEmail = envConfig.authentik.adminUserEmail;
-    const ldapBaseDn = envConfig.authentik.ldapBaseDn || 'dc=tak,dc=nz';
+    const ldapBaseDn = envConfig.authentik.ldapBaseDn ?? 'dc=tak,dc=nz';
     const hostnameAuthentik = envConfig.authentik.hostname;
     const hostnameLdap = envConfig.authentik.ldapHostname;
-    const gitSha = 'latest'; // Use fixed tag for context-driven approach
-    const enableEcsExec = envConfig.ecs.enableEcsExec ?? (props.environment === 'dev-test');
-    const useS3AuthentikConfigFile = envConfig.authentik.useS3AuthentikConfigFile ?? (props.environment === 'prod');
-    // NOTE: Postgres read replicas are currently broken in Authentik - see https://github.com/goauthentik/authentik/issues/14319#issuecomment-2844233291
+    const enableEcsExec = envConfig.ecs.enableEcsExec ?? false;
+    const useS3AuthentikConfigFile = envConfig.authentik.useS3AuthentikConfigFile ?? false;
     const enablePostgresReadReplicas = envConfig.authentik.enablePostgresReadReplicas ?? false;
 
     // =================
@@ -276,7 +283,6 @@ export class AuthInfraStack extends cdk.Stack {
     };
 
     const deploymentConfig: DeploymentConfig = {
-      gitSha: gitSha,
       enableExecute: enableEcsExec,
       useConfigFile: useS3AuthentikConfigFile
     };

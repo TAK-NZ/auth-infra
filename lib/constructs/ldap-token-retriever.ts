@@ -369,7 +369,7 @@ exports.handler = async (event, context) => {
         AdminSecretName: props.token.adminTokenSecret.secretName,
         LDAPSecretName: props.token.ldapTokenSecret.secretName,
         // Add a timestamp to force updates on every deployment
-        UpdateTimestamp: props.deployment.gitSha
+        UpdateTimestamp: Date.now().toString()
       }
     });
 

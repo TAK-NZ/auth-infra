@@ -51,5 +51,6 @@ coverage/
 .env.test.local
 .env.production.local
 
-# Backup directory (legacy CloudFormation templates)
+# Backup and To-Do directory 
 backup/
+todo/

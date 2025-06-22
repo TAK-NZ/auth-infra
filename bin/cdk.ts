@@ -2,7 +2,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { AuthInfraStack } from '../lib/auth-infra-stack';
 import { applyContextOverrides } from '../lib/utils/context-overrides';
-import { DEFAULT_AWS_REGION } from '../lib/utils/constants';
+
 import { generateStandardTags } from '../lib/utils/tag-helpers';
 
 
@@ -48,7 +48,7 @@ const stack = new AuthInfraStack(app, stackName, {
   envConfig: finalEnvConfig,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION || defaults?.region || DEFAULT_AWS_REGION,
+    region: process.env.CDK_DEFAULT_REGION || defaults?.region || 'ap-southeast-2',
   },
   tags: generateStandardTags(finalEnvConfig, envName as 'prod' | 'dev-test', defaults)
 });

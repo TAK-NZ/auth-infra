@@ -1,5 +1,4 @@
 import { ContextEnvironmentConfig } from '../stack-config';
-import { TAG_CONSTANTS } from './constants';
 
 /**
  * Interface for tag-related defaults from cdk.json context
@@ -27,10 +26,10 @@ export function generateStandardTags(
   
   return {
     // Core identification tags
-    Project: defaults?.project || TAG_CONSTANTS.PROJECT,
+    Project: defaults?.project || 'TAK.NZ',
     Environment: envConfig.stackName,
-    Component: defaults?.component || TAG_CONSTANTS.AUTH_COMPONENT,
-    ManagedBy: TAG_CONSTANTS.MANAGED_BY,
+    Component: defaults?.component || 'AuthInfra',
+    ManagedBy: 'CDK',
     
     // Environment type classification
     'Environment Type': environmentLabel,

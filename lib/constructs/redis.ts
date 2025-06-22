@@ -11,6 +11,7 @@ import {
 
 import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig } from '../construct-configs';
+import { REDIS_CONSTANTS } from '../utils/constants';
 
 /**
  * Properties for the Redis construct
@@ -75,7 +76,7 @@ export class Redis extends Construct {
       encryptionKey: props.infrastructure.kmsKey,
       generateSecretString: {
         excludePunctuation: true,
-        passwordLength: 64
+        passwordLength: REDIS_CONSTANTS.PASSWORD_LENGTH
       }
     });
 
@@ -99,8 +100,8 @@ export class Redis extends Construct {
       kmsKeyId: props.infrastructure.kmsKey.keyArn,
       cacheNodeType: props.contextConfig.redis.nodeType,
       cacheSubnetGroupName: subnetGroup.ref,
-      engine: 'valkey',
-      engineVersion: '7.2',
+      engine: REDIS_CONSTANTS.ENGINE,
+      engineVersion: REDIS_CONSTANTS.ENGINE_VERSION,
       autoMinorVersionUpgrade: true,
       numCacheClusters: props.contextConfig.redis.numCacheNodes,
       securityGroupIds: securityGroupIds

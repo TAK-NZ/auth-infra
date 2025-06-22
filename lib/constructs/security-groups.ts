@@ -7,6 +7,7 @@ import {
   Fn
 } from 'aws-cdk-lib';
 import { createBaseImportValue, BASE_EXPORT_NAMES } from '../cloudformation-imports';
+import { DATABASE_CONSTANTS, REDIS_CONSTANTS, AUTHENTIK_CONSTANTS, EFS_CONSTANTS } from '../utils/constants';
 
 /**
  * Properties for the SecurityGroups construct
@@ -75,7 +76,7 @@ export class SecurityGroups extends Construct {
     // Allow Authentik application traffic from ALB
     this.authentikServer.addIngressRule(
       ec2.Peer.securityGroupId(props.albSecurityGroup.securityGroupId),
-      ec2.Port.tcp(9443),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.SERVER_PORT),
       'Allow Authentik HTTPS traffic from ALB'
     );
 
@@ -112,12 +113,12 @@ export class SecurityGroups extends Construct {
     // LDAP inbound rules
     this.ldap.addIngressRule(
       ec2.Peer.securityGroupId(this.ldapNlb.securityGroupId),
-      ec2.Port.tcp(3389),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAP_PORT),
       'Allow LDAP traffic from NLB'
     );
     this.ldap.addIngressRule(
       ec2.Peer.securityGroupId(this.ldapNlb.securityGroupId),
-      ec2.Port.tcp(6636),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAPS_PORT),
       'Allow LDAPS traffic from NLB'
     );
 
@@ -142,12 +143,12 @@ export class SecurityGroups extends Construct {
     // Database inbound rules (will be added after ECS security groups are created)
     this.database.addIngressRule(
       ec2.Peer.securityGroupId(this.authentikServer.securityGroupId),
-      ec2.Port.tcp(5432),
+      ec2.Port.tcp(DATABASE_CONSTANTS.PORT),
       'Allow PostgreSQL access from Authentik Server'
     );
     this.database.addIngressRule(
       ec2.Peer.securityGroupId(this.authentikWorker.securityGroupId),
-      ec2.Port.tcp(5432),
+      ec2.Port.tcp(DATABASE_CONSTANTS.PORT),
       'Allow PostgreSQL access from Authentik Worker'
     );
 
@@ -161,12 +162,12 @@ export class SecurityGroups extends Construct {
     // Redis inbound rules
     this.redis.addIngressRule(
       ec2.Peer.securityGroupId(this.authentikServer.securityGroupId),
-      ec2.Port.tcp(6379),
+      ec2.Port.tcp(REDIS_CONSTANTS.PORT),
       'Allow Redis access from Authentik Server'
     );
     this.redis.addIngressRule(
       ec2.Peer.securityGroupId(this.authentikWorker.securityGroupId),
-      ec2.Port.tcp(6379),
+      ec2.Port.tcp(REDIS_CONSTANTS.PORT),
       'Allow Redis access from Authentik Worker'
     );
   }
@@ -177,17 +178,17 @@ export class SecurityGroups extends Construct {
   private addEcsOutboundRules(securityGroup: ec2.SecurityGroup): void {
     securityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(5432),
+      ec2.Port.tcp(DATABASE_CONSTANTS.PORT),
       'Allow PostgreSQL access'
     );
     securityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(6379),
+      ec2.Port.tcp(REDIS_CONSTANTS.PORT),
       'Allow Redis access'
     );
     securityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(2049),
+      ec2.Port.tcp(EFS_CONSTANTS.PORT),
       'Allow EFS access'
     );
     securityGroup.addEgressRule(
@@ -221,24 +222,24 @@ export class SecurityGroups extends Construct {
     // IPv4 rules
     securityGroup.addIngressRule(
       ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
-      ec2.Port.tcp(389),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.LDAP_PORT),
       'Allow LDAP access from VPC IPv4'
     );
     securityGroup.addIngressRule(
       ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
-      ec2.Port.tcp(636),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.LDAPS_PORT),
       'Allow LDAPS access from VPC IPv4'
     );
 
     // IPv6 rules
     securityGroup.addIngressRule(
       ec2.Peer.ipv6(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV6))),
-      ec2.Port.tcp(389),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.LDAP_PORT),
       'Allow LDAP access from VPC IPv6'
     );
     securityGroup.addIngressRule(
       ec2.Peer.ipv6(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV6))),
-      ec2.Port.tcp(636),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.LDAPS_PORT),
       'Allow LDAPS access from VPC IPv6'
     );
   }
@@ -250,24 +251,24 @@ export class SecurityGroups extends Construct {
     // IPv4 rules for health checks
     securityGroup.addEgressRule(
       ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
-      ec2.Port.tcp(3389),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAP_PORT),
       'Allow health check to LDAP container IPv4'
     );
     securityGroup.addEgressRule(
       ec2.Peer.ipv4(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV4))),
-      ec2.Port.tcp(6636),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAPS_PORT),
       'Allow health check to LDAPS container IPv4'
     );
 
     // IPv6 rules for health checks
     securityGroup.addEgressRule(
       ec2.Peer.ipv6(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV6))),
-      ec2.Port.tcp(3389),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAP_PORT),
       'Allow health check to LDAP container IPv6'
     );
     securityGroup.addEgressRule(
       ec2.Peer.ipv6(Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.VPC_CIDR_IPV6))),
-      ec2.Port.tcp(6636),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAPS_PORT),
       'Allow health check to LDAPS container IPv6'
     );
   }

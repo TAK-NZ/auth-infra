@@ -1,32 +1,22 @@
-/**
- * Constants and configuration definitions
- * Centralizes core values for the TAK-NZ auth infrastructure
- */
-export declare const AWS_REGIONS: {
-    readonly AP_SOUTHEAST_2: "ap-southeast-2";
-    readonly US_EAST_1: "us-east-1";
+export declare const DATABASE_CONSTANTS: {
+    readonly PORT: 5432;
+    readonly PASSWORD_LENGTH: 64;
+    readonly DEFAULT_DATABASE_NAME: "authentik";
+    readonly USERNAME: "authentik";
 };
-export declare const INFRASTRUCTURE_DEFAULTS: {
-    readonly DEFAULT_AWS_REGION: "ap-southeast-2";
+export declare const REDIS_CONSTANTS: {
+    readonly PORT: 6379;
+    readonly PASSWORD_LENGTH: 64;
+    readonly ENGINE: "valkey";
+    readonly ENGINE_VERSION: "7.2";
 };
-export declare const DEFAULT_AWS_REGION: "ap-southeast-2";
-/**
- * Tag constants for resource tagging
- */
-export declare const TAG_CONSTANTS: {
-    readonly PROJECT: "TAK";
-    readonly AUTH_COMPONENT: "AuthInfra";
-    readonly MANAGED_BY: "CDK";
+export declare const AUTHENTIK_CONSTANTS: {
+    readonly SERVER_PORT: 9000;
+    readonly LDAP_PORT: 389;
+    readonly LDAPS_PORT: 636;
+    readonly NLB_LDAP_PORT: 3389;
+    readonly NLB_LDAPS_PORT: 6636;
 };
-/**
- * Secret name constants for AWS Secrets Manager
- */
-export declare const SECRET_NAMES: {
-    readonly AUTHENTIK_SECRET_KEY: "authentik-secret-key";
-    readonly AUTHENTIK_POSTGRES_PASSWORD: "authentik-postgres-password";
-    readonly AUTHENTIK_REDIS_PASSWORD: "authentik-redis-password";
-    readonly LDAP_ADMIN_PASSWORD: "ldap-admin-password";
-    readonly LDAP_CONFIG_PASSWORD: "ldap-config-password";
-    readonly LDAP_READONLY_USER: "readonly";
-    readonly LDAP_READONLY_PASSWORD: "ldap-readonly-password";
+export declare const EFS_CONSTANTS: {
+    readonly PORT: 2049;
 };

@@ -127,11 +127,6 @@ export interface StorageConfig {
  */
 export interface DeploymentConfig {
   /**
-   * Git SHA for Docker image tagging
-   */
-  gitSha: string;
-
-  /**
    * Allow SSH exec into container
    */
   enableExecute: boolean;
