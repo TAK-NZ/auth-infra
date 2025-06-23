@@ -42,6 +42,7 @@ export interface ContextEnvironmentConfig {
     enablePostgresReadReplicas?: boolean;
     branding: string;
     authentikVersion: string;
+    outboundEmailServerPort?: number;
   };
   ecr: {
     imageRetentionCount: number;
