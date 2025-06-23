@@ -23,7 +23,7 @@ export class ConfigValidator {
   }
 
   private static validateDatabase(dbConfig: any): void {
-    const validInstanceClasses = ['db.serverless', 'db.t3.micro', 'db.t4g.micro', 'db.t4g.small', 'db.t4g.medium', 'db.t4g.large'];
+    const validInstanceClasses = ['db.serverless', 'db.t3.micro', 'db.t3.small', 'db.t4g.micro', 'db.t4g.small', 'db.t4g.medium', 'db.t4g.large'];
     if (!validInstanceClasses.includes(dbConfig.instanceClass)) {
       throw new Error(`Invalid database instance class: ${dbConfig.instanceClass}`);
     }
@@ -34,7 +34,7 @@ export class ConfigValidator {
   }
 
   private static validateRedis(redisConfig: any): void {
-    const validNodeTypes = ['cache.t3.micro', 'cache.t3.small', 'cache.t3.medium', 'cache.t3.large'];
+    const validNodeTypes = ['cache.t3.micro', 'cache.t3.small', 'cache.t3.medium', 'cache.t3.large', 'cache.t4g.micro', 'cache.t4g.small', 'cache.t4g.medium', 'cache.t4g.large'];
     if (!validNodeTypes.includes(redisConfig.nodeType)) {
       throw new Error(`Invalid Redis node type: ${redisConfig.nodeType}`);
     }
