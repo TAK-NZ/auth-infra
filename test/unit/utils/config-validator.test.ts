@@ -32,7 +32,7 @@ describe('ConfigValidator', () => {
         ...MOCK_CONFIGS.DEV_TEST,
         authentik: { ...MOCK_CONFIGS.DEV_TEST.authentik }
       };
-      delete invalidConfig.authentik.adminUserEmail;
+      (invalidConfig.authentik as any).adminUserEmail = undefined;
       
       expect(() => {
         ConfigValidator.validateEnvironmentConfig(invalidConfig, 'dev-test');
@@ -191,7 +191,7 @@ describe('ConfigValidator', () => {
           ...MOCK_CONFIGS.DEV_TEST.authentik
         }
       };
-      delete invalidConfig.authentik.hostname;
+      (invalidConfig.authentik as any).hostname = undefined;
       
       expect(() => {
         ConfigValidator.validateEnvironmentConfig(invalidConfig, 'dev-test');
@@ -205,7 +205,7 @@ describe('ConfigValidator', () => {
           ...MOCK_CONFIGS.DEV_TEST.authentik
         }
       };
-      delete invalidConfig.authentik.ldapHostname;
+      (invalidConfig.authentik as any).ldapHostname = undefined;
       
       expect(() => {
         ConfigValidator.validateEnvironmentConfig(invalidConfig, 'dev-test');
@@ -219,7 +219,7 @@ describe('ConfigValidator', () => {
           ...MOCK_CONFIGS.DEV_TEST.authentik
         }
       };
-      delete invalidConfig.authentik.ldapBaseDn;
+      (invalidConfig.authentik as any).ldapBaseDn = undefined;
       
       expect(() => {
         ConfigValidator.validateEnvironmentConfig(invalidConfig, 'dev-test');

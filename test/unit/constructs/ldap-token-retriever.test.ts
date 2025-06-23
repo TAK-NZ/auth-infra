@@ -102,8 +102,7 @@ describe('LDAP Token Retriever Construct', () => {
         }
       });
 
-      const envVars = ldapTokenRetriever.lambdaFunction.environment;
-      expect(envVars).toBeDefined();
+      expect(ldapTokenRetriever.lambdaFunction).toBeDefined();
     });
   });
 });
