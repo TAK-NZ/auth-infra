@@ -89,6 +89,16 @@ export class SecurityGroups extends Construct {
 
     // Authentik Server outbound rules
     this.addEcsOutboundRules(this.authentikServer);
+    this.authentikServer.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(emailServerPort),
+      'Allow outbound email server access'
+    );
+    this.authentikServer.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(emailServerPort),
+      'Allow outbound email server access IPv6'
+    );
 
     // Create Authentik Worker security group
     this.authentikWorker = new ec2.SecurityGroup(this, 'AuthentikWorker', {
