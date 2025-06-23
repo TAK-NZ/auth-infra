@@ -185,7 +185,8 @@ export class AuthInfraStack extends cdk.Stack {
     const securityGroups = new SecurityGroups(this, 'SecurityGroups', {
       vpc,
       stackNameComponent,
-      albSecurityGroup: authentikELB.loadBalancer.connections.securityGroups[0]
+      albSecurityGroup: authentikELB.loadBalancer.connections.securityGroups[0],
+      outboundEmailServerPort: envConfig.authentik.outboundEmailServerPort
     });
 
     // =================

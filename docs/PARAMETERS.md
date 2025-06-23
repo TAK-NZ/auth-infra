@@ -57,7 +57,8 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
         "useS3AuthentikConfigFile": false,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.6.2"
+        "authentikVersion": "2025.6.2",
+        "outboundEmailServerPort": 587
       },
       "ecr": {
         "imageRetentionCount": 5,
@@ -103,7 +104,8 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
         "useS3AuthentikConfigFile": true,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.6.2"
+        "authentikVersion": "2025.6.2",
+        "outboundEmailServerPort": 587
       },
       "ecr": {
         "imageRetentionCount": 20,
@@ -193,6 +195,7 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 | `enablePostgresReadReplicas` | Enable read replicas (currently disabled) | `false` | `false` |
 | `branding` | Docker image branding variant | `tak-nz` | `tak-nz` |
 | `authentikVersion` | Authentik version | `2025.6.2` | `2025.6.2` |
+| `outboundEmailServerPort` | Email server port for outbound connections | `587` | `587` |
 
 ### **ECR Configuration**
 | Parameter | Description | dev-test | prod |

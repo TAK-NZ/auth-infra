@@ -27,6 +27,11 @@ export interface SecurityGroupsProps {
    * ALB security group to reference
    */
   albSecurityGroup: ec2.ISecurityGroup;
+
+  /**
+   * Outbound email server port (default: 587)
+   */
+  outboundEmailServerPort?: number;
 }
 
 /**
@@ -66,6 +71,8 @@ export class SecurityGroups extends Construct {
   constructor(scope: Construct, id: string, props: SecurityGroupsProps) {
     super(scope, id);
 
+    const emailServerPort = props.outboundEmailServerPort ?? 587;
+
     // Create Authentik Server security group
     this.authentikServer = new ec2.SecurityGroup(this, 'AuthentikServer', {
       vpc: props.vpc,
@@ -82,6 +89,16 @@ export class SecurityGroups extends Construct {
 
     // Authentik Server outbound rules
     this.addEcsOutboundRules(this.authentikServer);
+    this.authentikServer.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(emailServerPort),
+      'Allow outbound email server access'
+    );
+    this.authentikServer.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(emailServerPort),
+      'Allow outbound email server access IPv6'
+    );
 
     // Create Authentik Worker security group
     this.authentikWorker = new ec2.SecurityGroup(this, 'AuthentikWorker', {
@@ -90,8 +107,18 @@ export class SecurityGroups extends Construct {
       allowAllOutbound: false
     });
 
-    // Authentik Worker outbound rules (same as server)
+    // Authentik Worker outbound rules (includes email server access)
     this.addEcsOutboundRules(this.authentikWorker);
+    this.authentikWorker.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(emailServerPort),
+      'Allow outbound email server access'
+    );
+    this.authentikWorker.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(emailServerPort),
+      'Allow outbound email server access IPv6'
+    );
 
     // Create LDAP NLB security group
     this.ldapNlb = new ec2.SecurityGroup(this, 'LDAPNLB', {
@@ -127,6 +154,11 @@ export class SecurityGroups extends Construct {
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(443),
       'Allow HTTPS access to Authentik server'
+    );
+    this.ldap.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(443),
+      'Allow HTTPS access to Authentik server IPv6'
     );
     this.addDnsRules(this.ldap);
 
@@ -182,9 +214,19 @@ export class SecurityGroups extends Construct {
       'Allow PostgreSQL access'
     );
     securityGroup.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(DATABASE_CONSTANTS.PORT),
+      'Allow PostgreSQL access IPv6'
+    );
+    securityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(REDIS_CONSTANTS.PORT),
       'Allow Redis access'
+    );
+    securityGroup.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(REDIS_CONSTANTS.PORT),
+      'Allow Redis access IPv6'
     );
     securityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
@@ -192,9 +234,19 @@ export class SecurityGroups extends Construct {
       'Allow EFS access'
     );
     securityGroup.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(EFS_CONSTANTS.PORT),
+      'Allow EFS access IPv6'
+    );
+    securityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(443),
       'Allow HTTPS access'
+    );
+    securityGroup.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(443),
+      'Allow HTTPS access IPv6'
     );
     this.addDnsRules(securityGroup);
   }
@@ -209,9 +261,19 @@ export class SecurityGroups extends Construct {
       'Allow DNS access'
     );
     securityGroup.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(53),
+      'Allow DNS access IPv6'
+    );
+    securityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.udp(53),
       'Allow DNS access'
+    );
+    securityGroup.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.udp(53),
+      'Allow DNS access IPv6'
     );
   }
 
