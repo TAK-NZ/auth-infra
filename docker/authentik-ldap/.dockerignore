@@ -1,0 +1,39 @@
+# Git and version control
+.git/
+.gitignore
+.gitattributes
+
+# Build artifacts and logs
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+
+# CDK and AWS
+cdk.out/
+.cdk.staging/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+*.bak
+*.orig
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
