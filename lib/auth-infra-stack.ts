@@ -421,6 +421,10 @@ export class AuthInfraStack extends cdk.Stack {
     // STACK OUTPUTS
     // =================
 
+    // Build custom domain URLs
+    const authentikCustomDomain = `${hostnameAuthentik}.${hostedZoneName}`;
+    const ldapCustomDomain = `${hostnameLdap}.${hostedZoneName}`;
+    
     // Outputs
     registerOutputs({
       stack: this,
@@ -435,11 +439,13 @@ export class AuthInfraStack extends cdk.Stack {
       authentikSecretKeyArn: secretsManager.secretKey.secretArn,
       authentikAdminTokenArn: secretsManager.adminUserToken.secretArn,
       authentikLdapTokenArn: secretsManager.ldapToken.secretArn,
+      authentikLdapServiceUserArn: secretsManager.ldapServiceUser.secretArn,
       authentikAlbDns: authentikELB.loadBalancer.loadBalancerDnsName,
-      authentikUrl: `https://${authentikELB.dnsName}`,
+      authentikUrl: `https://${authentikCustomDomain}`,
       ldapNlbDns: ldap.loadBalancer.loadBalancerDnsName,
-      ldapEndpoint: `ldap://${ldap.dnsName}:389`,
-      ldapsEndpoint: `ldaps://${ldap.dnsName}:636`,
+      ldapEndpoint: `ldap://${ldapCustomDomain}:389`,
+      ldapsEndpoint: `ldaps://${ldapCustomDomain}:636`,
+      ldapBaseDn: ldapBaseDn,
       ldapTokenRetrieverLambdaArn: ldapTokenRetriever.lambdaFunction.functionArn
     });
   }
