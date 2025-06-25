@@ -117,7 +117,7 @@ export class Database extends Construct {
     });
 
     // Create parameter group for PostgreSQL
-    const engineVersionString = dbConfig.engineVersion || '16.6';
+    const engineVersionString = dbConfig.engineVersion || '17.4';
     const engineVersion = engineVersionString.startsWith('17') ? 
       rds.AuroraPostgresEngineVersion.VER_17_4 : 
       rds.AuroraPostgresEngineVersion.VER_16_6;
@@ -171,7 +171,9 @@ export class Database extends Construct {
         cloudwatchLogsExports: ['postgresql'],
         cloudwatchLogsRetention: props.contextConfig.general.enableDetailedLogging ? 
           logs.RetentionDays.ONE_MONTH : 
-          logs.RetentionDays.ONE_WEEK
+          logs.RetentionDays.ONE_WEEK,
+        monitoringRole: enableMonitoring ? monitoringRole : undefined,
+        monitoringInterval: enableMonitoring ? Duration.seconds(dbConfig.monitoringInterval) : undefined
       });
     } else {
       // Provisioned instances configuration
@@ -222,7 +224,9 @@ export class Database extends Construct {
         cloudwatchLogsExports: ['postgresql'],
         cloudwatchLogsRetention: props.contextConfig.general.enableDetailedLogging ? 
           logs.RetentionDays.ONE_MONTH : 
-          logs.RetentionDays.ONE_WEEK
+          logs.RetentionDays.ONE_WEEK,
+        monitoringRole: enableMonitoring ? monitoringRole : undefined,
+        monitoringInterval: enableMonitoring ? Duration.seconds(dbConfig.monitoringInterval) : undefined
       });
     }
 
