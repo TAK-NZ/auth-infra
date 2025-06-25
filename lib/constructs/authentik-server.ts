@@ -66,6 +66,11 @@ export interface AuthentikServerProps {
    * Application configuration
    */
   application: AuthentikApplicationConfig;
+
+  /**
+   * Optional shared Docker image asset (to prevent rebuilds)
+   */
+  dockerImageAsset?: ecrAssets.DockerImageAsset;
 }
 
 /**
@@ -224,15 +229,37 @@ export class AuthentikServer extends Construct {
 
 
 
-    // Build Docker image with branding and version
-    const dockerfileName = `Dockerfile.${props.contextConfig.authentik.branding}`;
-    const dockerImageAsset = new ecrAssets.DockerImageAsset(this, 'ServerDockerAsset', {
-      directory: '.',
-      file: `docker/authentik-server/${dockerfileName}`,
-      buildArgs: {
-        AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
-      }
-    });
+    // Use shared Docker image asset if provided, otherwise create new one
+    const dockerImageAsset = props.dockerImageAsset || (() => {
+      const dockerfileName = `Dockerfile.${props.contextConfig.authentik.branding}`;
+      return new ecrAssets.DockerImageAsset(this, 'ServerDockerAsset', {
+        directory: '.',
+        file: `docker/authentik-server/${dockerfileName}`,
+        buildArgs: {
+          AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
+        },
+        // Exclude files that change frequently but don't affect the Docker build
+        exclude: [
+          'node_modules/**',
+          'cdk.out/**',
+          '.cdk.staging/**',
+          '**/*.log',
+          '**/*.tmp',
+          '.git/**',
+          '.vscode/**',
+          '.idea/**',
+          'test/**',
+          'docs/**',
+          'lib/**/*.js',
+          'lib/**/*.d.ts',
+          'lib/**/*.js.map',
+          'bin/**/*.js',
+          'bin/**/*.d.ts',
+          '**/.DS_Store',
+          '**/Thumbs.db'
+        ]
+      });
+    })();
 
     const containerImage = ecs.ContainerImage.fromDockerImageAsset(dockerImageAsset);
 

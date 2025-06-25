@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import { RemovalPolicy, StackProps, Fn, CfnOutput } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 
@@ -313,6 +314,36 @@ export class AuthInfraStack extends cdk.Stack {
     // APPLICATION SERVICES
     // =================
 
+    // Create shared Docker image asset for both server and worker
+    const dockerfileName = `Dockerfile.${envConfig.authentik.branding}`;
+    const sharedDockerAsset = new ecrAssets.DockerImageAsset(this, 'AuthentikDockerAsset', {
+      directory: '.',
+      file: `docker/authentik-server/${dockerfileName}`,
+      buildArgs: {
+        AUTHENTIK_VERSION: envConfig.authentik.authentikVersion
+      },
+      // Exclude files that change frequently but don't affect the Docker build
+      exclude: [
+        'node_modules/**',
+        'cdk.out/**',
+        '.cdk.staging/**',
+        '**/*.log',
+        '**/*.tmp',
+        '.git/**',
+        '.vscode/**',
+        '.idea/**',
+        'test/**',
+        'docs/**',
+        'lib/**/*.js',
+        'lib/**/*.d.ts',
+        'lib/**/*.js.map',
+        'bin/**/*.js',
+        'bin/**/*.d.ts',
+        '**/.DS_Store',
+        '**/Thumbs.db'
+      ]
+    });
+
     // Authentik Server
     const authentikServer = new AuthentikServer(this, 'AuthentikServer', {
       environment: props.environment,
@@ -321,7 +352,8 @@ export class AuthInfraStack extends cdk.Stack {
       secrets: secretsConfig,
       storage: storageConfig,
       deployment: deploymentConfig,
-      application: applicationConfig
+      application: applicationConfig,
+      dockerImageAsset: sharedDockerAsset
     });
 
     // Authentik Worker  
@@ -334,7 +366,8 @@ export class AuthInfraStack extends cdk.Stack {
       secrets: secretsConfig,
       storage: storageConfig,
       deployment: deploymentConfig,
-      application: authentikWorkerConfig
+      application: authentikWorkerConfig,
+      dockerImageAsset: sharedDockerAsset
     });
 
     // Connect Authentik Server to Load Balancer
