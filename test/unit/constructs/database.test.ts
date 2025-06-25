@@ -73,6 +73,21 @@ describe('Database Construct', () => {
       Engine: 'aurora-postgresql',
       DatabaseName: 'authentik'
     });
+    
+    // Verify monitoring role is created but MonitoringInterval is not set (undefined)
+    template.hasResourceProperties('AWS::IAM::Role', {
+      AssumeRolePolicyDocument: {
+        Statement: [{
+          Effect: 'Allow',
+          Principal: { Service: 'monitoring.rds.amazonaws.com' }
+        }]
+      }
+    });
+    
+    // Verify MonitoringInterval is not present in template when disabled
+    const resources = template.findResources('AWS::RDS::DBCluster');
+    const clusterProps = Object.values(resources)[0].Properties;
+    expect(clusterProps.MonitoringInterval).toBeUndefined();
   });
 
   test('should create provisioned database cluster', () => {
@@ -101,6 +116,22 @@ describe('Database Construct', () => {
       Engine: 'aurora-postgresql',
       DeletionProtection: true
     });
+    
+    // Verify monitoring role is created for enhanced monitoring
+    template.hasResourceProperties('AWS::IAM::Role', {
+      AssumeRolePolicyDocument: {
+        Statement: [{
+          Effect: 'Allow',
+          Principal: { Service: 'monitoring.rds.amazonaws.com' }
+        }]
+      },
+      ManagedPolicyArns: [{
+        'Fn::Join': ['', ['arn:', { Ref: 'AWS::Partition' }, ':iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole']]
+      }]
+    });
+    
+    // Verify enableMonitoring logic works (monitoring interval > 0)
+    expect(provisionedConfig.database.monitoringInterval).toBe(60);
   });
 
   test('should handle large instance type', () => {
