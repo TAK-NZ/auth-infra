@@ -196,6 +196,7 @@ export class AuthentikServer extends Construct {
 
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
+      family: 'TAK-Demo-AuthInfra-AuthentikServer',
       cpu: props.contextConfig.ecs.taskCpu,
       memoryLimitMiB: props.contextConfig.ecs.taskMemory,
       executionRole,
@@ -370,6 +371,7 @@ export class AuthentikServer extends Construct {
   public createTargetGroup(vpc: ec2.IVpc, listener: elbv2.ApplicationListener): elbv2.ApplicationTargetGroup {
     // Create target group for the Authentik service
     const targetGroup = new elbv2.ApplicationTargetGroup(this, 'TargetGroup', {
+      targetGroupName: `tak-${props.contextConfig.stackName.toLowerCase()}-authentik`,
       vpc: vpc,
       targetType: elbv2.TargetType.IP,
       port: 9443,

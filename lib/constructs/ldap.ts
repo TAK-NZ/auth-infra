@@ -126,7 +126,7 @@ export class Ldap extends Construct {
 
     // Create network load balancer
     this.loadBalancer = new elbv2.NetworkLoadBalancer(this, 'NLB', {
-      loadBalancerName: `${props.contextConfig.stackName.toLowerCase()}-ldap`,
+      loadBalancerName: `tak-${props.contextConfig.stackName.toLowerCase()}-ldap`,
       vpc: props.infrastructure.vpc,
       internetFacing: false,
       ipAddressType: elbv2.IpAddressType.DUAL_STACK,
@@ -192,6 +192,7 @@ export class Ldap extends Construct {
 
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
+      family: 'TAK-Demo-AuthInfra-LDAPService',
       cpu: props.contextConfig.ecs.taskCpu,
       memoryLimitMiB: props.contextConfig.ecs.taskMemory,
       executionRole,
@@ -257,6 +258,7 @@ export class Ldap extends Construct {
 
     // Create target groups for LDAP and LDAPS
     const ldapTargetGroup = new elbv2.NetworkTargetGroup(this, 'LdapTargetGroup', {
+      targetGroupName: `tak-${props.contextConfig.stackName.toLowerCase()}-ldap`,
       vpc: props.infrastructure.vpc,
       targetType: elbv2.TargetType.IP,
       port: 3389,
@@ -269,6 +271,7 @@ export class Ldap extends Construct {
     });
 
     const ldapsTargetGroup = new elbv2.NetworkTargetGroup(this, 'LdapsTargetGroup', {
+      targetGroupName: `tak-${props.contextConfig.stackName.toLowerCase()}-ldaps`,
       vpc: props.infrastructure.vpc,
       targetType: elbv2.TargetType.IP,
       port: 6636,
