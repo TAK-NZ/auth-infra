@@ -371,7 +371,7 @@ export class AuthInfraStack extends cdk.Stack {
     });
 
     // Connect Authentik Server to Load Balancer
-    authentikServer.createTargetGroup(vpc, authentikELB.httpsListener);
+    authentikServer.createTargetGroup(vpc, authentikELB.httpsListener, `tak-${envConfig.stackName.toLowerCase()}-authentik`);
 
     // =================
     // DNS SETUP (AUTHENTIK)
