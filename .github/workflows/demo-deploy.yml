@@ -1,0 +1,74 @@
+name: Demo Testing Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.gitignore'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/cdk-test.yml
+
+  demo-prod-test:
+    runs-on: ubuntu-latest
+    environment: demo
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHubActions-Demo
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate CDK Synthesis (Prod Profile)
+        run: npm run cdk synth -- --context envType=prod --context stackName=${{ vars.STACK_NAME }} --context r53ZoneName=${{ vars.R53_ZONE_NAME }}
+
+      - name: Validate Change Set
+        run: |
+          # Check if override is requested
+          if [[ "${{ github.event.head_commit.message }}" == *"[force-deploy]"* ]]; then
+            echo "🚨 Force deploy detected - skipping change set validation"
+          else
+            ./scripts/github/validate-changeset.sh ${{ vars.STACK_NAME }}
+          fi
+
+      - name: Deploy Demo with Prod Profile
+        run: npm run cdk deploy -- --context envType=prod --context stackName=${{ vars.STACK_NAME }} --context r53ZoneName=${{ vars.R53_ZONE_NAME }} --require-approval never
+
+      - name: Wait for Testing Period
+        run: sleep ${{ vars.DEMO_TEST_DURATION || '300' }}
+
+      - name: Run Automated Tests
+        run: |
+          echo "Placeholder for automated tests"
+          # TODO: Add health checks and integration tests
+          # curl -f https://${{ vars.R53_ZONE_NAME }}/health || exit 1
+
+      - name: Validate CDK Synthesis (Dev-Test Profile)
+        run: npm run cdk synth -- --context envType=dev-test --context stackName=${{ vars.STACK_NAME }} --context r53ZoneName=${{ vars.R53_ZONE_NAME }}
+        if: always()
+
+      - name: Revert Demo to Dev-Test Profile
+        run: npm run cdk deploy -- --context envType=dev-test --context stackName=${{ vars.STACK_NAME }} --context r53ZoneName=${{ vars.R53_ZONE_NAME }} --require-approval never
+        if: always()
