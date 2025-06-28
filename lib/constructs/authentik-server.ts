@@ -105,16 +105,7 @@ export class AuthentikServer extends Construct {
       removalPolicy: RemovalPolicy.DESTROY
     });
 
-    // Create config bucket if using config file
-    let configBucket;
-    if (props.deployment.useConfigFile) {
-      configBucket = new s3.Bucket(this, 'ConfigBucket', {
-        bucketName: `${id}-config`.toLowerCase(),
-        removalPolicy: removalPolicy,
-        encryption: s3.BucketEncryption.S3_MANAGED,
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
-      });
-    }
+    // Note: S3 config bucket is provided via BaseInfra - no need to create a separate one
 
     // Create task execution role
     const executionRole = new iam.Role(this, 'TaskExecutionRole', {
@@ -184,10 +175,7 @@ export class AuthentikServer extends Construct {
       ]
     }));
 
-    // Add task permissions
-    if (props.deployment.useConfigFile && configBucket) {
-      configBucket.grantRead(taskRole);
-    }
+    // Note: S3 permissions are handled via the BaseInfra bucket in the main stack
 
     // Grant read access to S3 configuration bucket for environment files
     if (props.storage.s3.envFileKey) {
