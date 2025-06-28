@@ -23,9 +23,7 @@ describe('Context-Based Configuration Management', () => {
         },
         redis: {
           nodeType: 'cache.t3.micro',
-          numCacheNodes: 1,
-          enableTransit: false,
-          enableAtRest: false
+          numCacheNodes: 1
         },
         ecs: {
           taskCpu: 512,
@@ -73,9 +71,7 @@ describe('Context-Based Configuration Management', () => {
         },
         redis: {
           nodeType: 'cache.t3.small',
-          numCacheNodes: 2,
-          enableTransit: true,
-          enableAtRest: true
+          numCacheNodes: 2
         },
         ecs: {
           taskCpu: 1024,

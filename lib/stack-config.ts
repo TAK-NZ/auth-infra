@@ -23,8 +23,6 @@ export interface ContextEnvironmentConfig {
   redis: {
     nodeType: string;
     numCacheNodes: number;
-    enableTransit: boolean;
-    enableAtRest: boolean;
   };
   ecs: {
     taskCpu: number;

@@ -54,7 +54,8 @@ jobs:
           fi
 
       - name: Deploy Demo with Prod Profile
-        run: npm run cdk deploy -- --context envType=prod --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} --require-approval never
+        # Use dev-test Redis settings to avoid slow Redis changes (>1 hour deployment)
+        run: npm run cdk deploy -- --context envType=prod --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} --context nodeType=cache.t3.micro --context numCacheNodes=1 --require-approval never
 
       - name: Wait for Testing Period
         run: sleep ${{ vars.DEMO_TEST_DURATION || '300' }}
