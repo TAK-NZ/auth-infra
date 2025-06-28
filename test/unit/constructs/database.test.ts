@@ -26,7 +26,7 @@ describe('Database Construct', () => {
   test('should throw error when database config is missing', () => {
     const configWithoutDb = {
       stackName: 'Test',
-      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1, enableTransit: false, enableAtRest: false },
+      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
@@ -48,7 +48,7 @@ describe('Database Construct', () => {
     const serverlessConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.serverless', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
-      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1, enableTransit: false, enableAtRest: false },
+      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
@@ -94,7 +94,7 @@ describe('Database Construct', () => {
     const provisionedConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.t3.medium', instanceCount: 2, allocatedStorage: 100, maxAllocatedStorage: 1000, enablePerformanceInsights: true, monitoringInterval: 60, backupRetentionDays: 30, deleteProtection: true },
-      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1, enableTransit: false, enableAtRest: false },
+      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
@@ -138,7 +138,7 @@ describe('Database Construct', () => {
     const largeInstanceConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.t3.large', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
-      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1, enableTransit: false, enableAtRest: false },
+      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
@@ -167,7 +167,7 @@ describe('Database Construct', () => {
     const mediumInstanceConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.t3.medium', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
-      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1, enableTransit: false, enableAtRest: false },
+      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
@@ -189,7 +189,7 @@ describe('Database Construct', () => {
     const customEngineConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.t3.medium', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false, engineVersion: '16.4' },
-      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1, enableTransit: false, enableAtRest: false },
+      redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
       ecr: { imageRetentionCount: 5, scanOnPush: false },

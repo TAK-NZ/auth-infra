@@ -11,6 +11,7 @@ entries:
       name: Default - Brand
     required: false 
 - attrs:
+    default: true
     branding_custom_css: ".pf-c-background-image {\n    --ak-flow-background: radial-gradient(at\
       left top, #4f5255, #3c3f42) !important;\n}\n\
       .pf-c-login__main-footer-links-item img, .pf-c-login__main-footer-links-item .fas {\n\

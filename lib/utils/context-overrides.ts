@@ -32,8 +32,6 @@ export function applyContextOverrides(
       ...baseConfig.redis,
       nodeType: app.node.tryGetContext('nodeType') ?? baseConfig.redis.nodeType,
       numCacheNodes: app.node.tryGetContext('numCacheNodes') ?? baseConfig.redis.numCacheNodes,
-      enableTransit: app.node.tryGetContext('enableTransit') ?? baseConfig.redis.enableTransit,
-      enableAtRest: app.node.tryGetContext('enableAtRest') ?? baseConfig.redis.enableAtRest,
     },
     ecs: {
       ...baseConfig.ecs,

@@ -77,6 +77,7 @@ This authentication infrastructure requires the base infrastructure and is the f
 - Base infrastructure stack (`TAK-<name>-BaseInfra`) must be deployed first
 - Public Route 53 hosted zone (e.g., `tak.nz`)
 - [Node.js](https://nodejs.org/) and npm installed
+- **For CI/CD deployment:** See [AWS & GitHub Setup Guide](docs/AWS_GITHUB_SETUP.md) for AuthInfra-specific GitHub Actions configuration
 
 ### Installation & Deployment
 
