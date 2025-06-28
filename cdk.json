@@ -51,7 +51,7 @@
         "useS3AuthentikConfigFile": false,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.6.2",
+        "authentikVersion": "2025.6.3",
         "outboundEmailServerPort": 587
       },
       "ecr": {
@@ -98,7 +98,7 @@
         "useS3AuthentikConfigFile": true,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.6.2",
+        "authentikVersion": "2025.6.3",
         "outboundEmailServerPort": 587
       },
       "ecr": {
