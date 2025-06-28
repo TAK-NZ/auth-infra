@@ -9,7 +9,7 @@ import { generateStandardTags } from '../lib/utils/tag-helpers';
 const app = new cdk.App();
 
 // Get environment from context (defaults to dev-test)
-const envName = app.node.tryGetContext('env') || 'dev-test';
+const envName = app.node.tryGetContext('envType') || 'dev-test';
 
 // Get the environment configuration from context
 // CDK automatically handles context overrides via --context flag
@@ -21,8 +21,8 @@ if (!envConfig) {
 ❌ Environment configuration for '${envName}' not found in cdk.json
 
 Usage:
-  npx cdk deploy --context env=dev-test
-  npx cdk deploy --context env=prod
+  npx cdk deploy --context envType=dev-test
+  npx cdk deploy --context envType=prod
 
 Expected cdk.json structure:
 {
