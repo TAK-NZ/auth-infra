@@ -31,7 +31,7 @@ export function applyContextOverrides(
     redis: {
       ...baseConfig.redis,
       nodeType: app.node.tryGetContext('nodeType') ?? baseConfig.redis.nodeType,
-      numCacheNodes: app.node.tryGetContext('numCacheNodes') ?? baseConfig.redis.numCacheNodes,
+      numCacheNodes: Number(app.node.tryGetContext('numCacheNodes')) || baseConfig.redis.numCacheNodes,
     },
     ecs: {
       ...baseConfig.ecs,
