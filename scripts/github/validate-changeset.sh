@@ -6,8 +6,14 @@ CHANGE_SET_NAME="breaking-change-check-$(date +%s)"
 
 echo "🔍 Creating CloudFormation change set for $STACK_NAME..."
 
-# Generate CDK template
-npm run cdk synth --context envType=prod > template.json
+# Check if stack exists
+if ! aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+  echo "✅ Stack does not exist - skipping change set validation for initial deployment"
+  exit 0
+fi
+
+# Generate CDK template with same context as deployment
+npm run cdk synth --context envType=prod --context stackName=$STACK_NAME > template.json
 
 # Create change set
 aws cloudformation create-change-set \
