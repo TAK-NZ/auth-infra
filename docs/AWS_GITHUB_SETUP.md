@@ -122,8 +122,13 @@ Push → [Tests + Build Images + Validate Prod] → Deploy & Test → Revert
 
 **Jobs:**
 1. **test**: Run CDK unit tests
-2. **build-images**: Build Docker images for production
-3. **deploy**: Deploy to production (requires approval)
+2. **build-images**: Build Docker images for production (calls production-build.yml)
+3. **deploy-production**: Deploy to production with built images (requires approval)
+
+**Flow:**
+```
+Tag v* → [Tests + Build Images] → Deploy Production
+```
 
 ### 6.4 Build Workflows
 
@@ -149,12 +154,16 @@ Push → [Tests + Build Images + Validate Prod] → Deploy & Test → Revert
 
 **Environment Variables:**
 
-| Variable | Environment | Description | Example |
-|----------|-------------|-------------|----------|
-| `STACK_NAME` | demo, prod | Stack name suffix | `Demo`, `Prod` |
-| `AUTHENTIK_ADMIN_EMAIL` | demo, prod | Admin email address | `admin@tak.nz` |
-| `DEMO_TEST_DURATION` | demo | Test wait time in seconds | `300` |
-| `R53_ZONE_NAME` | demo, prod | Route 53 zone name | `demo.tak.nz` |
+| Variable | Environment | Description | Example | Required |
+|----------|-------------|-------------|---------|----------|
+| `STACK_NAME` | demo, prod | Stack name suffix | `Demo`, `Prod` | ✅ |
+| `AUTHENTIK_ADMIN_EMAIL` | demo, prod | Admin email address | `admin@tak.nz` | ✅ |
+| `DEMO_TEST_DURATION` | demo | Test wait time in seconds | `300` | ❌ |
+
+**Required for Production Environment:**
+- All production workflows now use the same `STACK_NAME` and `AUTHENTIK_ADMIN_EMAIL` variables
+- Production build workflow uses `prod` context from cdk.json
+- Production deployment integrates with image building for consistent deployments
 
 ## 7. Composite Actions
 
@@ -217,10 +226,12 @@ Tag v* → Tests → Production (prod profile) [requires approval]
 | Issue | Symptoms | Solution |
 |-------|----------|----------|
 | **Missing Secrets** | `Error: Could not assume role` | Verify environment secrets are set correctly |
+| **Missing Variables** | `Error: Required variable not set` | Ensure `STACK_NAME` and `AUTHENTIK_ADMIN_EMAIL` are configured |
 | **Breaking Changes** | Workflow stops at validation | Use `[force-deploy]` in commit message or fix changes |
 | **Image Build Fails** | Docker build errors | Check Dockerfile and build context |
 | **CDK Synthesis Fails** | `cdk synth` command fails | Verify cdk.json context values |
 | **Deployment Timeout** | Job runs for hours | Check AWS resources and add timeout settings |
+| **Composite Action Error** | `Can't find action.yml` | Ensure checkout step runs before composite action |
 
 **Environment Setup Issues:**
 

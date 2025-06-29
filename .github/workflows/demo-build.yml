@@ -25,7 +25,7 @@ on:
       force_rebuild:
         description: 'Force rebuild even if version unchanged'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 permissions:
@@ -42,11 +42,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        
+      - name: Setup CDK Environment
+        uses: ./.github/actions/setup-cdk
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
           role-session-name: GitHubActions-DockerBuild
       
