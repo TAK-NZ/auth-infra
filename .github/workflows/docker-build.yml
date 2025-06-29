@@ -53,17 +53,11 @@ jobs:
       - name: Get ECR Repository and Build Tags
         id: tags
         run: |
-          # Debug: List all stack outputs
-          echo "Checking BaseInfra stack outputs:"
-          aws cloudformation describe-stacks --stack-name TAK-${{ vars.STACK_NAME }}-BaseInfra --query 'Stacks[0].Outputs[*].{Key:OutputKey,Value:OutputValue}' --output table
-          
           # Get ECR repository ARN from BaseInfra exports
           ECR_REPO_ARN=$(aws cloudformation describe-stacks \
             --stack-name TAK-${{ vars.STACK_NAME }}-BaseInfra \
             --query 'Stacks[0].Outputs[?OutputKey==`EcrRepoArnOutput`].OutputValue' \
             --output text)
-          
-          echo "ECR Repository ARN: $ECR_REPO_ARN"
           
           if [[ -z "$ECR_REPO_ARN" ]]; then
             echo "ERROR: ECR repository ARN not found in BaseInfra stack outputs"
@@ -73,9 +67,6 @@ jobs:
           # Extract repository name from ARN and build URI
           ECR_REPO_NAME=$(echo $ECR_REPO_ARN | cut -d'/' -f2)
           ECR_REPO_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_REPO_NAME}"
-          
-          echo "ECR Repository Name: $ECR_REPO_NAME"
-          echo "ECR Repository URI: $ECR_REPO_URI"
           
           VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
           BRANDING=$(jq -r '.context."dev-test".authentik.branding' cdk.json)
