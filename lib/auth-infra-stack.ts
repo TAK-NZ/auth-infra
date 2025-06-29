@@ -336,8 +336,13 @@ export class AuthInfraStack extends cdk.Stack {
     let sharedDockerAsset: ecrAssets.DockerImageAsset | undefined;
     
     if (usePreBuiltImages) {
-      authentikImageUri = `${this.account}.dkr.ecr.${this.region}.amazonaws.com/${authentikImageTag}`;
-      ldapImageUri = `${this.account}.dkr.ecr.${this.region}.amazonaws.com/${ldapImageTag}`;
+      // Get ECR repository ARN from BaseInfra and extract repository name
+      const ecrRepoArn = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECR_REPO));
+      const ecrRepoName = Fn.select(1, Fn.split('/', ecrRepoArn));
+      
+      // Construct full image URIs with correct repository and tag format
+      authentikImageUri = `${this.account}.dkr.ecr.${this.region}.amazonaws.com/${Token.asString(ecrRepoName)}:${authentikImageTag}`;
+      ldapImageUri = `${this.account}.dkr.ecr.${this.region}.amazonaws.com/${Token.asString(ecrRepoName)}:${ldapImageTag}`;
     }
     
     // Create shared Docker image asset only if not using pre-built images
