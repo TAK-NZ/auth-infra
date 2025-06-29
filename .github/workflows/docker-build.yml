@@ -97,28 +97,42 @@ jobs:
       
       - name: Build and Push Authentik Image
         run: |
-          VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
-          BRANDING=$(jq -r '.context."dev-test".authentik.branding' cdk.json)
-          
-          docker build \
-            -f docker/authentik-server/Dockerfile.${BRANDING} \
-            --build-arg AUTHENTIK_VERSION=${VERSION} \
-            -t ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.authentik-tag }} \
-            .
-          
-          docker push ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.authentik-tag }}
+          # Check if image already exists
+          if aws ecr describe-images --repository-name $(echo ${{ steps.tags.outputs.ecr-repo-uri }} | cut -d'/' -f2) --image-ids imageTag=${{ steps.tags.outputs.authentik-tag }} >/dev/null 2>&1; then
+            echo "✅ Authentik image ${{ steps.tags.outputs.authentik-tag }} already exists, skipping build"
+          else
+            echo "🔨 Building Authentik image ${{ steps.tags.outputs.authentik-tag }}"
+            VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
+            BRANDING=$(jq -r '.context."dev-test".authentik.branding' cdk.json)
+            
+            docker build \
+              -f docker/authentik-server/Dockerfile.${BRANDING} \
+              --build-arg AUTHENTIK_VERSION=${VERSION} \
+              -t ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.authentik-tag }} \
+              .
+            
+            docker push ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.authentik-tag }}
+            echo "✅ Authentik image pushed successfully"
+          fi
       
       - name: Build and Push LDAP Image
         run: |
-          VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
-          
-          docker build \
-            -f docker/authentik-ldap/Dockerfile \
-            --build-arg AUTHENTIK_VERSION=${VERSION} \
-            -t ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.ldap-tag }} \
-            docker/authentik-ldap/
-          
-          docker push ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.ldap-tag }}
+          # Check if image already exists
+          if aws ecr describe-images --repository-name $(echo ${{ steps.tags.outputs.ecr-repo-uri }} | cut -d'/' -f2) --image-ids imageTag=${{ steps.tags.outputs.ldap-tag }} >/dev/null 2>&1; then
+            echo "✅ LDAP image ${{ steps.tags.outputs.ldap-tag }} already exists, skipping build"
+          else
+            echo "🔨 Building LDAP image ${{ steps.tags.outputs.ldap-tag }}"
+            VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
+            
+            docker build \
+              -f docker/authentik-ldap/Dockerfile \
+              --build-arg AUTHENTIK_VERSION=${VERSION} \
+              -t ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.ldap-tag }} \
+              docker/authentik-ldap/
+            
+            docker push ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.ldap-tag }}
+            echo "✅ LDAP image pushed successfully"
+          fi
       
       - name: Output Image Information
         run: |
