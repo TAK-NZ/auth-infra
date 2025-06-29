@@ -64,8 +64,8 @@ jobs:
           BRANDING=$(jq -r '.context."dev-test".authentik.branding' cdk.json)
           REVISION=$(jq -r '.context."dev-test".authentik.buildRevision' cdk.json)
           
-          AUTHENTIK_TAG="authentik:${VERSION}-${BRANDING}-r${REVISION}"
-          LDAP_TAG="ldap:${VERSION}-r${REVISION}"
+          AUTHENTIK_TAG="authentik-${VERSION}-${BRANDING}-r${REVISION}"
+          LDAP_TAG="ldap-${VERSION}-r${REVISION}"
           
           echo "authentik-tag=$AUTHENTIK_TAG" >> $GITHUB_OUTPUT
           echo "ldap-tag=$LDAP_TAG" >> $GITHUB_OUTPUT
