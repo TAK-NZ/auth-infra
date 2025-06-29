@@ -72,18 +72,7 @@ jobs:
 
       - name: Deploy Demo with Prod Profile
         # Use dev-test Redis settings to avoid slow Redis changes (>1 hour deployment)
-        run: |
-          npm run cdk deploy -- \
-            --context envType=prod \
-            --context stackName=${{ vars.STACK_NAME }} \
-            --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} \
-            --context nodeType=cache.t3.micro \
-            --context numCacheNodes=1 \
-            --context useS3AuthentikConfigFile=true \
-            --context usePreBuiltImages=true \
-            --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} \
-            --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} \
-            --require-approval never
+        run: npm run cdk deploy -- --context envType=prod --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} --context nodeType=cache.t3.micro --context numCacheNodes=1 --context useS3AuthentikConfigFile=true --context usePreBuiltImages=true --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} --require-approval never
 
       - name: Wait for Testing Period
         run: sleep ${{ vars.DEMO_TEST_DURATION || '300' }}
@@ -99,13 +88,5 @@ jobs:
         if: always()
 
       - name: Revert Demo to Dev-Test Profile
-        run: |
-          npm run cdk deploy -- \
-            --context envType=dev-test \
-            --context stackName=${{ vars.STACK_NAME }} \
-            --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} \
-            --context usePreBuiltImages=true \
-            --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} \
-            --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} \
-            --require-approval never
+        run: npm run cdk deploy -- --context envType=dev-test --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} --context usePreBuiltImages=true --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} --require-approval never
         if: always()

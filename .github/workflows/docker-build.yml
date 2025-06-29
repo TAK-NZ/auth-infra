@@ -6,6 +6,20 @@ on:
     paths:
       - 'docker/**'
       - 'cdk.json'
+  workflow_call:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild even if version unchanged'
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      authentik-tag:
+        description: 'Authentik image tag'
+        value: ${{ jobs.build-images.outputs.authentik-tag }}
+      ldap-tag:
+        description: 'LDAP image tag'
+        value: ${{ jobs.build-images.outputs.ldap-tag }}
   workflow_dispatch:
     inputs:
       force_rebuild:
