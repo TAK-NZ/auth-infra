@@ -37,7 +37,7 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 #### 1. Authentik Application Server
 - **Technology**: Python/Django application running in ECS Fargate
 - **Purpose**: Web-based authentication and identity management
-- **Scaling**: Auto-scaling based on CPU/memory utilization
+- **Scaling**: Fixed task count based on environment configuration
 - **Storage**: Persistent data in Aurora PostgreSQL, session data in Redis
 
 #### 2. LDAP Outpost
@@ -200,7 +200,7 @@ The infrastructure implements a layered security model with dedicated security g
 ### 2. Container Management
 - **ECR**: Private container registry
 - **ECS Fargate**: Serverless container orchestration
-- **Auto Scaling**: CPU and memory-based scaling policies
+- **Task Management**: Fixed desired count per environment (dev: 1, prod: 2)
 
 ### 3. Environment Separation
 - **Development**: Single AZ, minimal redundancy
@@ -242,12 +242,12 @@ The infrastructure implements a layered security model with dedicated security g
 - **ECS Services**: Automatic container replacement on failure
 - **Aurora**: Built-in failover to reader instance in production
 - **Redis**: Automatic failover in multi-node configuration
-- **Auto Scaling**: ECS services scale based on CPU and memory utilization
+- **Task Count**: Fixed ECS service task counts (dev: 1 task, prod: 2 tasks)
 
 ## Performance Considerations
 
 ### 1. Scaling Patterns
-- **Horizontal Scaling**: ECS service auto-scaling
+- **Fixed Capacity**: Predictable resource allocation with fixed task counts
 - **Database Scaling**: Read replicas for read-heavy workloads
 - **Caching**: Redis for session and application caching
 

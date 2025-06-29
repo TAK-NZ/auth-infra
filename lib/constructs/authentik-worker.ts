@@ -353,17 +353,6 @@ export class AuthentikWorker extends Construct {
       circuitBreaker: { rollback: true }
     });
 
-    // Add auto scaling for workers
-    const scaling = this.ecsService.autoScaleTaskCount({
-      minCapacity: 1,
-      maxCapacity: isHighAvailability ? 10 : 3
-    });
-
-    // Scale based on CPU utilization (workers may have different scaling patterns)
-    scaling.scaleOnCpuUtilization('WorkerCpuScaling', {
-      targetUtilizationPercent: 80, // Higher threshold for workers
-      scaleInCooldown: Duration.minutes(5),
-      scaleOutCooldown: Duration.minutes(2)
-    });
+    // No autoscaling - use fixed desired count from configuration
   }
 }
