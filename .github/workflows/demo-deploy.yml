@@ -18,36 +18,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Run CDK unit tests and linting
   test:
     uses: ./.github/workflows/cdk-test.yml
 
+  # Build Docker images for demo environment
   build-images:
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/demo-build.yml
     secrets: inherit
 
-  demo-prod-test:
+  # Validate production configuration without deploying
+  # Runs in parallel with build-images to save time
+  validate-prod:
     runs-on: ubuntu-latest
     environment: demo
-    needs: [test, build-images]
+    needs: [test]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup CDK Environment
+        uses: ./.github/actions/setup-cdk
         with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
           role-session-name: GitHubActions-Demo
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Validate CDK Synthesis (Prod Profile)
         run: npm run cdk synth -- --context envType=prod --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }}
@@ -60,6 +52,23 @@ jobs:
           else
             ./scripts/github/validate-changeset.sh TAK-${{ vars.STACK_NAME }}-AuthInfra
           fi
+
+  # Deploy demo environment with production configuration for testing
+  # Uses built images and runs automated tests
+  deploy-and-test:
+    runs-on: ubuntu-latest
+    environment: demo
+    needs: [validate-prod, build-images]
+    outputs:
+      authentik-tag: ${{ steps.images.outputs.authentik-tag }}
+      ldap-tag: ${{ steps.images.outputs.ldap-tag }}
+    steps:
+      - name: Setup CDK Environment
+        uses: ./.github/actions/setup-cdk
+        with:
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHubActions-Demo
 
       - name: Extract Image Tags
         id: images
@@ -87,10 +96,23 @@ jobs:
           # TODO: Add health checks and integration tests
           # curl -f https://${{ vars.R53_ZONE_NAME }}/health || exit 1
 
+  # Always revert demo environment back to dev-test configuration
+  # Ensures demo environment is left in a consistent state regardless of test results
+  revert-to-dev-test:
+    runs-on: ubuntu-latest
+    environment: demo
+    needs: [deploy-and-test]
+    if: always()
+    steps:
+      - name: Setup CDK Environment
+        uses: ./.github/actions/setup-cdk
+        with:
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHubActions-Demo
+
       - name: Validate CDK Synthesis (Dev-Test Profile)
         run: npm run cdk synth -- --context envType=dev-test --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }}
-        if: always()
 
       - name: Revert Demo to Dev-Test Profile
-        run: npm run cdk deploy -- --context envType=dev-test --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} --context usePreBuiltImages=true --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} --require-approval never
-        if: always()
+        run: npm run cdk deploy -- --context envType=dev-test --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} --context usePreBuiltImages=true --context authentikImageTag=${{ needs.deploy-and-test.outputs.authentik-tag }} --context ldapImageTag=${{ needs.deploy-and-test.outputs.ldap-tag }} --require-approval never
