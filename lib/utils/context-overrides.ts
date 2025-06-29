@@ -50,6 +50,7 @@ export function applyContextOverrides(
       enablePostgresReadReplicas: app.node.tryGetContext('enablePostgresReadReplicas') ?? baseConfig.authentik.enablePostgresReadReplicas,
       branding: app.node.tryGetContext('branding') ?? baseConfig.authentik.branding,
       authentikVersion: app.node.tryGetContext('authentikVersion') ?? baseConfig.authentik.authentikVersion,
+      buildRevision: Number(app.node.tryGetContext('buildRevision')) || baseConfig.authentik.buildRevision,
     },
     ecr: {
       imageRetentionCount: app.node.tryGetContext('imageRetentionCount') ?? baseConfig.ecr.imageRetentionCount,
@@ -60,6 +61,11 @@ export function applyContextOverrides(
       removalPolicy: app.node.tryGetContext('removalPolicy') || baseConfig.general.removalPolicy,
       enableDetailedLogging: app.node.tryGetContext('enableDetailedLogging') ?? baseConfig.general.enableDetailedLogging,
       enableContainerInsights: app.node.tryGetContext('enableContainerInsights') ?? baseConfig.general.enableContainerInsights,
+    },
+    docker: {
+      ...baseConfig.docker,
+      authentikImageTag: app.node.tryGetContext('authentikImageTag') ?? baseConfig.docker?.authentikImageTag,
+      ldapImageTag: app.node.tryGetContext('ldapImageTag') ?? baseConfig.docker?.ldapImageTag,
     },
   };
 }

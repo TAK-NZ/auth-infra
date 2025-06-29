@@ -314,35 +314,63 @@ export class AuthInfraStack extends cdk.Stack {
     // APPLICATION SERVICES
     // =================
 
-    // Create shared Docker image asset for both server and worker
-    const dockerfileName = `Dockerfile.${envConfig.authentik.branding}`;
-    const sharedDockerAsset = new ecrAssets.DockerImageAsset(this, 'AuthentikDockerAsset', {
-      directory: '.',
-      file: `docker/authentik-server/${dockerfileName}`,
-      buildArgs: {
-        AUTHENTIK_VERSION: envConfig.authentik.authentikVersion
-      },
-      // Exclude files that change frequently but don't affect the Docker build
-      exclude: [
-        'node_modules/**',
-        'cdk.out/**',
-        '.cdk.staging/**',
-        '**/*.log',
-        '**/*.tmp',
-        '.git/**',
-        '.vscode/**',
-        '.idea/**',
-        'test/**',
-        'docs/**',
-        'lib/**/*.js',
-        'lib/**/*.d.ts',
-        'lib/**/*.js.map',
-        'bin/**/*.js',
-        'bin/**/*.d.ts',
-        '**/.DS_Store',
-        '**/Thumbs.db'
-      ]
-    });
+    // Determine container image strategy
+    const app = cdk.App.of(this)!;
+    const usePreBuiltImages = app.node.tryGetContext('usePreBuiltImages') ?? false;
+    
+    // Build image tags from configuration
+    const authentikVersion = envConfig.authentik.authentikVersion;
+    const branding = envConfig.authentik.branding;
+    const buildRevision = envConfig.authentik.buildRevision;
+    
+    const defaultAuthentikTag = `authentik:${authentikVersion}-${branding}-r${buildRevision}`;
+    const defaultLdapTag = `ldap:${authentikVersion}-r${buildRevision}`;
+    
+    // Allow override via context parameters
+    const authentikImageTag = app.node.tryGetContext('authentikImageTag') ?? defaultAuthentikTag;
+    const ldapImageTag = app.node.tryGetContext('ldapImageTag') ?? defaultLdapTag;
+    
+    // Build container image URIs if using pre-built images
+    let authentikImageUri: string | undefined;
+    let ldapImageUri: string | undefined;
+    let sharedDockerAsset: ecrAssets.DockerImageAsset | undefined;
+    
+    if (usePreBuiltImages) {
+      authentikImageUri = `${this.account}.dkr.ecr.${this.region}.amazonaws.com/${authentikImageTag}`;
+      ldapImageUri = `${this.account}.dkr.ecr.${this.region}.amazonaws.com/${ldapImageTag}`;
+    }
+    
+    // Create shared Docker image asset only if not using pre-built images
+    if (!usePreBuiltImages) {
+      const dockerfileName = `Dockerfile.${envConfig.authentik.branding}`;
+      sharedDockerAsset = new ecrAssets.DockerImageAsset(this, 'AuthentikDockerAsset', {
+        directory: '.',
+        file: `docker/authentik-server/${dockerfileName}`,
+        buildArgs: {
+          AUTHENTIK_VERSION: envConfig.authentik.authentikVersion
+        },
+        // Exclude files that change frequently but don't affect the Docker build
+        exclude: [
+          'node_modules/**',
+          'cdk.out/**',
+          '.cdk.staging/**',
+          '**/*.log',
+          '**/*.tmp',
+          '.git/**',
+          '.vscode/**',
+          '.idea/**',
+          'test/**',
+          'docs/**',
+          'lib/**/*.js',
+          'lib/**/*.d.ts',
+          'lib/**/*.js.map',
+          'bin/**/*.js',
+          'bin/**/*.d.ts',
+          '**/.DS_Store',
+          '**/Thumbs.db'
+        ]
+      });
+    }
 
     // Authentik Server
     const authentikServer = new AuthentikServer(this, 'AuthentikServer', {
@@ -353,7 +381,8 @@ export class AuthInfraStack extends cdk.Stack {
       storage: storageConfig,
       deployment: deploymentConfig,
       application: applicationConfig,
-      dockerImageAsset: sharedDockerAsset
+      dockerImageAsset: sharedDockerAsset,
+      containerImageUri: authentikImageUri
     });
 
     // Authentik Worker  
@@ -367,7 +396,8 @@ export class AuthInfraStack extends cdk.Stack {
       storage: storageConfig,
       deployment: deploymentConfig,
       application: authentikWorkerConfig,
-      dockerImageAsset: sharedDockerAsset
+      dockerImageAsset: sharedDockerAsset,
+      containerImageUri: authentikImageUri
     });
 
     // Connect Authentik Server to Load Balancer
@@ -424,7 +454,8 @@ export class AuthInfraStack extends cdk.Stack {
       network: ldapNetworkConfig,
       application: ldapApplicationConfig,
       ldapToken: secretsManager.ldapToken,
-      nlbSecurityGroup: securityGroups.ldapNlb
+      nlbSecurityGroup: securityGroups.ldapNlb,
+      containerImageUri: ldapImageUri
     });
 
     // Ensure LDAP waits for the token to be retrieved

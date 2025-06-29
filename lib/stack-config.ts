@@ -40,6 +40,7 @@ export interface ContextEnvironmentConfig {
     enablePostgresReadReplicas?: boolean;
     branding: string;
     authentikVersion: string;
+    buildRevision: number;
     outboundEmailServerPort?: number;
   };
   ecr: {
@@ -50,5 +51,9 @@ export interface ContextEnvironmentConfig {
     removalPolicy: string;
     enableDetailedLogging: boolean;
     enableContainerInsights: boolean;
+  };
+  docker?: {
+    authentikImageTag?: string;
+    ldapImageTag?: string;
   };
 }

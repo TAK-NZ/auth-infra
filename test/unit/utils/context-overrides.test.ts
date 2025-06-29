@@ -25,5 +25,30 @@ describe('Context Overrides', () => {
       const result = applyContextOverrides(app, MOCK_CONFIGS.DEV_TEST);
       expect(result.redis.numCacheNodes).toBe(MOCK_CONFIGS.DEV_TEST.redis.numCacheNodes);
     });
+
+    test('should override docker image tags', () => {
+      const app = new App({ 
+        context: { 
+          authentikImageTag: 'authentik:custom',
+          ldapImageTag: 'ldap:custom'
+        } 
+      });
+      const result = applyContextOverrides(app, MOCK_CONFIGS.DEV_TEST);
+      expect(result.docker?.authentikImageTag).toBe('authentik:custom');
+      expect(result.docker?.ldapImageTag).toBe('ldap:custom');
+    });
+
+    test('should handle missing docker config in base', () => {
+      const configWithoutDocker = { ...MOCK_CONFIGS.DEV_TEST };
+      delete (configWithoutDocker as any).docker;
+      
+      const app = new App({ 
+        context: { 
+          authentikImageTag: 'authentik:override'
+        } 
+      });
+      const result = applyContextOverrides(app, configWithoutDocker);
+      expect(result.docker?.authentikImageTag).toBe('authentik:override');
+    });
   });
 });

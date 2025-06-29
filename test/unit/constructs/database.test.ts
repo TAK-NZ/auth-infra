@@ -28,7 +28,7 @@ describe('Database Construct', () => {
       stackName: 'Test',
       redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
-      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
+      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
     } as any;
@@ -50,7 +50,7 @@ describe('Database Construct', () => {
       database: { instanceClass: 'db.serverless', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
       redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
-      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
+      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
     };
@@ -96,7 +96,7 @@ describe('Database Construct', () => {
       database: { instanceClass: 'db.t3.medium', instanceCount: 2, allocatedStorage: 100, maxAllocatedStorage: 1000, enablePerformanceInsights: true, monitoringInterval: 60, backupRetentionDays: 30, deleteProtection: true },
       redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
-      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
+      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'RETAIN', enableDetailedLogging: false, enableContainerInsights: true }
     };
@@ -140,7 +140,7 @@ describe('Database Construct', () => {
       database: { instanceClass: 'db.t3.large', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
       redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
-      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
+      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
     };
@@ -169,7 +169,7 @@ describe('Database Construct', () => {
       database: { instanceClass: 'db.t3.medium', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
       redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
-      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
+      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
     };
@@ -191,7 +191,7 @@ describe('Database Construct', () => {
       database: { instanceClass: 'db.t3.medium', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false, engineVersion: '16.4' },
       redis: { nodeType: 'cache.t3.micro', numCacheNodes: 1 },
       ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
-      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2' },
+      authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
     };
