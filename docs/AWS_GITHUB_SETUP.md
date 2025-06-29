@@ -35,7 +35,7 @@ In your AuthInfra GitHub repository, go to **Settings → Environments** and cre
 **For `production` environment:**
 - `AWS_ACCOUNT_ID`: `111111111111`
 - `AWS_ROLE_ARN`: `arn:aws:iam::111111111111:role/GitHubActions-TAK-Role`
-- `AWS_REGION`: `ap-southeast-2`
+- `AWS_REGION`: `ap-southeast-6`
 
 **For `demo` environment:**
 - `AWS_ACCOUNT_ID`: `222222222222`
@@ -248,18 +248,22 @@ npm run cdk context --clear
 npm run cdk synth --context envType=demo
 ```
 
-### 9.2 Deployment Issues
+### 9.2 AuthInfra Specific Issues
 
-**Common CDK Deployment Problems:**
+**Common AuthInfra Problems:**
 
-- **Resource Conflicts:** Check for existing resources with same names
-- **Permission Issues:** Verify IAM role has required permissions
-- **Network Issues:** Ensure VPC and subnets exist from BaseInfra
-- **Image Pull Issues:** Verify ECR repository exists and images are pushed
+- **Authentik Version Mismatch:** Ensure Authentik version in cdk.json matches available Docker image
+- **Database Connection Issues:** Verify PostgreSQL cluster is accessible and credentials are correct
+- **Redis Connection Issues:** Check Redis cluster connectivity and security groups
+- **Load Balancer Issues:** Verify ALB target group health and certificate configuration
+- **OIDC Configuration:** Check Authentik OIDC provider settings and client configurations
 
 **Debug Commands:**
 
 ```bash
+# Check Authentik version
+jq -r '.context."dev-test".authentik.authentikVersion' cdk.json
+
 # Check stack status
 aws cloudformation describe-stacks --stack-name TAK-Demo-AuthInfra
 
@@ -272,6 +276,12 @@ aws ecr describe-images --repository-name tak-auth-infra
 # Test image tags
 VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
 echo "Expected tag: authentik-${VERSION}-tak-r1"
+
+# Test database connectivity
+aws rds describe-db-clusters --db-cluster-identifier tak-demo-postgres
+
+# Check Redis cluster
+aws elasticache describe-cache-clusters --cache-cluster-id tak-demo-redis
 ```
 
 ### 9.3 Breaking Change Detection
