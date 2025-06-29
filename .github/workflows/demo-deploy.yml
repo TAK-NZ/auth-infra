@@ -34,6 +34,9 @@ jobs:
     environment: demo
     needs: [test]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
       - name: Setup CDK Environment
         uses: ./.github/actions/setup-cdk
         with:
@@ -63,6 +66,9 @@ jobs:
       authentik-tag: ${{ steps.images.outputs.authentik-tag }}
       ldap-tag: ${{ steps.images.outputs.ldap-tag }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
       - name: Setup CDK Environment
         uses: ./.github/actions/setup-cdk
         with:
@@ -94,7 +100,8 @@ jobs:
         run: |
           echo "Placeholder for automated tests"
           # TODO: Add health checks and integration tests
-          # curl -f https://${{ vars.R53_ZONE_NAME }}/health || exit 1
+          # Health check URL should be retrieved from BaseInfra stack outputs
+          # curl -f https://$(aws cloudformation describe-stacks --stack-name TAK-${{ vars.STACK_NAME }}-BaseInfra --query 'Stacks[0].Outputs[?OutputKey==`DomainNameOutput`].OutputValue' --output text)/health || exit 1
 
   # Always revert demo environment back to dev-test configuration
   # Ensures demo environment is left in a consistent state regardless of test results
@@ -104,6 +111,9 @@ jobs:
     needs: [deploy-and-test]
     if: always()
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
       - name: Setup CDK Environment
         uses: ./.github/actions/setup-cdk
         with:

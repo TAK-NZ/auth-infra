@@ -19,29 +19,24 @@ jobs:
   test:
     uses: ./.github/workflows/cdk-test.yml
 
+  build-images:
+    uses: ./.github/workflows/production-build.yml
+    secrets: inherit
+
   deploy-production:
     runs-on: ubuntu-latest
     environment: production
-    needs: test
+    needs: [test, build-images]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+        
+      - name: Setup CDK Environment
+        uses: ./.github/actions/setup-cdk
         with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
           role-session-name: GitHubActions-Production
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Bootstrap CDK (if needed)
         run: |
@@ -49,16 +44,27 @@ jobs:
             npx cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }} --context envType=prod
           fi
 
+      - name: Extract Image Tags
+        id: images
+        run: |
+          VERSION=$(jq -r '.context."prod".authentik.authentikVersion' cdk.json)
+          BRANDING=$(jq -r '.context."prod".authentik.branding' cdk.json)
+          REVISION=$(jq -r '.context."prod".authentik.buildRevision' cdk.json)
+          
+          AUTHENTIK_TAG="authentik-${VERSION}-${BRANDING}-r${REVISION}"
+          LDAP_TAG="ldap-${VERSION}-r${REVISION}"
+          
+          echo "authentik-tag=$AUTHENTIK_TAG" >> $GITHUB_OUTPUT
+          echo "ldap-tag=$LDAP_TAG" >> $GITHUB_OUTPUT
+
       - name: Validate Production Change Set
         run: |
           # Check if override is requested
           if [[ "${{ github.event.head_commit.message }}" == *"[force-deploy]"* ]]; then
             echo "🚨 Force deploy detected - skipping change set validation"
           else
-            # Use stack name from environment variable or default
-            STACK_NAME="${{ vars.STACK_NAME || 'TAK-Prod-AuthInfra' }}"
-            ./scripts/github/validate-changeset.sh $STACK_NAME
+            ./scripts/github/validate-changeset.sh TAK-${{ vars.STACK_NAME }}-AuthInfra
           fi
 
       - name: Deploy Production
-        run: npm run deploy:prod -- --require-approval never
+        run: npm run cdk deploy -- --context envType=prod --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} --context usePreBuiltImages=true --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} --require-approval never
