@@ -36,25 +36,36 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           role-session-name: GitHubActions-DockerBuild
       
-      - name: Build Image Tags
+      - name: Get ECR Repository and Build Tags
         id: tags
         run: |
+          # Get ECR repository ARN from BaseInfra exports
+          ECR_REPO_ARN=$(aws cloudformation describe-stacks \
+            --stack-name TAK-${{ vars.STACK_NAME }}-BaseInfra \
+            --query 'Stacks[0].Outputs[?OutputKey==`EcrRepoArn`].OutputValue' \
+            --output text)
+          
+          # Extract repository name from ARN and build URI
+          ECR_REPO_NAME=$(echo $ECR_REPO_ARN | cut -d'/' -f2)
+          ECR_REPO_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_REPO_NAME}"
+          
           VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
           BRANDING=$(jq -r '.context."dev-test".authentik.branding' cdk.json)
           REVISION=$(jq -r '.context."dev-test".authentik.buildRevision' cdk.json)
           
           if [[ "${{ github.event.inputs.force_rebuild }}" == "true" ]]; then
-            # Add timestamp for forced rebuilds
             TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-            AUTHENTIK_TAG="authentik:${VERSION}-${BRANDING}-r${REVISION}-${TIMESTAMP}"
-            LDAP_TAG="ldap:${VERSION}-r${REVISION}-${TIMESTAMP}"
+            AUTHENTIK_TAG="authentik-${VERSION}-${BRANDING}-r${REVISION}-${TIMESTAMP}"
+            LDAP_TAG="ldap-${VERSION}-r${REVISION}-${TIMESTAMP}"
           else
-            AUTHENTIK_TAG="authentik:${VERSION}-${BRANDING}-r${REVISION}"
-            LDAP_TAG="ldap:${VERSION}-r${REVISION}"
+            AUTHENTIK_TAG="authentik-${VERSION}-${BRANDING}-r${REVISION}"
+            LDAP_TAG="ldap-${VERSION}-r${REVISION}"
           fi
           
+          echo "ecr-repo-uri=$ECR_REPO_URI" >> $GITHUB_OUTPUT
           echo "authentik-tag=$AUTHENTIK_TAG" >> $GITHUB_OUTPUT
           echo "ldap-tag=$LDAP_TAG" >> $GITHUB_OUTPUT
+          echo "Using ECR repository: $ECR_REPO_URI"
           echo "Building images with tags:"
           echo "  Authentik: $AUTHENTIK_TAG"
           echo "  LDAP: $LDAP_TAG"
@@ -63,7 +74,7 @@ jobs:
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
             docker login --username AWS --password-stdin \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+            ${{ steps.tags.outputs.ecr-repo-uri }}
       
       - name: Build and Push Authentik Image
         run: |
@@ -73,10 +84,10 @@ jobs:
           docker build \
             -f docker/authentik-server/Dockerfile.${BRANDING} \
             --build-arg AUTHENTIK_VERSION=${VERSION} \
-            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.tags.outputs.authentik-tag }} \
+            -t ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.authentik-tag }} \
             .
           
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.tags.outputs.authentik-tag }}
+          docker push ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.authentik-tag }}
       
       - name: Build and Push LDAP Image
         run: |
@@ -85,10 +96,10 @@ jobs:
           docker build \
             -f docker/authentik-ldap/Dockerfile \
             --build-arg AUTHENTIK_VERSION=${VERSION} \
-            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.tags.outputs.ldap-tag }} \
+            -t ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.ldap-tag }} \
             docker/authentik-ldap/
           
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.tags.outputs.ldap-tag }}
+          docker push ${{ steps.tags.outputs.ecr-repo-uri }}:${{ steps.tags.outputs.ldap-tag }}
       
       - name: Output Image Information
         run: |
