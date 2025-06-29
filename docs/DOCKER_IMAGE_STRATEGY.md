@@ -19,8 +19,8 @@ This provides the best of both worlds:
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `usePreBuiltImages` | Enable/disable pre-built image usage | `true` or `false` |
-| `authentikImageTag` | Tag for Authentik server/worker image | `authentik:abc123` |
-| `ldapImageTag` | Tag for LDAP outpost image | `ldap:abc123` |
+| `authentikImageTag` | Tag for Authentik server/worker image | `authentik-2024.8.3-tak-r1` |
+| `ldapImageTag` | Tag for LDAP outpost image | `ldap-2024.8.3-tak-r1` |
 
 ### Default Behavior
 
@@ -34,8 +34,8 @@ This provides the best of both worlds:
 ```bash
 npm run cdk deploy -- \
   --context usePreBuiltImages=true \
-  --context authentikImageTag=authentik:${GITHUB_SHA} \
-  --context ldapImageTag=ldap:${GITHUB_SHA}
+  --context authentikImageTag=authentik-2024.8.3-tak-r1 \
+  --context ldapImageTag=ldap-2024.8.3-tak-r1
 ```
 
 ### Local Development (Build on Demand)
@@ -55,28 +55,31 @@ npm run cdk deploy -- \
 npm run cdk deploy -- \
   --context envType=prod \
   --context usePreBuiltImages=true \
-  --context authentikImageTag=authentik:latest \
-  --context ldapImageTag=ldap:latest
+  --context authentikImageTag=authentik-2024.8.3-tak-r1 \
+  --context ldapImageTag=ldap-2024.8.3-tak-r1
 ```
 
 ## Image Repositories
 
 The stack expects images to be available in ECR repositories:
 
-- **Authentik**: `${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/authentik:${TAG}`
-- **LDAP**: `${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/ldap:${TAG}`
+- **Authentik**: `${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${TAG}`
+- **LDAP**: `${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${TAG}`
+- **Repository Name**: Dynamically retrieved from BaseInfra stack exports (e.g., `tak-demo-baseinfra`)
 
 ## Implementation Details
 
 ### Stack Logic
 ```typescript
 // Determine image strategy
-const usePreBuiltImages = app.node.tryGetContext('usePreBuiltImages') ?? false;
-const authentikImageTag = app.node.tryGetContext('authentikImageTag');
+const usePreBuiltImages = this.node.tryGetContext('usePreBuiltImages') ?? false;
+const authentikImageTag = this.node.tryGetContext('authentikImageTag');
 
 if (usePreBuiltImages && authentikImageTag) {
-  // Use pre-built image from ECR
-  const imageUri = `${account}.dkr.ecr.${region}.amazonaws.com/${authentikImageTag}`;
+  // Get ECR repository from BaseInfra and build image URI
+  const ecrRepoArn = Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.ECR_REPO));
+  const ecrRepoName = Fn.select(1, Fn.split('/', ecrRepoArn));
+  const imageUri = `${account}.dkr.ecr.${region}.amazonaws.com/${Token.asString(ecrRepoName)}:${authentikImageTag}`;
   containerImage = ecs.ContainerImage.fromRegistry(imageUri);
 } else {
   // Fall back to building Docker image asset
@@ -148,7 +151,7 @@ Error: authentikImageTag context required
 # Test synthesis with pre-built images
 npm run cdk synth -- \
   --context usePreBuiltImages=true \
-  --context authentikImageTag=authentik:test
+  --context authentikImageTag=authentik-2024.8.3-tak-r1
 
 # Test synthesis with local building
 npm run cdk synth -- \
