@@ -351,18 +351,7 @@ export class AuthentikServer extends Construct {
       circuitBreaker: { rollback: true }
     });
 
-    // Add auto scaling
-    const scaling = this.ecsService.autoScaleTaskCount({
-      minCapacity: 1,
-      maxCapacity: isHighAvailability ? 10 : 3
-    });
-
-    // Scale based on CPU utilization
-    scaling.scaleOnCpuUtilization('CpuScaling', {
-      targetUtilizationPercent: 70,
-      scaleInCooldown: Duration.minutes(3),
-      scaleOutCooldown: Duration.minutes(1)
-    });
+    // No autoscaling - use fixed desired count from configuration
   }
 
   /**
