@@ -42,9 +42,10 @@ jobs:
         run: npm ci
 
       - name: Validate CDK Synthesis (Prod Profile)
-        run: npm run cdk synth -- \
-          --context envType=prod \
-          --context stackName=${{ vars.STACK_NAME }} \
+        run: >
+          npm run cdk synth --
+          --context envType=prod
+          --context stackName=${{ vars.STACK_NAME }}
           --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }}
 
       - name: Validate Change Set
@@ -94,19 +95,21 @@ jobs:
           # curl -f https://${{ vars.R53_ZONE_NAME }}/health || exit 1
 
       - name: Validate CDK Synthesis (Dev-Test Profile)
-        run: npm run cdk synth -- \
-          --context envType=dev-test \
-          --context stackName=${{ vars.STACK_NAME }} \
+        run: >
+          npm run cdk synth --
+          --context envType=dev-test
+          --context stackName=${{ vars.STACK_NAME }}
           --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }}
         if: always()
 
       - name: Revert Demo to Dev-Test Profile
-        run: npm run cdk deploy -- \
-          --context envType=dev-test \
-          --context stackName=${{ vars.STACK_NAME }} \
-          --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} \
-          --context usePreBuiltImages=true \
-          --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} \
-          --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} \
-          --require-approval never
+        run: |
+          npm run cdk deploy -- \
+            --context envType=dev-test \
+            --context stackName=${{ vars.STACK_NAME }} \
+            --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} \
+            --context usePreBuiltImages=true \
+            --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} \
+            --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} \
+            --require-approval never
         if: always()
