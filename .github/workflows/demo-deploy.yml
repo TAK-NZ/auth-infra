@@ -42,7 +42,10 @@ jobs:
         run: npm ci
 
       - name: Validate CDK Synthesis (Prod Profile)
-        run: npm run cdk synth -- --context envType=prod --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }}
+        run: npm run cdk synth -- \
+          --context envType=prod \
+          --context stackName=${{ vars.STACK_NAME }} \
+          --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }}
 
       - name: Validate Change Set
         run: |
@@ -50,8 +53,21 @@ jobs:
           if [[ "${{ github.event.head_commit.message }}" == *"[force-deploy]"* ]]; then
             echo "🚨 Force deploy detected - skipping change set validation"
           else
-            ./scripts/github/validate-changeset.sh ${{ vars.STACK_NAME }}
+            ./scripts/github/validate-changeset.sh TAK-${{ vars.STACK_NAME }}-AuthInfra
           fi
+
+      - name: Extract Image Tags
+        id: images
+        run: |
+          VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
+          BRANDING=$(jq -r '.context."dev-test".authentik.branding' cdk.json)
+          REVISION=$(jq -r '.context."dev-test".authentik.buildRevision' cdk.json)
+          
+          AUTHENTIK_TAG="authentik:${VERSION}-${BRANDING}-r${REVISION}"
+          LDAP_TAG="ldap:${VERSION}-r${REVISION}"
+          
+          echo "authentik-tag=$AUTHENTIK_TAG" >> $GITHUB_OUTPUT
+          echo "ldap-tag=$LDAP_TAG" >> $GITHUB_OUTPUT
 
       - name: Deploy Demo with Prod Profile
         # Use dev-test Redis settings to avoid slow Redis changes (>1 hour deployment)
@@ -63,6 +79,9 @@ jobs:
             --context nodeType=cache.t3.micro \
             --context numCacheNodes=1 \
             --context useS3AuthentikConfigFile=true \
+            --context usePreBuiltImages=true \
+            --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} \
+            --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} \
             --require-approval never
 
       - name: Wait for Testing Period
@@ -75,9 +94,19 @@ jobs:
           # curl -f https://${{ vars.R53_ZONE_NAME }}/health || exit 1
 
       - name: Validate CDK Synthesis (Dev-Test Profile)
-        run: npm run cdk synth -- --context envType=dev-test --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }}
+        run: npm run cdk synth -- \
+          --context envType=dev-test \
+          --context stackName=${{ vars.STACK_NAME }} \
+          --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }}
         if: always()
 
       - name: Revert Demo to Dev-Test Profile
-        run: npm run cdk deploy -- --context envType=dev-test --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} --require-approval never
+        run: npm run cdk deploy -- \
+          --context envType=dev-test \
+          --context stackName=${{ vars.STACK_NAME }} \
+          --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} \
+          --context usePreBuiltImages=true \
+          --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} \
+          --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} \
+          --require-approval never
         if: always()

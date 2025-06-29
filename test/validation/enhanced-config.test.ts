@@ -37,7 +37,8 @@ describe('Context-Based Configuration Management', () => {
           ldapHostname: 'ldap',
           ldapBaseDn: 'dc=tak,dc=nz',
           branding: 'tak-nz',
-          authentikVersion: '2025.6.2'
+          authentikVersion: '2025.6.2',
+          buildRevision: 1
         },
         ecr: {
           imageRetentionCount: 5,
@@ -85,7 +86,8 @@ describe('Context-Based Configuration Management', () => {
           ldapHostname: 'ldap',
           ldapBaseDn: 'dc=tak,dc=nz',
           branding: 'tak-nz',
-          authentikVersion: '2025.6.2'
+          authentikVersion: '2025.6.2',
+          buildRevision: 1
         },
         ecr: {
           imageRetentionCount: 20,

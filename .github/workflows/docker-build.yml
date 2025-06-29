@@ -1,0 +1,103 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docker/**'
+      - 'cdk.json'
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild even if version unchanged'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    environment: demo
+    outputs:
+      authentik-tag: ${{ steps.tags.outputs.authentik-tag }}
+      ldap-tag: ${{ steps.tags.outputs.ldap-tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHubActions-DockerBuild
+      
+      - name: Build Image Tags
+        id: tags
+        run: |
+          VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
+          BRANDING=$(jq -r '.context."dev-test".authentik.branding' cdk.json)
+          REVISION=$(jq -r '.context."dev-test".authentik.buildRevision' cdk.json)
+          
+          if [[ "${{ github.event.inputs.force_rebuild }}" == "true" ]]; then
+            # Add timestamp for forced rebuilds
+            TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+            AUTHENTIK_TAG="authentik:${VERSION}-${BRANDING}-r${REVISION}-${TIMESTAMP}"
+            LDAP_TAG="ldap:${VERSION}-r${REVISION}-${TIMESTAMP}"
+          else
+            AUTHENTIK_TAG="authentik:${VERSION}-${BRANDING}-r${REVISION}"
+            LDAP_TAG="ldap:${VERSION}-r${REVISION}"
+          fi
+          
+          echo "authentik-tag=$AUTHENTIK_TAG" >> $GITHUB_OUTPUT
+          echo "ldap-tag=$LDAP_TAG" >> $GITHUB_OUTPUT
+          echo "Building images with tags:"
+          echo "  Authentik: $AUTHENTIK_TAG"
+          echo "  LDAP: $LDAP_TAG"
+      
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+            docker login --username AWS --password-stdin \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+      
+      - name: Build and Push Authentik Image
+        run: |
+          VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
+          BRANDING=$(jq -r '.context."dev-test".authentik.branding' cdk.json)
+          
+          docker build \
+            -f docker/authentik-server/Dockerfile.${BRANDING} \
+            --build-arg AUTHENTIK_VERSION=${VERSION} \
+            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.tags.outputs.authentik-tag }} \
+            .
+          
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.tags.outputs.authentik-tag }}
+      
+      - name: Build and Push LDAP Image
+        run: |
+          VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
+          
+          docker build \
+            -f docker/authentik-ldap/Dockerfile \
+            --build-arg AUTHENTIK_VERSION=${VERSION} \
+            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.tags.outputs.ldap-tag }} \
+            docker/authentik-ldap/
+          
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ steps.tags.outputs.ldap-tag }}
+      
+      - name: Output Image Information
+        run: |
+          echo "✅ Successfully built and pushed Docker images:"
+          echo "📦 Authentik: ${{ steps.tags.outputs.authentik-tag }}"
+          echo "📦 LDAP: ${{ steps.tags.outputs.ldap-tag }}"
+          echo ""
+          echo "🚀 To deploy with these images, use:"
+          echo "npm run cdk deploy -- \\"
+          echo "  --context usePreBuiltImages=true \\"
+          echo "  --context authentikImageTag=${{ steps.tags.outputs.authentik-tag }} \\"
+          echo "  --context ldapImageTag=${{ steps.tags.outputs.ldap-tag }}"

@@ -114,34 +114,47 @@ npm run deploy:prod
 - **Route 53 Records** - Service endpoint DNS management
 - **KMS Encryption** - Data encryption at rest and in transit
 
-## Docker Image Handling
+## Docker Image Strategy
 
-This stack uses **AWS CDK's built-in Docker image assets** for automatic container image management. CDK handles all Docker image building, ECR repository creation, and image pushing automatically during deployment.
+This stack uses a **hybrid Docker image strategy** that supports both pre-built images and local building for optimal performance and flexibility.
 
 ### How It Works
 
-- **Automatic Building**: CDK builds Docker images from local Dockerfiles during deployment
-- **ECR Integration**: CDK automatically creates ECR repositories and pushes images
-- **Version Management**: Images are tagged with CDK-generated hashes for consistency
-- **No Manual Steps**: No need to manually build or push Docker images
+- **Pre-built Images**: Fast deployments using images from ECR (CI/CD)
+- **Local Building**: On-demand building for development (CDK Docker assets)
+- **Automatic Fallback**: Uses pre-built images when available, builds locally otherwise
+- **Context-Driven**: Controlled via CDK context parameters
 
-### Docker Images Used
+### Usage Modes
+
+**CI/CD Deployments (Fast)**:
+```bash
+npm run cdk deploy -- \
+  --context usePreBuiltImages=true \
+  --context authentikImageTag=authentik:abc123
+```
+
+**Local Development (Flexible)**:
+```bash
+npm run deploy:local:dev    # Builds images locally
+npm run deploy:local:prod   # Builds images locally
+```
+
+### Docker Images
 
 1. **Authentik Server & Worker**: Built from `docker/authentik-server/Dockerfile.{branding}`
 2. **LDAP Outpost**: Built from `docker/authentik-ldap/Dockerfile`
 
-### Branding Support
+### Configuration
 
-The stack supports different Docker image variants via the `branding` configuration:
-- **`tak-nz`**: TAK.NZ branded images (default)
-- **`generic`**: Generic TAK branded images
+- **Branding**: `tak-nz` (default) or `generic`
+- **Version**: Controlled via `authentikVersion` in configuration
+- **Strategy**: See [Docker Image Strategy Guide](docs/DOCKER_IMAGE_STRATEGY.md) for details
 
-### Authentik Version
-
-Docker images are built with the Authentik version specified in configuration:
 ```json
 "authentik": {
-  "authentikVersion": "2025.6.2"
+  "authentikVersion": "2025.6.3",
+  "branding": "tak-nz"
 }
 ```
 
@@ -202,6 +215,7 @@ npm run deploy:dev -- --context branding=generic
 - **[🏗️ Architecture Guide](docs/ARCHITECTURE.md)** - Technical architecture and design decisions  
 - **[⚡ Quick Reference](docs/QUICK_REFERENCE.md)** - Fast deployment commands and environment comparison
 - **[⚙️ Configuration Guide](docs/PARAMETERS.md)** - Complete configuration management reference
+- **[🐳 Docker Image Strategy](docs/DOCKER_IMAGE_STRATEGY.md)** - Hybrid image strategy for fast CI/CD and flexible development
 - **[🧪 Test Organization](test/TEST_ORGANIZATION.md)** - Test structure and coverage information
 
 ## Security Features

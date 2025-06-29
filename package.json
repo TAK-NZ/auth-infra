@@ -23,6 +23,8 @@
     
     "deploy:dev": "npm run build && cdk deploy --context envType=dev-test --no-warnings",
     "deploy:prod": "npm run build && cdk deploy --context envType=prod --no-warnings",
+    "deploy:local:dev": "npm run build && cdk deploy --context envType=dev-test --context usePreBuiltImages=false --no-warnings",
+    "deploy:local:prod": "npm run build && cdk deploy --context envType=prod --context usePreBuiltImages=false --no-warnings",
     "synth:dev": "npm run build && cdk synth --context envType=dev-test",
     "synth:prod": "npm run build && cdk synth --context envType=prod",
     

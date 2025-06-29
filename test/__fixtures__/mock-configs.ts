@@ -32,7 +32,8 @@ export const MOCK_CONFIGS = {
       ldapHostname: 'ldap',
       ldapBaseDn: 'dc=test,dc=com',
       branding: 'tak-nz',
-      authentikVersion: '2025.6.2'
+      authentikVersion: '2025.6.2',
+      buildRevision: 1
     },
     ecr: {
       imageRetentionCount: 5,
@@ -42,6 +43,10 @@ export const MOCK_CONFIGS = {
       removalPolicy: 'DESTROY',
       enableDetailedLogging: true,
       enableContainerInsights: false
+    },
+    docker: {
+      authentikImageTag: 'authentik:test',
+      ldapImageTag: 'ldap:test'
     }
   } as ContextEnvironmentConfig,
 
@@ -73,7 +78,8 @@ export const MOCK_CONFIGS = {
       ldapHostname: 'ldap',
       ldapBaseDn: 'dc=prod,dc=com',
       branding: 'tak-nz',
-      authentikVersion: '2025.6.2'
+      authentikVersion: '2025.6.2',
+      buildRevision: 1
     },
     ecr: {
       imageRetentionCount: 20,
@@ -83,6 +89,10 @@ export const MOCK_CONFIGS = {
       removalPolicy: 'RETAIN',
       enableDetailedLogging: false,
       enableContainerInsights: true
+    },
+    docker: {
+      authentikImageTag: 'authentik:prod',
+      ldapImageTag: 'ldap:prod'
     }
   } as ContextEnvironmentConfig,
 
@@ -114,7 +124,8 @@ export const MOCK_CONFIGS = {
       ldapHostname: 'ldap',
       ldapBaseDn: 'dc=serverless,dc=com',
       branding: 'tak-nz',
-      authentikVersion: '2025.6.2'
+      authentikVersion: '2025.6.2',
+      buildRevision: 1
     },
     ecr: {
       imageRetentionCount: 5,
@@ -124,6 +135,10 @@ export const MOCK_CONFIGS = {
       removalPolicy: 'DESTROY',
       enableDetailedLogging: true,
       enableContainerInsights: false
+    },
+    docker: {
+      authentikImageTag: 'authentik:serverless',
+      ldapImageTag: 'ldap:serverless'
     }
   } as ContextEnvironmentConfig
 };

@@ -75,6 +75,11 @@ export interface LdapProps {
    * Security group for the Network Load Balancer
    */
   nlbSecurityGroup: ec2.SecurityGroup;
+
+  /**
+   * Optional container image URI for pre-built images
+   */
+  containerImageUri?: string;
 }
 
 /**
@@ -201,15 +206,22 @@ export class Ldap extends Construct {
 
 
 
-    // Build LDAP Docker image with version
-    const dockerImageAsset = new ecrAssets.DockerImageAsset(this, 'LdapDockerAsset', {
-      directory: './docker/authentik-ldap',
-      buildArgs: {
-        AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
-      }
-    });
-
-    const containerImage = ecs.ContainerImage.fromDockerImageAsset(dockerImageAsset);
+    // Use container image with fallback strategy
+    let containerImage: ecs.ContainerImage;
+    
+    if (props.containerImageUri) {
+      // Use pre-built image from registry
+      containerImage = ecs.ContainerImage.fromRegistry(props.containerImageUri);
+    } else {
+      // Fall back to building Docker image asset
+      const dockerImageAsset = new ecrAssets.DockerImageAsset(this, 'LdapDockerAsset', {
+        directory: './docker/authentik-ldap',
+        buildArgs: {
+          AUTHENTIK_VERSION: props.contextConfig.authentik.authentikVersion
+        }
+      });
+      containerImage = ecs.ContainerImage.fromDockerImageAsset(dockerImageAsset);
+    }
 
     // Create container definition
     const container = this.taskDefinition.addContainer('AuthentikLdap', {
