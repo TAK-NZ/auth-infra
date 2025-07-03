@@ -177,6 +177,112 @@ const RETRY_CONFIG = {
     backoffMultiplier: parseFloat(process.env.BACKOFF_MULTIPLIER || '2')
 };
 
+// Error categorization with codes and remediation suggestions
+const ERROR_CATEGORIES = {
+    NETWORK: {
+        code: 'NET001',
+        category: 'NETWORK_CONNECTIVITY',
+        suggestion: 'Check security groups, VPC configuration, and network connectivity to Authentik host'
+    },
+    AUTH: {
+        code: 'AUTH001',
+        category: 'AUTHENTICATION_FAILED',
+        suggestion: 'Verify admin token exists in Secrets Manager and has correct permissions in Authentik'
+    },
+    CONFIG: {
+        code: 'CFG001',
+        category: 'CONFIGURATION_ERROR',
+        suggestion: 'Check LDAP outpost configuration in Authentik and verify outpost name matches'
+    },
+    SERVICE: {
+        code: 'SVC001',
+        category: 'SERVICE_UNAVAILABLE',
+        suggestion: 'Authentik service may not be ready. Check ECS service health and wait for full initialization'
+    },
+    AWS: {
+        code: 'AWS001',
+        category: 'AWS_SERVICE_ERROR',
+        suggestion: 'Check IAM permissions for Secrets Manager and KMS key access'
+    },
+    TIMEOUT: {
+        code: 'TMO001',
+        category: 'OPERATION_TIMEOUT',
+        suggestion: 'Operation timed out. Check network latency and Authentik service responsiveness'
+    }
+};
+
+// Enhanced error classification function
+function classifyError(error, context = {}) {
+    const errorMessage = error.message.toLowerCase();
+    const errorType = error.constructor.name;
+    
+    // Network-related errors
+    if (errorMessage.includes('timeout') || errorMessage.includes('econnrefused') || 
+        errorMessage.includes('enotfound') || errorMessage.includes('network')) {
+        return {
+            ...ERROR_CATEGORIES.NETWORK,
+            details: 'Network error: ' + error.message,
+            context: { errorType, ...context }
+        };
+    }
+    
+    // Authentication errors
+    if (errorMessage.includes('unauthorized') || errorMessage.includes('forbidden') ||
+        errorMessage.includes('invalid token') || errorMessage.includes('authentication')) {
+        return {
+            ...ERROR_CATEGORIES.AUTH,
+            details: 'Authentication error: ' + error.message,
+            context: { errorType, ...context }
+        };
+    }
+    
+    // Configuration errors
+    if (errorMessage.includes('outpost') && errorMessage.includes('not found') ||
+        errorMessage.includes('token identifier') || errorMessage.includes('configuration')) {
+        return {
+            ...ERROR_CATEGORIES.CONFIG,
+            details: 'Configuration error: ' + error.message,
+            context: { errorType, ...context }
+        };
+    }
+    
+    // Service availability errors
+    if (errorMessage.includes('500') || errorMessage.includes('503') ||
+        errorMessage.includes('service unavailable') || errorMessage.includes('server error')) {
+        return {
+            ...ERROR_CATEGORIES.SERVICE,
+            details: 'Service error: ' + error.message,
+            context: { errorType, ...context }
+        };
+    }
+    
+    // AWS service errors
+    if (errorMessage.includes('secretsmanager') || errorMessage.includes('kms') ||
+        errorMessage.includes('access denied') || errorType.includes('AWS')) {
+        return {
+            ...ERROR_CATEGORIES.AWS,
+            details: 'AWS service error: ' + error.message,
+            context: { errorType, ...context }
+        };
+    }
+    
+    // Timeout errors
+    if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+        return {
+            ...ERROR_CATEGORIES.TIMEOUT,
+            details: 'Timeout error: ' + error.message,
+            context: { errorType, ...context }
+        };
+    }
+    
+    // Default to service error for unclassified errors
+    return {
+        ...ERROR_CATEGORIES.SERVICE,
+        details: 'Unclassified error: ' + error.message,
+        context: { errorType, ...context }
+    };
+}
+
 // Enhanced logging utility
 function logWithTimestamp(level, message, details = {}) {
     const timestamp = new Date().toISOString();
@@ -258,16 +364,35 @@ async function withRetry(operation, operationName, context = {}) {
     throw lastError;
 }
 
-// Helper function to send CloudFormation response
-async function sendResponse(event, context, responseStatus, responseData = {}, physicalResourceId = null) {
+// Enhanced helper function to send CloudFormation response with structured error data
+async function sendResponse(event, context, responseStatus, responseData = {}, physicalResourceId = null, errorInfo = null) {
+    let enhancedData = { ...responseData };
+    let reason = \`See the details in CloudWatch Log Stream: \${context.logStreamName}\`;
+    
+    // Add structured error information for failed responses
+    if (responseStatus === 'FAILED' && errorInfo) {
+        enhancedData = {
+            ...responseData,
+            ErrorCode: errorInfo.code,
+            ErrorCategory: errorInfo.category,
+            ErrorDetails: errorInfo.details,
+            RemediationSuggestion: errorInfo.suggestion,
+            Context: errorInfo.context || {},
+            LogStreamName: context.logStreamName
+        };
+        
+        // Create more descriptive reason for CloudFormation
+        reason = \`[\${errorInfo.code}] \${errorInfo.category}: \${errorInfo.details}. Suggestion: \${errorInfo.suggestion}. Logs: \${context.logStreamName}\`;
+    }
+    
     const responseBody = JSON.stringify({
         Status: responseStatus,
-        Reason: \`See the details in CloudWatch Log Stream: \${context.logStreamName}\`,
+        Reason: reason,
         PhysicalResourceId: physicalResourceId || context.logStreamName,
         StackId: event.StackId,
         RequestId: event.RequestId,
         LogicalResourceId: event.LogicalResourceId,
-        Data: responseData
+        Data: enhancedData
     });
 
     const parsedUrl = new URL(event.ResponseURL);
@@ -584,11 +709,20 @@ exports.handler = async (event, context) => {
             remainingTimeMs: context.getRemainingTimeInMillis()
         });
         
+        // Classify the error and create structured error information
+        const errorInfo = classifyError(error, {
+            environment: ResourceProperties.Environment,
+            authentikHost: ResourceProperties.AuthentikHost,
+            outpostName: ResourceProperties.OutpostName,
+            executionTimeMs: executionTime,
+            remainingTimeMs: context.getRemainingTimeInMillis()
+        });
+        
         await sendResponse(event, context, 'FAILED', {
             Message: error.message,
             ErrorType: error.constructor.name,
             ExecutionTimeMs: executionTime
-        });
+        }, null, errorInfo);
     }
 };
       `)
