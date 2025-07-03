@@ -177,111 +177,12 @@ const RETRY_CONFIG = {
     backoffMultiplier: parseFloat(process.env.BACKOFF_MULTIPLIER || '2')
 };
 
-// Error categorization with codes and remediation suggestions
-const ERROR_CATEGORIES = {
-    NETWORK: {
-        code: 'NET001',
-        category: 'NETWORK_CONNECTIVITY',
-        suggestion: 'Check security groups, VPC configuration, and network connectivity to Authentik host'
-    },
-    AUTH: {
-        code: 'AUTH001',
-        category: 'AUTHENTICATION_FAILED',
-        suggestion: 'Verify admin token exists in Secrets Manager and has correct permissions in Authentik'
-    },
-    CONFIG: {
-        code: 'CFG001',
-        category: 'CONFIGURATION_ERROR',
-        suggestion: 'Check LDAP outpost configuration in Authentik and verify outpost name matches'
-    },
-    SERVICE: {
-        code: 'SVC001',
-        category: 'SERVICE_UNAVAILABLE',
-        suggestion: 'Authentik service may not be ready. Check ECS service health and wait for full initialization'
-    },
-    AWS: {
-        code: 'AWS001',
-        category: 'AWS_SERVICE_ERROR',
-        suggestion: 'Check IAM permissions for Secrets Manager and KMS key access'
-    },
-    TIMEOUT: {
-        code: 'TMO001',
-        category: 'OPERATION_TIMEOUT',
-        suggestion: 'Operation timed out. Check network latency and Authentik service responsiveness'
-    }
+// LDAP Configuration constants
+const LDAP_CONFIG = {
+    username: 'ldapservice',
+    gidStart: 4000,
+    uidStart: 2000
 };
-
-// Enhanced error classification function
-function classifyError(error, context = {}) {
-    const errorMessage = error.message.toLowerCase();
-    const errorType = error.constructor.name;
-    
-    // Network-related errors
-    if (errorMessage.includes('timeout') || errorMessage.includes('econnrefused') || 
-        errorMessage.includes('enotfound') || errorMessage.includes('network')) {
-        return {
-            ...ERROR_CATEGORIES.NETWORK,
-            details: 'Network error: ' + error.message,
-            context: { errorType, ...context }
-        };
-    }
-    
-    // Authentication errors
-    if (errorMessage.includes('unauthorized') || errorMessage.includes('forbidden') ||
-        errorMessage.includes('invalid token') || errorMessage.includes('authentication')) {
-        return {
-            ...ERROR_CATEGORIES.AUTH,
-            details: 'Authentication error: ' + error.message,
-            context: { errorType, ...context }
-        };
-    }
-    
-    // Configuration errors
-    if (errorMessage.includes('outpost') && errorMessage.includes('not found') ||
-        errorMessage.includes('token identifier') || errorMessage.includes('configuration')) {
-        return {
-            ...ERROR_CATEGORIES.CONFIG,
-            details: 'Configuration error: ' + error.message,
-            context: { errorType, ...context }
-        };
-    }
-    
-    // Service availability errors
-    if (errorMessage.includes('500') || errorMessage.includes('503') ||
-        errorMessage.includes('service unavailable') || errorMessage.includes('server error')) {
-        return {
-            ...ERROR_CATEGORIES.SERVICE,
-            details: 'Service error: ' + error.message,
-            context: { errorType, ...context }
-        };
-    }
-    
-    // AWS service errors
-    if (errorMessage.includes('secretsmanager') || errorMessage.includes('kms') ||
-        errorMessage.includes('access denied') || errorType.includes('AWS')) {
-        return {
-            ...ERROR_CATEGORIES.AWS,
-            details: 'AWS service error: ' + error.message,
-            context: { errorType, ...context }
-        };
-    }
-    
-    // Timeout errors
-    if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
-        return {
-            ...ERROR_CATEGORIES.TIMEOUT,
-            details: 'Timeout error: ' + error.message,
-            context: { errorType, ...context }
-        };
-    }
-    
-    // Default to service error for unclassified errors
-    return {
-        ...ERROR_CATEGORIES.SERVICE,
-        details: 'Unclassified error: ' + error.message,
-        context: { errorType, ...context }
-    };
-}
 
 // Enhanced logging utility
 function logWithTimestamp(level, message, details = {}) {
@@ -306,7 +207,6 @@ function calculateDelay(attempt) {
         RETRY_CONFIG.baseDelayMs * Math.pow(RETRY_CONFIG.backoffMultiplier, attempt),
         RETRY_CONFIG.maxDelayMs
     );
-    // Add jitter to prevent thundering herd
     return delay + Math.random() * 1000;
 }
 
@@ -364,35 +264,16 @@ async function withRetry(operation, operationName, context = {}) {
     throw lastError;
 }
 
-// Enhanced helper function to send CloudFormation response with structured error data
-async function sendResponse(event, context, responseStatus, responseData = {}, physicalResourceId = null, errorInfo = null) {
-    let enhancedData = { ...responseData };
-    let reason = \`See the details in CloudWatch Log Stream: \${context.logStreamName}\`;
-    
-    // Add structured error information for failed responses
-    if (responseStatus === 'FAILED' && errorInfo) {
-        enhancedData = {
-            ...responseData,
-            ErrorCode: errorInfo.code,
-            ErrorCategory: errorInfo.category,
-            ErrorDetails: errorInfo.details,
-            RemediationSuggestion: errorInfo.suggestion,
-            Context: errorInfo.context || {},
-            LogStreamName: context.logStreamName
-        };
-        
-        // Create more descriptive reason for CloudFormation
-        reason = \`[\${errorInfo.code}] \${errorInfo.category}: \${errorInfo.details}. Suggestion: \${errorInfo.suggestion}. Logs: \${context.logStreamName}\`;
-    }
-    
+// Enhanced helper function to send CloudFormation response
+async function sendResponse(event, context, responseStatus, responseData = {}) {
     const responseBody = JSON.stringify({
         Status: responseStatus,
-        Reason: reason,
-        PhysicalResourceId: physicalResourceId || context.logStreamName,
+        Reason: responseStatus === 'FAILED' ? responseData.Message : 'Success',
+        PhysicalResourceId: context.logStreamName,
         StackId: event.StackId,
         RequestId: event.RequestId,
         LogicalResourceId: event.LogicalResourceId,
-        Data: enhancedData
+        Data: responseData
     });
 
     const parsedUrl = new URL(event.ResponseURL);
@@ -428,29 +309,27 @@ async function sendResponse(event, context, responseStatus, responseData = {}, p
     });
 }
 
-// Enhanced HTTP client with detailed logging
-async function fetchJson(url, options) {
+// HTTP client with detailed logging
+async function apiCall(url, options) {
     return new Promise((resolve, reject) => {
         const urlObj = new URL(url);
         const lib = urlObj.protocol === 'https:' ? https : http;
         
-        logWithTimestamp('debug', 'Making HTTP request', {
+        logWithTimestamp('debug', 'Making API request', {
             url: url,
-            method: options.method || 'GET',
-            hasAuth: !!(options.headers && options.headers.Authorization)
+            method: options.method || 'GET'
         });
         
         const req = lib.request(url, {
             method: options.method || 'GET',
             headers: options.headers || {},
-            timeout: 30000 // 30 second timeout
+            timeout: 30000
         }, (res) => {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
-                logWithTimestamp('debug', 'HTTP response received', {
+                logWithTimestamp('debug', 'API response received', {
                     statusCode: res.statusCode,
-                    contentLength: data.length,
                     url: url
                 });
                 
@@ -459,36 +338,23 @@ async function fetchJson(url, options) {
                         const jsonData = JSON.parse(data);
                         resolve(jsonData);
                     } catch (e) {
-                        logWithTimestamp('error', 'Invalid JSON response', {
-                            error: e.message,
-                            responsePreview: data.substring(0, 200)
-                        });
                         reject(new Error(\`Invalid JSON response: \${e.message}\`));
                     }
                 } else {
-                    logWithTimestamp('error', 'HTTP error response', {
-                        statusCode: res.statusCode,
-                        responsePreview: data.substring(0, 500)
-                    });
                     reject(new Error(\`HTTP error! status: \${res.statusCode}, response: \${data.substring(0, 200)}\`));
                 }
             });
         });
         
-        req.on('error', (error) => {
-            logWithTimestamp('error', 'HTTP request failed', {
-                error: error.message,
-                url: url
-            });
-            reject(error);
-        });
-        
+        req.on('error', reject);
         req.on('timeout', () => {
-            logWithTimestamp('error', 'HTTP request timeout', { url: url });
             req.destroy();
             reject(new Error('Request timeout'));
         });
         
+        if (options.body) {
+            req.write(JSON.stringify(options.body));
+        }
         req.end();
     });
 }
@@ -498,117 +364,301 @@ async function getAdminToken(adminSecretName) {
         secretName: adminSecretName
     });
     
-    const command = new GetSecretValueCommand({
-        SecretId: adminSecretName
-    });
-    
+    const command = new GetSecretValueCommand({ SecretId: adminSecretName });
     const response = await secretsManager.send(command);
     
     if (!response.SecretString) {
         throw new Error('Admin token secret is empty or invalid');
     }
     
-    logWithTimestamp('info', 'Admin token retrieved successfully', {
-        tokenLength: response.SecretString.length
-    });
-    
     return response.SecretString;
 }
 
-async function retrieveToken(authentikHost, authentikApiToken, outpostName) {
-    outpostName = outpostName || 'LDAP';
-    
-    logWithTimestamp('info', 'Starting token retrieval process', {
-        authentikHost,
-        outpostName,
-        tokenLength: authentikApiToken.length
-    });
-    
-    // Fetch outpost instances from API
-    const outpostInstancesUrl = new URL('/api/v3/outposts/instances/', authentikHost);
-    outpostInstancesUrl.searchParams.append('name__iexact', outpostName);
-
-    logWithTimestamp('info', 'Fetching outpost instances', {
-        url: outpostInstancesUrl.toString()
-    });
-    
-    const outpostInstances = await fetchJson(outpostInstancesUrl.toString(), {
-        method: 'GET',
-        headers: {
-            'Accept': 'application/json',
-            'Authorization': \`Bearer \${authentikApiToken}\`
+// Helper function to get or create resource
+async function getOrCreate(getUrl, createData, resourceName, headers) {
+    try {
+        const existing = await apiCall(getUrl, { method: 'GET', headers });
+        if (existing.results && existing.results.length > 0) {
+            logWithTimestamp('info', \`\${resourceName} already exists\`, { id: existing.results[0].pk });
+            return existing.results[0];
         }
+    } catch (error) {
+        logWithTimestamp('debug', \`Error checking existing \${resourceName}\`, { error: error.message });
+    }
+    
+    const created = await apiCall(createData.url, {
+        method: 'POST',
+        headers,
+        body: createData.body
     });
+    logWithTimestamp('info', \`\${resourceName} created\`, { id: created.pk });
+    return created;
+}
 
-    // Check if we found the outpost
-    const results = outpostInstances.results || [];
-    
-    logWithTimestamp('info', 'Outpost instances retrieved', {
-        totalResults: results.length,
-        outpostNames: results.map(r => r.name)
-    });
-    
-    if (results.length === 0) {
-        throw new Error(\`Outpost with name \${outpostName} not found. Available outposts: none\`);
+// Create LDAP configuration via Authentik API
+async function createLdapConfiguration(authentikHost, adminToken, baseDn) {
+    const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': \`Bearer \${adminToken}\`
+    };
+
+    logWithTimestamp('info', 'Creating LDAP configuration via API');
+
+    // 1. Get or create service account
+    const serviceAccount = await getOrCreate(
+        \`\${authentikHost}/api/v3/core/users/?username=\${LDAP_CONFIG.username}\`,
+        {
+            url: \`\${authentikHost}/api/v3/core/users/\`,
+            body: {
+                username: LDAP_CONFIG.username,
+                name: 'LDAP Service account',
+                type: 'service_account',
+                password: \`ldap-\${Date.now()}\`
+            }
+        },
+        'Service account',
+        headers
+    );
+
+    // 2. Get default flows
+    const flows = await apiCall(\`\${authentikHost}/api/v3/flows/flows/\`, { method: 'GET', headers });
+    const invalidationFlow = flows.results.find(f => f.slug === 'default-invalidation-flow');
+
+    // 3. Get or create authentication flow
+    const authFlow = await getOrCreate(
+        \`\${authentikHost}/api/v3/flows/flows/?slug=ldap-authentication-flow\`,
+        {
+            url: \`\${authentikHost}/api/v3/flows/flows/\`,
+            body: {
+                name: 'ldap-authentication-flow',
+                slug: 'ldap-authentication-flow',
+                title: 'ldap-authentication-flow',
+                designation: 'authentication',
+                authentication: 'require_outpost',
+                denied_action: 'message_continue',
+                layout: 'stacked',
+                policy_engine_mode: 'any'
+            }
+        },
+        'Authentication flow',
+        headers
+    );
+
+    // 4. Get or create stages
+    const identificationStage = await getOrCreate(
+        \`\${authentikHost}/api/v3/stages/identification/?name=ldap-identification-stage\`,
+        {
+            url: \`\${authentikHost}/api/v3/stages/identification/\`,
+            body: {
+                name: 'ldap-identification-stage',
+                case_insensitive_matching: true,
+                pretend_user_exists: true,
+                show_matched_user: true,
+                user_fields: ['username', 'email']
+            }
+        },
+        'Identification stage',
+        headers
+    );
+
+    const loginStage = await getOrCreate(
+        \`\${authentikHost}/api/v3/stages/user_login/?name=ldap-authentication-login\`,
+        {
+            url: \`\${authentikHost}/api/v3/stages/user_login/\`,
+            body: {
+                name: 'ldap-authentication-login',
+                geoip_binding: 'bind_continent',
+                network_binding: 'bind_asn',
+                remember_me_offset: 'seconds=0',
+                session_duration: 'seconds=0'
+            }
+        },
+        'Login stage',
+        headers
+    );
+
+    // 5. Create stage bindings (check if they exist first)
+    try {
+        const bindings = await apiCall(\`\${authentikHost}/api/v3/flows/bindings/?target=\${authFlow.pk}\`, { method: 'GET', headers });
+        const hasIdentificationBinding = bindings.results.some(b => b.stage === identificationStage.pk);
+        const hasLoginBinding = bindings.results.some(b => b.stage === loginStage.pk);
+        
+        if (!hasIdentificationBinding) {
+            await apiCall(\`\${authentikHost}/api/v3/flows/bindings/\`, {
+                method: 'POST',
+                headers,
+                body: {
+                    target: authFlow.pk,
+                    stage: identificationStage.pk,
+                    order: 10,
+                    evaluate_on_plan: true,
+                    invalid_response_action: 'retry',
+                    policy_engine_mode: 'any',
+                    re_evaluate_policies: true
+                }
+            });
+            logWithTimestamp('info', 'Identification stage binding created');
+        }
+        
+        if (!hasLoginBinding) {
+            await apiCall(\`\${authentikHost}/api/v3/flows/bindings/\`, {
+                method: 'POST',
+                headers,
+                body: {
+                    target: authFlow.pk,
+                    stage: loginStage.pk,
+                    order: 30,
+                    evaluate_on_plan: true,
+                    invalid_response_action: 'retry',
+                    policy_engine_mode: 'any',
+                    re_evaluate_policies: true
+                }
+            });
+            logWithTimestamp('info', 'Login stage binding created');
+        }
+    } catch (error) {
+        logWithTimestamp('warn', 'Error managing stage bindings', { error: error.message });
     }
 
-    // Extract the token identifier
-    const outpost = results.find((item) => item.name === outpostName);
-    if (!outpost) {
-        const availableNames = results.map(r => r.name).join(', ');
-        throw new Error(\`Outpost with name \${outpostName} not found. Available outposts: \${availableNames}\`);
+    // 6. Get or create LDAP provider
+    const ldapProvider = await getOrCreate(
+        \`\${authentikHost}/api/v3/providers/ldap/?name=LDAP\`,
+        {
+            url: \`\${authentikHost}/api/v3/providers/ldap/\`,
+            body: {
+                name: 'LDAP',
+                authorization_flow: authFlow.pk,
+                base_dn: baseDn,
+                bind_mode: 'cached',
+                gid_start_number: LDAP_CONFIG.gidStart,
+                invalidation_flow: invalidationFlow?.pk,
+                mfa_support: true,
+                search_mode: 'cached',
+                uid_start_number: LDAP_CONFIG.uidStart
+            }
+        },
+        'LDAP provider',
+        headers
+    );
+
+    // 7. Add service account permissions to LDAP provider
+    try {
+        await apiCall(\`\${authentikHost}/api/v3/providers/ldap/\${ldapProvider.pk}/\`, {
+            method: 'PATCH',
+            headers,
+            body: {
+                search_group: serviceAccount.pk
+            }
+        });
+        logWithTimestamp('info', 'Service account permissions added to LDAP provider');
+    } catch (error) {
+        logWithTimestamp('warn', 'Error adding service account permissions', { error: error.message });
+    }
+
+    // 8. Get or create application
+    const application = await getOrCreate(
+        \`\${authentikHost}/api/v3/core/applications/?slug=ldap\`,
+        {
+            url: \`\${authentikHost}/api/v3/core/applications/\`,
+            body: {
+                name: 'LDAP',
+                slug: 'ldap',
+                policy_engine_mode: 'any',
+                provider: ldapProvider.pk
+            }
+        },
+        'Application',
+        headers
+    );
+
+    // 9. Get or create outpost
+    const outpost = await getOrCreate(
+        \`\${authentikHost}/api/v3/outposts/outposts/?name=LDAP\`,
+        {
+            url: \`\${authentikHost}/api/v3/outposts/outposts/\`,
+            body: {
+                name: 'LDAP',
+                type: 'ldap',
+                providers: [ldapProvider.pk],
+                config: {
+                    authentik_host: authentikHost
+                }
+            }
+        },
+        'Outpost',
+        headers
+    );
+
+    return outpost;
+}
+
+async function retrieveToken(authentikHost, adminToken, outpostName, baseDn) {
+    logWithTimestamp('info', 'Starting token retrieval process', {
+        authentikHost,
+        outpostName
+    });
+    
+    // First, try to get existing outpost
+    let outpost;
+    try {
+        const outposts = await apiCall(\`\${authentikHost}/api/v3/outposts/outposts/?name=\${outpostName}\`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': \`Bearer \${adminToken}\`
+            }
+        });
+        
+        outpost = outposts.results?.[0];
+        if (!outpost) {
+            logWithTimestamp('info', 'Outpost not found, creating LDAP configuration');
+            outpost = await createLdapConfiguration(authentikHost, adminToken, baseDn);
+        }
+    } catch (error) {
+        logWithTimestamp('info', 'Error checking outpost, creating LDAP configuration', { error: error.message });
+        outpost = await createLdapConfiguration(authentikHost, adminToken, baseDn);
+    }
+
+    // Get the token (with retry for token_identifier)
+    if (!outpost.token_identifier) {
+        // Refresh outpost data to get token_identifier
+        const refreshedOutpost = await apiCall(\`\${authentikHost}/api/v3/outposts/outposts/\${outpost.pk}/\`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': \`Bearer \${adminToken}\`
+            }
+        });
+        outpost = refreshedOutpost;
     }
     
     if (!outpost.token_identifier) {
-        logWithTimestamp('error', 'Outpost found but missing token identifier', {
-            outpost: { ...outpost, token_identifier: undefined }
-        });
-        throw new Error(\`Token identifier for outpost \${outpostName} not found\`);
+        throw new Error('Outpost token_identifier not available');
     }
 
-    const tokenIdentifier = outpost.token_identifier;
-    logWithTimestamp('info', 'Found outpost and token identifier', {
-        outpostName,
-        tokenIdentifier,
-        outpostId: outpost.pk
-    });
-
-    // Fetch the token
-    const viewKeyUrl = new URL(\`/api/v3/core/tokens/\${tokenIdentifier}/view_key/\`, authentikHost);
-
-    logWithTimestamp('info', 'Fetching token key', {
-        url: viewKeyUrl.toString()
-    });
-
-    const viewKeyResult = await fetchJson(viewKeyUrl.toString(), {
+    const tokenUrl = \`\${authentikHost}/api/v3/core/tokens/\${outpost.token_identifier}/view_key/\`;
+    const tokenResult = await apiCall(tokenUrl, {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
-            'Authorization': \`Bearer \${authentikApiToken}\`
+            'Authorization': \`Bearer \${adminToken}\`
         }
     });
 
-    const outpostToken = viewKeyResult.key;
-    if (!outpostToken) {
-        logWithTimestamp('error', 'Token key response invalid', {
-            responseKeys: Object.keys(viewKeyResult)
-        });
-        throw new Error(\`Token for outpost \${outpostName} not found in response\`);
+    if (!tokenResult.key) {
+        throw new Error('Token not found in response');
     }
 
     logWithTimestamp('info', 'Token retrieved successfully', {
-        tokenLength: outpostToken.length,
-        tokenPrefix: outpostToken.substring(0, 8) + '...'
+        tokenLength: tokenResult.key.length
     });
 
-    return outpostToken;
+    return tokenResult.key;
 }
 
 async function putLDAPSecret(secretName, secretValue) {
-    logWithTimestamp('info', 'Updating LDAP token secret', {
-        secretName,
-        tokenLength: secretValue.length
-    });
+    logWithTimestamp('info', 'Updating LDAP token secret', { secretName });
     
     const command = new PutSecretValueCommand({
         SecretId: secretName,
@@ -616,10 +666,7 @@ async function putLDAPSecret(secretName, secretValue) {
     });
     
     await secretsManager.send(command);
-    
-    logWithTimestamp('info', 'LDAP token secret updated successfully', {
-        secretName
-    });
+    logWithTimestamp('info', 'LDAP token secret updated successfully');
 }
 
 exports.handler = async (event, context) => {
@@ -627,12 +674,7 @@ exports.handler = async (event, context) => {
     
     logWithTimestamp('info', 'Lambda function started', {
         requestId: context.awsRequestId,
-        functionName: context.functionName,
-        remainingTimeMs: context.getRemainingTimeInMillis()
-    });
-    
-    logWithTimestamp('debug', 'Received event', {
-        event: JSON.stringify(event, null, 2)
+        functionName: context.functionName
     });
     
     const { RequestType, ResourceProperties } = event;
@@ -641,35 +683,34 @@ exports.handler = async (event, context) => {
         AuthentikHost, 
         OutpostName,
         AdminSecretName,
-        LDAPSecretName
+        LDAPSecretName,
+        BaseDN
     } = ResourceProperties;
     
     try {
         if (RequestType === 'Create' || RequestType === 'Update') {
-            logWithTimestamp('info', 'Processing LDAP token retrieval', {
+            logWithTimestamp('info', 'Processing LDAP configuration and token retrieval', {
                 requestType: RequestType,
                 environment: Environment,
                 authentikHost: AuthentikHost,
-                outpostName: OutpostName,
-                adminSecretName: AdminSecretName,
-                ldapSecretName: LDAPSecretName
+                outpostName: OutpostName
             });
             
-            // Get the admin token from AWS Secrets Manager with retry
+            // Get admin token
             const adminToken = await withRetry(
                 () => getAdminToken(AdminSecretName),
                 'getAdminToken',
                 { secretName: AdminSecretName }
             );
             
-            // Retrieve the LDAP token from Authentik with retry
+            // Create LDAP configuration and retrieve token
             const ldapToken = await withRetry(
-                () => retrieveToken(AuthentikHost, adminToken, OutpostName),
+                () => retrieveToken(AuthentikHost, adminToken, OutpostName, BaseDN),
                 'retrieveToken',
                 { authentikHost: AuthentikHost, outpostName: OutpostName }
             );
             
-            // Store the LDAP token back in AWS Secrets Manager with retry
+            // Store token in Secrets Manager
             await withRetry(
                 () => putLDAPSecret(LDAPSecretName, ldapToken),
                 'putLDAPSecret',
@@ -678,24 +719,17 @@ exports.handler = async (event, context) => {
             
             const executionTime = Date.now() - startTime;
             
-            logWithTimestamp('info', 'LDAP token retrieval completed successfully', {
-                executionTimeMs: executionTime,
-                tokenLength: ldapToken.length
+            logWithTimestamp('info', 'LDAP configuration and token retrieval completed', {
+                executionTimeMs: executionTime
             });
             
             await sendResponse(event, context, 'SUCCESS', {
-                Message: 'LDAP token retrieved and updated successfully',
-                ExecutionTimeMs: executionTime,
-                TokenLength: ldapToken.length,
-                LDAPTokenPrefix: ldapToken.substring(0, 10) + '...'
+                Message: 'LDAP configuration created and token retrieved successfully',
+                ExecutionTimeMs: executionTime
             });
         } else if (RequestType === 'Delete') {
-            logWithTimestamp('info', 'Processing delete request', {
-                requestType: RequestType
-            });
-            
             await sendResponse(event, context, 'SUCCESS', {
-                Message: 'Delete completed - no action needed for LDAP token retrieval'
+                Message: 'Delete completed - no action needed'
             });
         }
     } catch (error) {
@@ -704,25 +738,14 @@ exports.handler = async (event, context) => {
         logWithTimestamp('error', 'Lambda function failed', {
             error: error.message,
             errorType: error.constructor.name,
-            stack: error.stack,
-            executionTimeMs: executionTime,
-            remainingTimeMs: context.getRemainingTimeInMillis()
-        });
-        
-        // Classify the error and create structured error information
-        const errorInfo = classifyError(error, {
-            environment: ResourceProperties.Environment,
-            authentikHost: ResourceProperties.AuthentikHost,
-            outpostName: ResourceProperties.OutpostName,
-            executionTimeMs: executionTime,
-            remainingTimeMs: context.getRemainingTimeInMillis()
+            executionTimeMs: executionTime
         });
         
         await sendResponse(event, context, 'FAILED', {
             Message: error.message,
             ErrorType: error.constructor.name,
             ExecutionTimeMs: executionTime
-        }, null, errorInfo);
+        });
     }
 };
       `)
@@ -740,6 +763,7 @@ exports.handler = async (event, context) => {
         OutpostName: props.token.outpostName || 'LDAP',
         AdminSecretName: props.token.adminTokenSecret.secretName,
         LDAPSecretName: props.token.ldapTokenSecret.secretName,
+        BaseDN: props.contextConfig.authentik?.ldapBaseDn || 'DC=example,DC=com',
         // Add a timestamp to force updates on every deployment
         UpdateTimestamp: Date.now().toString()
       }
