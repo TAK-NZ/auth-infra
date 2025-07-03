@@ -465,6 +465,13 @@ async function fetchJson(url, options) {
                         });
                         reject(new Error(\`Invalid JSON response: \${e.message}\`));
                     }
+                } else if (res.statusCode === 404) {
+                    // Check if we got HTML instead of JSON (likely hitting wrong endpoint)
+                    if (data.includes('<!DOCTYPE html>') || data.includes('<html>')) {
+                        reject(new Error(\`API endpoint not found - got HTML page instead of API response. Check Authentik URL and API path.\`));
+                    } else {
+                        reject(new Error(\`API endpoint not found: \${res.statusCode}, response: \${data.substring(0, 200)}\`));
+                    }
                 } else {
                     logWithTimestamp('error', 'HTTP error response', {
                         statusCode: res.statusCode,
@@ -489,6 +496,9 @@ async function fetchJson(url, options) {
             reject(new Error('Request timeout'));
         });
         
+        if (options.body) {
+            req.write(JSON.stringify(options.body));
+        }
         req.end();
     });
 }
@@ -515,72 +525,273 @@ async function getAdminToken(adminSecretName) {
     return response.SecretString;
 }
 
-async function retrieveToken(authentikHost, authentikApiToken, outpostName) {
+// Helper function to get or create resource
+async function getOrCreate(getUrl, createData, resourceName, headers) {
+    try {
+        const existing = await fetchJson(getUrl, { method: 'GET', headers });
+        if (existing.results && existing.results.length > 0) {
+            logWithTimestamp('info', \`\${resourceName} already exists\`, { id: existing.results[0].pk });
+            return existing.results[0];
+        }
+    } catch (error) {
+        logWithTimestamp('debug', \`Error checking existing \${resourceName}\`, { error: error.message });
+    }
+    
+    const created = await fetchJson(createData.url, {
+        method: 'POST',
+        headers,
+        body: createData.body
+    });
+    logWithTimestamp('info', \`\${resourceName} created\`, { id: created.pk });
+    return created;
+}
+
+// Create LDAP configuration via Authentik API
+async function createLdapConfiguration(authentikHost, adminToken, baseDn) {
+    const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': \`Bearer \${adminToken}\`
+    };
+
+    logWithTimestamp('info', 'Creating LDAP configuration via API');
+
+    // 1. Get or create service account
+    const serviceAccount = await getOrCreate(
+        \`\${authentikHost}/api/v3/core/users/?username__exact=ldapservice\`,
+        {
+            url: \`\${authentikHost}/api/v3/core/users/\`,
+            body: {
+                username: 'ldapservice',
+                name: 'LDAP Service account',
+                type: 'service_account',
+                password: \`ldap-\${Date.now()}\`
+            }
+        },
+        'Service account',
+        headers
+    );
+
+    // 2. Get default flows
+    const flows = await fetchJson(\`\${authentikHost}/api/v3/flows/flows/\`, { method: 'GET', headers });
+    const invalidationFlow = flows.results.find(f => f.slug === 'default-invalidation-flow');
+
+    // 3. Get or create authentication flow
+    const authFlow = await getOrCreate(
+        \`\${authentikHost}/api/v3/flows/flows/?slug__exact=ldap-authentication-flow\`,
+        {
+            url: \`\${authentikHost}/api/v3/flows/flows/\`,
+            body: {
+                name: 'ldap-authentication-flow',
+                slug: 'ldap-authentication-flow',
+                title: 'ldap-authentication-flow',
+                designation: 'authentication',
+                authentication: 'require_outpost',
+                denied_action: 'message_continue',
+                layout: 'stacked',
+                policy_engine_mode: 'any'
+            }
+        },
+        'Authentication flow',
+        headers
+    );
+
+    // 4. Get or create stages
+    const identificationStage = await getOrCreate(
+        \`\${authentikHost}/api/v3/stages/identification/?name__exact=ldap-identification-stage\`,
+        {
+            url: \`\${authentikHost}/api/v3/stages/identification/\`,
+            body: {
+                name: 'ldap-identification-stage',
+                case_insensitive_matching: true,
+                pretend_user_exists: true,
+                show_matched_user: true,
+                user_fields: ['username', 'email']
+            }
+        },
+        'Identification stage',
+        headers
+    );
+
+    const loginStage = await getOrCreate(
+        \`\${authentikHost}/api/v3/stages/user_login/?name__exact=ldap-authentication-login\`,
+        {
+            url: \`\${authentikHost}/api/v3/stages/user_login/\`,
+            body: {
+                name: 'ldap-authentication-login',
+                geoip_binding: 'bind_continent',
+                network_binding: 'bind_asn',
+                remember_me_offset: 'seconds=0',
+                session_duration: 'seconds=0'
+            }
+        },
+        'Login stage',
+        headers
+    );
+
+    // 5. Create stage bindings
+    try {
+        const bindings = await fetchJson(\`\${authentikHost}/api/v3/flows/bindings/?target=\${authFlow.pk}\`, { method: 'GET', headers });
+        const hasIdentificationBinding = bindings.results.some(b => b.stage === identificationStage.pk);
+        const hasLoginBinding = bindings.results.some(b => b.stage === loginStage.pk);
+        
+        if (!hasIdentificationBinding) {
+            await fetchJson(\`\${authentikHost}/api/v3/flows/bindings/\`, {
+                method: 'POST',
+                headers,
+                body: {
+                    target: authFlow.pk,
+                    stage: identificationStage.pk,
+                    order: 10,
+                    evaluate_on_plan: true,
+                    invalid_response_action: 'retry',
+                    policy_engine_mode: 'any',
+                    re_evaluate_policies: true
+                }
+            });
+        }
+        
+        if (!hasLoginBinding) {
+            await fetchJson(\`\${authentikHost}/api/v3/flows/bindings/\`, {
+                method: 'POST',
+                headers,
+                body: {
+                    target: authFlow.pk,
+                    stage: loginStage.pk,
+                    order: 30,
+                    evaluate_on_plan: true,
+                    invalid_response_action: 'retry',
+                    policy_engine_mode: 'any',
+                    re_evaluate_policies: true
+                }
+            });
+        }
+    } catch (error) {
+        logWithTimestamp('warn', 'Error managing stage bindings', { error: error.message });
+    }
+
+    // 6. Get or create LDAP provider
+    const ldapProvider = await getOrCreate(
+        \`\${authentikHost}/api/v3/providers/ldap/?name__exact=LDAP\`,
+        {
+            url: \`\${authentikHost}/api/v3/providers/ldap/\`,
+            body: {
+                name: 'LDAP',
+                authorization_flow: authFlow.pk,
+                base_dn: baseDn,
+                bind_mode: 'cached',
+                gid_start_number: 4000,
+                invalidation_flow: invalidationFlow?.pk,
+                mfa_support: true,
+                search_mode: 'cached',
+                uid_start_number: 2000
+            }
+        },
+        'LDAP provider',
+        headers
+    );
+
+    // 7. Get or create application
+    const application = await getOrCreate(
+        \`\${authentikHost}/api/v3/core/applications/?slug__exact=ldap\`,
+        {
+            url: \`\${authentikHost}/api/v3/core/applications/\`,
+            body: {
+                name: 'LDAP',
+                slug: 'ldap',
+                policy_engine_mode: 'any',
+                provider: ldapProvider.pk
+            }
+        },
+        'Application',
+        headers
+    );
+
+    // 8. Get or create outpost
+    const outpost = await getOrCreate(
+        \`\${authentikHost}/api/v3/outposts/outposts/?name__exact=LDAP\`,
+        {
+            url: \`\${authentikHost}/api/v3/outposts/outposts/\`,
+            body: {
+                name: 'LDAP',
+                type: 'ldap',
+                providers: [ldapProvider.pk],
+                config: {
+                    authentik_host: authentikHost
+                }
+            }
+        },
+        'Outpost',
+        headers
+    );
+
+    return outpost;
+}
+
+async function retrieveToken(authentikHost, authentikApiToken, outpostName, baseDn) {
     outpostName = outpostName || 'LDAP';
     
     logWithTimestamp('info', 'Starting token retrieval process', {
         authentikHost,
-        outpostName,
-        tokenLength: authentikApiToken.length
+        outpostName
     });
     
-    // Fetch outpost instances from API
-    const outpostInstancesUrl = new URL('/api/v3/outposts/instances/', authentikHost);
-    outpostInstancesUrl.searchParams.append('name__iexact', outpostName);
-
-    logWithTimestamp('info', 'Fetching outpost instances', {
-        url: outpostInstancesUrl.toString()
-    });
+    // Validate Authentik host URL
+    if (!authentikHost || !authentikHost.startsWith('http')) {
+        throw new Error(\`Invalid Authentik host URL: \${authentikHost}\`);
+    }
     
-    const outpostInstances = await fetchJson(outpostInstancesUrl.toString(), {
-        method: 'GET',
-        headers: {
-            'Accept': 'application/json',
-            'Authorization': \`Bearer \${authentikApiToken}\`
+    // First, try to get existing outpost instances (like original working code)
+    let outpost;
+    try {
+        const outpostInstances = await fetchJson(\`\${authentikHost}/api/v3/outposts/instances/?name__iexact=\${outpostName}\`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': \`Bearer \${authentikApiToken}\`
+            }
+        });
+        
+        if (outpostInstances.results && outpostInstances.results.length > 0) {
+            // Found running instance, get the outpost definition
+            const outpostDef = await fetchJson(\`\${authentikHost}/api/v3/outposts/outposts/?name__exact=\${outpostName}\`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': \`Bearer \${authentikApiToken}\`
+                }
+            });
+            outpost = outpostDef.results?.[0];
         }
-    });
-
-    // Check if we found the outpost
-    const results = outpostInstances.results || [];
-    
-    logWithTimestamp('info', 'Outpost instances retrieved', {
-        totalResults: results.length,
-        outpostNames: results.map(r => r.name)
-    });
-    
-    if (results.length === 0) {
-        throw new Error(\`Outpost with name \${outpostName} not found. Available outposts: none\`);
+        
+        if (!outpost) {
+            logWithTimestamp('info', 'Outpost not found, creating LDAP configuration');
+            outpost = await createLdapConfiguration(authentikHost, authentikApiToken, baseDn);
+        }
+    } catch (error) {
+        logWithTimestamp('info', 'Error checking outpost, creating LDAP configuration', { error: error.message });
+        outpost = await createLdapConfiguration(authentikHost, authentikApiToken, baseDn);
     }
 
-    // Extract the token identifier
-    const outpost = results.find((item) => item.name === outpostName);
-    if (!outpost) {
-        const availableNames = results.map(r => r.name).join(', ');
-        throw new Error(\`Outpost with name \${outpostName} not found. Available outposts: \${availableNames}\`);
+    // Get the token (with retry for token_identifier)
+    if (!outpost.token_identifier) {
+        // Refresh outpost data to get token_identifier
+        const refreshedOutpost = await fetchJson(\`\${authentikHost}/api/v3/outposts/outposts/\${outpost.pk}/\`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': \`Bearer \${authentikApiToken}\`
+            }
+        });
+        outpost = refreshedOutpost;
     }
     
     if (!outpost.token_identifier) {
-        logWithTimestamp('error', 'Outpost found but missing token identifier', {
-            outpost: { ...outpost, token_identifier: undefined }
-        });
-        throw new Error(\`Token identifier for outpost \${outpostName} not found\`);
+        throw new Error('Outpost token_identifier not available');
     }
 
-    const tokenIdentifier = outpost.token_identifier;
-    logWithTimestamp('info', 'Found outpost and token identifier', {
-        outpostName,
-        tokenIdentifier,
-        outpostId: outpost.pk
-    });
-
-    // Fetch the token
-    const viewKeyUrl = new URL(\`/api/v3/core/tokens/\${tokenIdentifier}/view_key/\`, authentikHost);
-
-    logWithTimestamp('info', 'Fetching token key', {
-        url: viewKeyUrl.toString()
-    });
-
-    const viewKeyResult = await fetchJson(viewKeyUrl.toString(), {
+    const tokenUrl = \`\${authentikHost}/api/v3/core/tokens/\${outpost.token_identifier}/view_key/\`;
+    const tokenResult = await fetchJson(tokenUrl, {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
@@ -588,20 +799,15 @@ async function retrieveToken(authentikHost, authentikApiToken, outpostName) {
         }
     });
 
-    const outpostToken = viewKeyResult.key;
-    if (!outpostToken) {
-        logWithTimestamp('error', 'Token key response invalid', {
-            responseKeys: Object.keys(viewKeyResult)
-        });
-        throw new Error(\`Token for outpost \${outpostName} not found in response\`);
+    if (!tokenResult.key) {
+        throw new Error('Token not found in response');
     }
 
     logWithTimestamp('info', 'Token retrieved successfully', {
-        tokenLength: outpostToken.length,
-        tokenPrefix: outpostToken.substring(0, 8) + '...'
+        tokenLength: tokenResult.key.length
     });
 
-    return outpostToken;
+    return tokenResult.key;
 }
 
 async function putLDAPSecret(secretName, secretValue) {
@@ -641,7 +847,8 @@ exports.handler = async (event, context) => {
         AuthentikHost, 
         OutpostName,
         AdminSecretName,
-        LDAPSecretName
+        LDAPSecretName,
+        BaseDN
     } = ResourceProperties;
     
     try {
@@ -662,9 +869,9 @@ exports.handler = async (event, context) => {
                 { secretName: AdminSecretName }
             );
             
-            // Retrieve the LDAP token from Authentik with retry
+            // Create LDAP configuration and retrieve token
             const ldapToken = await withRetry(
-                () => retrieveToken(AuthentikHost, adminToken, OutpostName),
+                () => retrieveToken(AuthentikHost, adminToken, OutpostName, ResourceProperties.BaseDN || 'DC=example,DC=com'),
                 'retrieveToken',
                 { authentikHost: AuthentikHost, outpostName: OutpostName }
             );
@@ -740,6 +947,7 @@ exports.handler = async (event, context) => {
         OutpostName: props.token.outpostName || 'LDAP',
         AdminSecretName: props.token.adminTokenSecret.secretName,
         LDAPSecretName: props.token.ldapTokenSecret.secretName,
+        BaseDN: props.contextConfig.authentik?.ldapBaseDn || 'DC=example,DC=com',
         // Add a timestamp to force updates on every deployment
         UpdateTimestamp: Date.now().toString()
       }
