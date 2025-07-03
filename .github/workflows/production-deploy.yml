@@ -60,7 +60,8 @@ jobs:
       - name: Validate Production Change Set
         run: |
           # Check if override is requested
-          if [[ "${{ github.event.head_commit.message }}" == *"[force-deploy]"* ]]; then
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if [[ "$COMMIT_MSG" == *"[force-deploy]"* ]]; then
             echo "🚨 Force deploy detected - skipping change set validation"
           else
             ./scripts/github/validate-changeset.sh TAK-${{ vars.STACK_NAME }}-AuthInfra
