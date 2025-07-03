@@ -604,6 +604,58 @@ async function retrieveToken(authentikHost, authentikApiToken, outpostName) {
     return outpostToken;
 }
 
+    // Extract the token identifier
+    const outpost = results.find((item) => item.name === outpostName);
+    if (!outpost) {
+        const availableNames = results.map(r => r.name).join(', ');
+        throw new Error(\`Outpost with name \${outpostName} not found. Available outposts: \${availableNames}\`);
+    }
+    
+    if (!outpost.token_identifier) {
+        logWithTimestamp('error', 'Outpost found but missing token identifier', {
+            outpost: { ...outpost, token_identifier: undefined }
+        });
+        throw new Error(\`Token identifier for outpost \${outpostName} not found\`);
+    }
+
+    const tokenIdentifier = outpost.token_identifier;
+    logWithTimestamp('info', 'Found outpost and token identifier', {
+        outpostName,
+        tokenIdentifier,
+        outpostId: outpost.pk
+    });
+
+    // Fetch the token
+    const viewKeyUrl = new URL(\`/api/v3/core/tokens/\${tokenIdentifier}/view_key/\`, authentikHost);
+
+    logWithTimestamp('info', 'Fetching token key', {
+        url: viewKeyUrl.toString()
+    });
+
+    const viewKeyResult = await fetchJson(viewKeyUrl.toString(), {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': \`Bearer \${authentikApiToken}\`
+        }
+    });
+
+    const outpostToken = viewKeyResult.key;
+    if (!outpostToken) {
+        logWithTimestamp('error', 'Token key response invalid', {
+            responseKeys: Object.keys(viewKeyResult)
+        });
+        throw new Error(\`Token for outpost \${outpostName} not found in response\`);
+    }
+
+    logWithTimestamp('info', 'Token retrieved successfully', {
+        tokenLength: outpostToken.length,
+        tokenPrefix: outpostToken.substring(0, 8) + '...'
+    });
+
+    return outpostToken;
+}
+
 async function putLDAPSecret(secretName, secretValue) {
     logWithTimestamp('info', 'Updating LDAP token secret', {
         secretName,
