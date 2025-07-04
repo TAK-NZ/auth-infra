@@ -46,6 +46,7 @@ entries:
     identifiers:
       slug: ldap-authentication-flow
     model: authentik_flows.flow
+    state: present
     id: ldap-authentication-flow
   - attrs:
       backends:
@@ -57,6 +58,7 @@ entries:
     identifiers:
       name: ldap-authentication-password
     model: authentik_stages_password.passwordstage
+    state: present
     id: ldap-authentication-password
   - attrs:
       case_insensitive_matching: true
@@ -69,6 +71,7 @@ entries:
     identifiers:
       name: ldap-identification-stage
     model: authentik_stages_identification.identificationstage
+    state: present
     id: ldap-identification-stage
   - attrs:
       geoip_binding: bind_continent
@@ -78,6 +81,7 @@ entries:
     identifiers:
         name: ldap-authentication-login
     model: authentik_stages_user_login.userloginstage
+    state: present
     id: ldap-authentication-login
   - attrs:
       evaluate_on_plan: true
@@ -88,7 +92,8 @@ entries:
       order: 10
       stage: !KeyOf ldap-identification-stage
       target: !KeyOf ldap-authentication-flow
-    model: authentik_flows.flowstagebinding  
+    model: authentik_flows.flowstagebinding
+    state: present
     id: ldap-identification-stage-flow-binding
   - attrs:
       evaluate_on_plan: true
@@ -96,13 +101,15 @@ entries:
       policy_engine_mode: any
       re_evaluate_policies: true
     identifiers:
-      order: 30
+      order: 20
       stage: !KeyOf ldap-authentication-login
       target: !KeyOf ldap-authentication-flow
     model: authentik_flows.flowstagebinding
+    state: present
     id: ldap-authentication-login-binding
   - model: authentik_providers_ldap.ldapprovider
     id: provider
+    state: present
     identifiers:
       name: LDAP
     attrs:
@@ -120,6 +127,7 @@ entries:
         user: !KeyOf ldap-service-account
   - model: authentik_core.application
     id: app
+    state: present
     identifiers:
       slug: ldap
     attrs:
@@ -128,6 +136,7 @@ entries:
       provider: !KeyOf provider
   - model: authentik_outposts.outpost  
     id: outpost
+    state: present
     identifiers:
       name: LDAP
     attrs:
