@@ -546,8 +546,42 @@ async function getOrCreate(getUrl, createData, resourceName, headers) {
     return created;
 }
 
-// Check for LDAP service account and trigger blueprint if missing
-async function ensureLdapServiceAccount(authentikHost, adminToken) {
+// Apply LDAP blueprint once
+async function applyLdapBlueprint(authentikHost, adminToken) {
+    const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': \`Bearer \${adminToken}\`
+    };
+
+    logWithTimestamp('info', 'Applying LDAP blueprint');
+    
+    try {
+        const blueprints = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/\`, { method: 'GET', headers });
+        const takLdapBlueprint = blueprints.results.find(bp => bp.name === 'LDAP Setup for TAK');
+        
+        if (takLdapBlueprint) {
+            logWithTimestamp('info', \`Found TAK LDAP blueprint, applying\`, { uuid: takLdapBlueprint.pk });
+            
+            const applyResult = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/\${takLdapBlueprint.pk}/apply/\`, {
+                method: 'POST',
+                headers
+            });
+            
+            logWithTimestamp('info', 'Blueprint applied successfully', {
+                blueprintUuid: takLdapBlueprint.pk,
+                result: applyResult
+            });
+        } else {
+            logWithTimestamp('warn', 'TAK LDAP blueprint not found in managed blueprints');
+        }
+    } catch (error) {
+        logWithTimestamp('warn', \`Failed to apply blueprint: \${error.message}\`);
+    }
+}
+
+// Trigger LDAP blueprint to create outpost and service account
+async function triggerLdapBlueprint(authentikHost, adminToken) {
     const headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -576,6 +610,8 @@ async function ensureLdapServiceAccount(authentikHost, adminToken) {
                 logWithTimestamp('info', 'LDAP service account found successfully');
                 return;
             }
+            
+            logWithTimestamp('info', 'LDAP service account not found, will trigger blueprint');
             
             // Service account missing, find and trigger blueprint
             if (!blueprintInstanceUuid) {
@@ -651,6 +687,9 @@ async function retrieveToken(authentikHost, authentikApiToken, outpostName, base
         throw new Error(\`Invalid Authentik host URL: \${authentikHost}\`);
     }
     
+    // Always apply blueprint first to ensure LDAP setup is current
+    await applyLdapBlueprint(authentikHost, authentikApiToken);
+    
     // First, try to get existing outpost instances (like original working code)
     let outpost;
     try {
@@ -662,14 +701,16 @@ async function retrieveToken(authentikHost, authentikApiToken, outpostName, base
             }
         });
         
-        if (outpostInstances.results && outpostInstances.results.length > 0) {
+        if (outpostInstances.results && outpostInstances.results.length > 0 && outpostInstances.pagination?.count > 0) {
             // Found running instance, use it directly
             outpost = outpostInstances.results[0];
+        } else {
+            logWithTimestamp('info', 'No LDAP outpost instances found');
         }
         
         if (!outpost) {
-            logWithTimestamp('info', 'Outpost not found, ensuring LDAP service account exists');
-            await ensureLdapServiceAccount(authentikHost, authentikApiToken);
+            logWithTimestamp('info', 'Outpost not found, triggering blueprint');
+            await triggerLdapBlueprint(authentikHost, authentikApiToken);
             
             // Try again after ensuring service account exists
             const outpostInstances = await fetchJson(\`\${authentikHost}/api/v3/outposts/instances/?name__iexact=LDAP\`, {
@@ -686,8 +727,8 @@ async function retrieveToken(authentikHost, authentikApiToken, outpostName, base
             }
         }
     } catch (error) {
-        logWithTimestamp('info', 'Error checking outpost, ensuring LDAP service account exists', { error: error.message });
-        await ensureLdapServiceAccount(authentikHost, authentikApiToken);
+        logWithTimestamp('info', 'Error checking outpost, triggering blueprint', { error: error.message });
+        await triggerLdapBlueprint(authentikHost, authentikApiToken);
         
         // Try again after ensuring service account exists
         const outpostInstances = await fetchJson(\`\${authentikHost}/api/v3/outposts/instances/?name__iexact=LDAP\`, {
