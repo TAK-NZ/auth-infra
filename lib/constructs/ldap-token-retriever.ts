@@ -546,8 +546,8 @@ async function getOrCreate(getUrl, createData, resourceName, headers) {
     return created;
 }
 
-// Check for blueprint-created LDAP resources with exponential backoff
-async function waitForBlueprintResources(authentikHost, adminToken) {
+// Check for LDAP service account and trigger blueprint if missing
+async function ensureLdapServiceAccount(authentikHost, adminToken) {
     const headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -558,78 +558,66 @@ async function waitForBlueprintResources(authentikHost, adminToken) {
     const startTime = Date.now();
     let attempt = 0;
     const maxAttempts = 20;
+    let blueprintInstanceUuid = null;
 
-    logWithTimestamp('info', 'Waiting for blueprint to create LDAP resources');
+    logWithTimestamp('info', 'Ensuring LDAP service account exists');
 
     while (Date.now() - startTime < maxWaitTime && attempt < maxAttempts) {
         attempt++;
         const backoffDelay = Math.min(1000 * Math.pow(2, attempt - 1), 30000); // Cap at 30s
         
-        logWithTimestamp('info', \`Checking for blueprint resources (attempt \${attempt}/\${maxAttempts})\`);
+        logWithTimestamp('info', \`Checking for LDAP service account (attempt \${attempt}/\${maxAttempts})\`);
         
         try {
-            // Check required resources in order
-            const missingResources = [];
+            // Check if LDAP service account exists
+            const users = await fetchJson(\`\${authentikHost}/api/v3/core/users/?username__iexact=ldapservice\`, { method: 'GET', headers });
             
-            // 1. Check service account
-            try {
-                const users = await fetchJson(\`\${authentikHost}/api/v3/core/users/?username__exact=ldapservice\`, { method: 'GET', headers });
-                if (!users.results || users.results.length === 0) {
-                    missingResources.push('LDAP service account (ldapservice)');
-                }
-            } catch (error) {
-                missingResources.push('LDAP service account (ldapservice)');
-            }
-            
-            // 2. Check authentication flow
-            try {
-                const flows = await fetchJson(\`\${authentikHost}/api/v3/flows/instances/?slug__exact=ldap-authentication-flow\`, { method: 'GET', headers });
-                if (!flows.results || flows.results.length === 0) {
-                    missingResources.push('LDAP authentication flow (ldap-authentication-flow)');
-                }
-            } catch (error) {
-                missingResources.push('LDAP authentication flow (ldap-authentication-flow)');
-            }
-            
-            // 3. Check LDAP provider
-            try {
-                const providers = await fetchJson(\`\${authentikHost}/api/v3/providers/ldap/?name__iexact=Provider for LDAP\`, { method: 'GET', headers });
-                if (!providers.results || providers.results.length === 0) {
-                    missingResources.push('LDAP provider (Provider for LDAP)');
-                }
-            } catch (error) {
-                missingResources.push('LDAP provider (Provider for LDAP)');
-            }
-            
-            // 4. Check application
-            try {
-                const apps = await fetchJson(\`\${authentikHost}/api/v3/core/applications/?slug__iexact=ldap\`, { method: 'GET', headers });
-                if (!apps.results || apps.results.length === 0) {
-                    missingResources.push('LDAP application (ldap)');
-                }
-            } catch (error) {
-                missingResources.push('LDAP application (ldap)');
-            }
-            
-            // 5. Check outpost
-            try {
-                const outposts = await fetchJson(\`\${authentikHost}/api/v3/outposts/instances/?name__iexact=LDAP\`, { method: 'GET', headers });
-                if (!outposts.results || outposts.results.length === 0) {
-                    missingResources.push('LDAP outpost (LDAP)');
-                }
-            } catch (error) {
-                missingResources.push('LDAP outpost (LDAP)');
-            }
-            
-            if (missingResources.length === 0) {
-                logWithTimestamp('info', 'All blueprint resources found successfully');
+            if (users.results && users.results.length > 0) {
+                logWithTimestamp('info', 'LDAP service account found successfully');
                 return;
             }
             
-            logWithTimestamp('info', \`Missing resources: \${missingResources.join(', ')}. Retrying in \${backoffDelay}ms\`);
+            // Service account missing, find and trigger blueprint
+            if (!blueprintInstanceUuid) {
+                try {
+                    const blueprints = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/\`, { method: 'GET', headers });
+                    const takLdapBlueprint = blueprints.results.find(bp => bp.name === 'LDAP Setup for TAK');
+                    if (takLdapBlueprint) {
+                        blueprintInstanceUuid = takLdapBlueprint.pk;
+                        logWithTimestamp('info', \`Found TAK LDAP blueprint with UUID: \${blueprintInstanceUuid}\`);
+                    } else {
+                        logWithTimestamp('warn', 'TAK LDAP blueprint not found in managed blueprints');
+                    }
+                } catch (blueprintFindError) {
+                    logWithTimestamp('warn', \`Failed to find TAK LDAP blueprint: \${blueprintFindError.message}\`);
+                }
+            }
+            
+            if (blueprintInstanceUuid) {
+                logWithTimestamp('info', \`LDAP service account missing, triggering blueprint (attempt \${attempt})\`);
+                
+                try {
+                    const applyResult = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/\${blueprintInstanceUuid}/apply/\`, {
+                        method: 'POST',
+                        headers
+                    });
+                    
+                    logWithTimestamp('info', 'Blueprint apply triggered successfully', {
+                        blueprintUuid: blueprintInstanceUuid,
+                        result: applyResult
+                    });
+                    
+                } catch (blueprintError) {
+                    logWithTimestamp('warn', \`Failed to trigger blueprint: \${blueprintError.message}\`);
+                }
+            } else {
+                logWithTimestamp('warn', 'Cannot trigger blueprint - blueprint UUID not found');
+            }
+            
+            logWithTimestamp('info', \`Waiting \${backoffDelay}ms before next check...\`);
             
         } catch (error) {
-            logWithTimestamp('warn', \`Error checking blueprint resources: \${error.message}\`);
+            logWithTimestamp('warn', \`Error checking LDAP service account: \${error.message}\`);
         }
         
         // Wait before next attempt
@@ -637,27 +625,17 @@ async function waitForBlueprintResources(authentikHost, adminToken) {
     }
     
     // Final check to provide detailed error message
-    const missingResources = [];
     try {
         const users = await fetchJson(\`\${authentikHost}/api/v3/core/users/?username__iexact=ldapservice\`, { method: 'GET', headers });
-        if (!users.results || users.results.length === 0) missingResources.push('LDAP service account (ldapservice)');
-        
-        const flows = await fetchJson(\`\${authentikHost}/api/v3/flows/instances/?slug__iexact=ldap-authentication-flow\`, { method: 'GET', headers });
-        if (!flows.results || flows.results.length === 0) missingResources.push('LDAP authentication flow (ldap-authentication-flow)');
-        
-        const providers = await fetchJson(\`\${authentikHost}/api/v3/providers/ldap/?name__iexact=Provider for LDAP\`, { method: 'GET', headers });
-        if (!providers.results || providers.results.length === 0) missingResources.push('LDAP provider (Provider for LDAP)');
-        
-        const apps = await fetchJson(\`\${authentikHost}/api/v3/core/applications/?slug__iexact=ldap\`, { method: 'GET', headers });
-        if (!apps.results || apps.results.length === 0) missingResources.push('LDAP application (ldap)');
-        
-        const outposts = await fetchJson(\`\${authentikHost}/api/v3/outposts/instances/?name__iexact=LDAP\`, { method: 'GET', headers });
-        if (!outposts.results || outposts.results.length === 0) missingResources.push('LDAP outpost (LDAP)');
+        if (!users.results || users.results.length === 0) {
+            const errorMsg = blueprintInstanceUuid 
+                ? \`LDAP service account (ldapservice) not found after \${maxAttempts} attempts over 10 minutes. Blueprint UUID: \${blueprintInstanceUuid}. Check Authentik logs for blueprint execution errors.\`
+                : \`LDAP service account (ldapservice) not found after \${maxAttempts} attempts over 10 minutes. TAK LDAP blueprint was never found in managed blueprints. Check blueprint installation and Authentik startup.\`;
+            throw new Error(errorMsg);
+        }
     } catch (error) {
-        throw new Error(\`Failed to check blueprint resources after timeout: \${error.message}\`);
+        throw new Error(\`Failed to verify LDAP service account after timeout: \${error.message}\`);
     }
-    
-    throw new Error(\`Blueprint failed to create required LDAP resources within 10 minutes. Missing: \${missingResources.join(', ')}. Check Authentik logs and blueprint configuration.\`);
 }
 
 async function retrieveToken(authentikHost, authentikApiToken, outpostName, baseDn) {
@@ -690,10 +668,10 @@ async function retrieveToken(authentikHost, authentikApiToken, outpostName, base
         }
         
         if (!outpost) {
-            logWithTimestamp('info', 'Outpost not found, waiting for blueprint to create resources');
-            await waitForBlueprintResources(authentikHost, authentikApiToken);
+            logWithTimestamp('info', 'Outpost not found, ensuring LDAP service account exists');
+            await ensureLdapServiceAccount(authentikHost, authentikApiToken);
             
-            // Try again after blueprint resources are created
+            // Try again after ensuring service account exists
             const outpostInstances = await fetchJson(\`\${authentikHost}/api/v3/outposts/instances/?name__iexact=LDAP\`, {
                 method: 'GET',
                 headers: {
@@ -704,14 +682,14 @@ async function retrieveToken(authentikHost, authentikApiToken, outpostName, base
             outpost = outpostInstances.results?.[0];
             
             if (!outpost) {
-                throw new Error('LDAP outpost not found even after blueprint resources were created');
+                throw new Error('LDAP outpost not found even after ensuring service account exists');
             }
         }
     } catch (error) {
-        logWithTimestamp('info', 'Error checking outpost, waiting for blueprint to create resources', { error: error.message });
-        await waitForBlueprintResources(authentikHost, authentikApiToken);
+        logWithTimestamp('info', 'Error checking outpost, ensuring LDAP service account exists', { error: error.message });
+        await ensureLdapServiceAccount(authentikHost, authentikApiToken);
         
-        // Try again after blueprint resources are created
+        // Try again after ensuring service account exists
         const outpostInstances = await fetchJson(\`\${authentikHost}/api/v3/outposts/instances/?name__iexact=LDAP\`, {
             method: 'GET',
             headers: {
@@ -722,7 +700,7 @@ async function retrieveToken(authentikHost, authentikApiToken, outpostName, base
         outpost = outpostInstances.results?.[0];
         
         if (!outpost) {
-            throw new Error('LDAP outpost not found even after blueprint resources were created');
+            throw new Error('LDAP outpost not found even after ensuring service account exists');
         }
     }
 
