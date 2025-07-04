@@ -4,6 +4,7 @@ metadata:
   labels:
     blueprints.goauthentik.io/description: |
       This blueprint configures the default LDAP service account.
+    blueprints.goauthentik.io/depends-on: "default-flows,default-stages"
 context:
   username: !Env [AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME, 'ldapservice']
   password: !Env [AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD, null]
@@ -14,12 +15,17 @@ entries:
     attrs:
       identifiers:
         name: Default - Invalidation flow
-      required: false 
+      required: true
   - model: authentik_blueprints.metaapplyblueprint
     attrs:
       identifiers:
         name: Default - Password change flow
-      required: false
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - Authentication flow
+      required: true
   - model: authentik_core.user
     state: created
     id: ldap-service-account
