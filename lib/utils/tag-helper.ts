@@ -1,30 +1,34 @@
-import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
-
-export interface StandardTags {
-  Project: string;
-  Component: string;
-  Environment: string;
-  ManagedBy: string;
-  StackName: string;
-  Region: string;
+/**
+ * Interface for tag-related defaults from cdk.json context
+ */
+export interface TagDefaults {
+  project?: string;
+  component?: string;
 }
 
-export class TagHelper {
-  static applyStandardTags(construct: Construct, tags: StandardTags): void {
-    Object.entries(tags).forEach(([key, value]) => {
-      cdk.Tags.of(construct).add(key, value);
-    });
-  }
-
-  static createStandardTags(stackName: string, region: string): StandardTags {
-    return {
-      Project: 'TAK.NZ',
-      Component: 'AuthInfra', 
-      Environment: stackName,
-      ManagedBy: 'CDK',
-      StackName: stackName,
-      Region: region
-    };
-  }
+/**
+ * Generate standardized tags for TAK infrastructure resources
+ * 
+ * @param stackName - Stack name for environment identification
+ * @param environment - Environment type ('prod' | 'dev-test')
+ * @param defaults - Default values from cdk.json context
+ * @returns Object containing all standard tags
+ */
+export function generateStandardTags(
+  stackName: string,
+  environment: 'prod' | 'dev-test',
+  defaults?: TagDefaults
+): Record<string, string> {
+  const environmentLabel = environment === 'prod' ? 'Prod' : 'Dev-Test';
+  
+  return {
+    // Core identification tags
+    Project: defaults?.project || 'TAK',
+    Environment: stackName,
+    Component: defaults?.component || 'AuthInfra',
+    ManagedBy: 'CDK',
+    
+    // Environment type classification
+    'Environment Type': environmentLabel,
+  };
 }

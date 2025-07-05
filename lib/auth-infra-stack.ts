@@ -37,7 +37,6 @@ import { registerOutputs } from './outputs';
 import { createBaseImportValue, BASE_EXPORT_NAMES } from './cloudformation-imports';
 import { ContextEnvironmentConfig } from './stack-config';
 import { ConfigValidator } from './utils/config-validator';
-import { TagHelper } from './utils/tag-helper';
 
 
 export interface AuthInfraStackProps extends StackProps {
@@ -75,13 +74,6 @@ export class AuthInfraStack extends cdk.Stack {
     // Use computed values from configuration
     const enableHighAvailability = isHighAvailability;
     const enableDetailedMonitoring = envConfig.general.enableDetailedLogging;
-
-    // Apply comprehensive tagging
-    const standardTags = TagHelper.createStandardTags(
-      envConfig.stackName,
-      this.region
-    );
-    TagHelper.applyStandardTags(this, standardTags);
 
     // Get runtime CloudFormation values for stack outputs and resource naming
     const stackName = Fn.ref('AWS::StackName');
