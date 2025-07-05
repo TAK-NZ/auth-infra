@@ -20,12 +20,12 @@ export function applyContextOverrides(
     database: {
       ...baseConfig.database,
       instanceClass: app.node.tryGetContext('instanceClass') ?? baseConfig.database.instanceClass,
-      instanceCount: app.node.tryGetContext('instanceCount') ?? baseConfig.database.instanceCount,
-      allocatedStorage: app.node.tryGetContext('allocatedStorage') ?? baseConfig.database.allocatedStorage,
-      maxAllocatedStorage: app.node.tryGetContext('maxAllocatedStorage') ?? baseConfig.database.maxAllocatedStorage,
+      instanceCount: Number(app.node.tryGetContext('instanceCount')) || baseConfig.database.instanceCount,
+      allocatedStorage: Number(app.node.tryGetContext('allocatedStorage')) || baseConfig.database.allocatedStorage,
+      maxAllocatedStorage: Number(app.node.tryGetContext('maxAllocatedStorage')) || baseConfig.database.maxAllocatedStorage,
       enablePerformanceInsights: app.node.tryGetContext('enablePerformanceInsights') ?? baseConfig.database.enablePerformanceInsights,
-      monitoringInterval: app.node.tryGetContext('monitoringInterval') ?? baseConfig.database.monitoringInterval,
-      backupRetentionDays: app.node.tryGetContext('backupRetentionDays') ?? baseConfig.database.backupRetentionDays,
+      monitoringInterval: Number(app.node.tryGetContext('monitoringInterval')) || baseConfig.database.monitoringInterval,
+      backupRetentionDays: Number(app.node.tryGetContext('backupRetentionDays')) || baseConfig.database.backupRetentionDays,
       deleteProtection: app.node.tryGetContext('deleteProtection') ?? baseConfig.database.deleteProtection,
     },
     redis: {
@@ -35,9 +35,9 @@ export function applyContextOverrides(
     },
     ecs: {
       ...baseConfig.ecs,
-      taskCpu: app.node.tryGetContext('taskCpu') ?? baseConfig.ecs.taskCpu,
-      taskMemory: app.node.tryGetContext('taskMemory') ?? baseConfig.ecs.taskMemory,
-      desiredCount: app.node.tryGetContext('desiredCount') ?? baseConfig.ecs.desiredCount,
+      taskCpu: Number(app.node.tryGetContext('taskCpu')) || baseConfig.ecs.taskCpu,
+      taskMemory: Number(app.node.tryGetContext('taskMemory')) || baseConfig.ecs.taskMemory,
+      desiredCount: Number(app.node.tryGetContext('desiredCount')) || baseConfig.ecs.desiredCount,
       enableDetailedLogging: app.node.tryGetContext('enableDetailedLogging') ?? baseConfig.ecs.enableDetailedLogging,
     },
     authentik: {
@@ -53,7 +53,7 @@ export function applyContextOverrides(
       buildRevision: Number(app.node.tryGetContext('buildRevision')) || baseConfig.authentik.buildRevision,
     },
     ecr: {
-      imageRetentionCount: app.node.tryGetContext('imageRetentionCount') ?? baseConfig.ecr.imageRetentionCount,
+      imageRetentionCount: Number(app.node.tryGetContext('imageRetentionCount')) || baseConfig.ecr.imageRetentionCount,
       scanOnPush: app.node.tryGetContext('scanOnPush') ?? baseConfig.ecr.scanOnPush,
     },
     general: {
