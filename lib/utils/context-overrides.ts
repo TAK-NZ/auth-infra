@@ -9,9 +9,9 @@ import { ContextEnvironmentConfig } from '../stack-config';
 /**
  * Convert string context parameter to boolean
  */
-function contextBoolean(app: cdk.App, key: string, defaultValue: boolean): boolean {
+function contextBoolean(app: cdk.App, key: string, defaultValue: boolean | undefined): boolean {
   const value = app.node.tryGetContext(key);
-  if (value === undefined) return defaultValue;
+  if (value === undefined) return defaultValue ?? false;
   return value === 'true' || value === true;
 }
 
