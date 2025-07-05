@@ -341,10 +341,33 @@ npm run deploy:dev -- --context stackName=Demo
 
 ### **Resource Tagging**
 All AWS resources are automatically tagged with:
-- **Project**: "TAK.NZ" (from `tak-defaults.project`)
-- **Component**: "AuthInfra" (from `tak-defaults.component`)
+- **Project**: "TAK.NZ" (from `tak-defaults.project` or `tak-project` override)
+- **Component**: "BaseInfra" (from `tak-defaults.component` or `tak-component` override)
 - **Environment**: The environment name (from `stackName`)
 - **ManagedBy**: "CDK"
+
+### **Project Configuration Overrides**
+The project metadata can be overridden using individual context parameters:
+
+```bash
+# Override project name for custom branding
+npm run deploy:dev -- --context tak-project="Custom TAK Project"
+
+# Override component name (useful for custom deployments)
+npm run deploy:dev -- --context tak-component="CustomBaseInfra"
+
+# Override region for tagging purposes
+npm run deploy:dev -- --context tak-region="us-east-1"
+```
+
+#### **Project Context Parameters**
+| Parameter | Description | Default | Example Override |
+|-----------|-------------|---------|------------------|
+| `tak-project` | Project name for resource tagging | `TAK.NZ` | `"Enterprise TAK"` |
+| `tak-component` | Component name for resource tagging | `BaseInfra` | `"CustomBaseInfra"` |
+| `tak-region` | Region identifier for tagging | `ap-southeast-2` | `"us-west-2"` |
+
+**Note**: These parameters provide backward compatibility with the existing `tak-defaults` object while allowing individual overrides for deployment scripts and CI/CD pipelines.
 
 ---
 
