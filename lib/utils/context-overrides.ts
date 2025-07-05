@@ -6,6 +6,15 @@
 import * as cdk from 'aws-cdk-lib';
 import { ContextEnvironmentConfig } from '../stack-config';
 
+/**
+ * Convert string context parameter to boolean
+ */
+function contextBoolean(app: cdk.App, key: string, defaultValue: boolean): boolean {
+  const value = app.node.tryGetContext(key);
+  if (value === undefined) return defaultValue;
+  return value === 'true' || value === true;
+}
+
 export function applyContextOverrides(
   app: cdk.App, 
   baseConfig: ContextEnvironmentConfig
@@ -23,10 +32,10 @@ export function applyContextOverrides(
       instanceCount: Number(app.node.tryGetContext('instanceCount')) || baseConfig.database.instanceCount,
       allocatedStorage: Number(app.node.tryGetContext('allocatedStorage')) || baseConfig.database.allocatedStorage,
       maxAllocatedStorage: Number(app.node.tryGetContext('maxAllocatedStorage')) || baseConfig.database.maxAllocatedStorage,
-      enablePerformanceInsights: app.node.tryGetContext('enablePerformanceInsights') ?? baseConfig.database.enablePerformanceInsights,
+      enablePerformanceInsights: contextBoolean(app, 'enablePerformanceInsights', baseConfig.database.enablePerformanceInsights),
       monitoringInterval: Number(app.node.tryGetContext('monitoringInterval')) || baseConfig.database.monitoringInterval,
       backupRetentionDays: Number(app.node.tryGetContext('backupRetentionDays')) || baseConfig.database.backupRetentionDays,
-      deleteProtection: app.node.tryGetContext('deleteProtection') ?? baseConfig.database.deleteProtection,
+      deleteProtection: contextBoolean(app, 'deleteProtection', baseConfig.database.deleteProtection),
     },
     redis: {
       ...baseConfig.redis,
@@ -38,7 +47,7 @@ export function applyContextOverrides(
       taskCpu: Number(app.node.tryGetContext('taskCpu')) || baseConfig.ecs.taskCpu,
       taskMemory: Number(app.node.tryGetContext('taskMemory')) || baseConfig.ecs.taskMemory,
       desiredCount: Number(app.node.tryGetContext('desiredCount')) || baseConfig.ecs.desiredCount,
-      enableDetailedLogging: app.node.tryGetContext('enableDetailedLogging') ?? baseConfig.ecs.enableDetailedLogging,
+      enableDetailedLogging: contextBoolean(app, 'enableDetailedLogging', baseConfig.ecs.enableDetailedLogging),
     },
     authentik: {
       ...baseConfig.authentik,
@@ -46,21 +55,21 @@ export function applyContextOverrides(
       adminUserEmail: app.node.tryGetContext('adminUserEmail') ?? baseConfig.authentik.adminUserEmail,
       ldapHostname: app.node.tryGetContext('ldapHostname') ?? baseConfig.authentik.ldapHostname,
       ldapBaseDn: app.node.tryGetContext('ldapBaseDn') ?? baseConfig.authentik.ldapBaseDn,
-      useS3AuthentikConfigFile: app.node.tryGetContext('useS3AuthentikConfigFile') ?? baseConfig.authentik.useS3AuthentikConfigFile,
-      enablePostgresReadReplicas: app.node.tryGetContext('enablePostgresReadReplicas') ?? baseConfig.authentik.enablePostgresReadReplicas,
+      useS3AuthentikConfigFile: contextBoolean(app, 'useS3AuthentikConfigFile', baseConfig.authentik.useS3AuthentikConfigFile),
+      enablePostgresReadReplicas: contextBoolean(app, 'enablePostgresReadReplicas', baseConfig.authentik.enablePostgresReadReplicas),
       branding: app.node.tryGetContext('branding') ?? baseConfig.authentik.branding,
       authentikVersion: app.node.tryGetContext('authentikVersion') ?? baseConfig.authentik.authentikVersion,
       buildRevision: Number(app.node.tryGetContext('buildRevision')) || baseConfig.authentik.buildRevision,
     },
     ecr: {
       imageRetentionCount: Number(app.node.tryGetContext('imageRetentionCount')) || baseConfig.ecr.imageRetentionCount,
-      scanOnPush: app.node.tryGetContext('scanOnPush') ?? baseConfig.ecr.scanOnPush,
+      scanOnPush: contextBoolean(app, 'scanOnPush', baseConfig.ecr.scanOnPush),
     },
     general: {
       ...baseConfig.general,
       removalPolicy: app.node.tryGetContext('removalPolicy') || baseConfig.general.removalPolicy,
-      enableDetailedLogging: app.node.tryGetContext('enableDetailedLogging') ?? baseConfig.general.enableDetailedLogging,
-      enableContainerInsights: app.node.tryGetContext('enableContainerInsights') ?? baseConfig.general.enableContainerInsights,
+      enableDetailedLogging: contextBoolean(app, 'enableDetailedLogging', baseConfig.general.enableDetailedLogging),
+      enableContainerInsights: contextBoolean(app, 'enableContainerInsights', baseConfig.general.enableContainerInsights),
     },
     docker: {
       ...baseConfig.docker,
