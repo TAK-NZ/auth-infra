@@ -5,8 +5,11 @@ import { Construct } from 'constructs';
 import {
   aws_ec2 as ec2,
   aws_elasticloadbalancingv2 as elbv2,
+  aws_s3 as s3,
+  Fn,
   Duration
 } from 'aws-cdk-lib';
+import { BASE_EXPORT_NAMES, createBaseImportValue } from '../cloudformation-imports';
 import type { ContextEnvironmentConfig } from '../stack-config';
 import type { InfrastructureConfig, NetworkConfig } from '../construct-configs';
 
@@ -57,6 +60,13 @@ export class Elb extends Construct {
   constructor(scope: Construct, id: string, props: ELBProps) {
     super(scope, id);
 
+    // Import S3 logs bucket from BaseInfra
+    const logsBucket = s3.Bucket.fromBucketArn(
+      this,
+      'LogsBucket',
+      Fn.importValue(createBaseImportValue(props.contextConfig.stackName, BASE_EXPORT_NAMES.S3_ALB_LOGS))
+    );
+
     // Create load balancer with dualstack IP addressing
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'ALB', {
       loadBalancerName: `tak-${props.contextConfig.stackName.toLowerCase()}-auth`,
@@ -64,6 +74,15 @@ export class Elb extends Construct {
       internetFacing: true,
       ipAddressType: elbv2.IpAddressType.DUAL_STACK
     });
+
+    // Enable access logging to S3 bucket
+    this.loadBalancer.setAttribute('idle_timeout.timeout_seconds', '4000');
+    this.loadBalancer.setAttribute('access_logs.s3.enabled', 'true');
+    this.loadBalancer.setAttribute('access_logs.s3.bucket', logsBucket.bucketName);
+    this.loadBalancer.setAttribute('access_logs.s3.prefix', `TAK-${props.contextConfig.stackName}-AuthInfra`);
+    this.loadBalancer.setAttribute('connection_logs.s3.enabled', 'true');
+    this.loadBalancer.setAttribute('connection_logs.s3.bucket', logsBucket.bucketName);
+    this.loadBalancer.setAttribute('connection_logs.s3.prefix', `TAK-${props.contextConfig.stackName}-AuthInfra`);
 
     // Create HTTP listener and redirect to HTTPS
     const httpListener = this.loadBalancer.addListener('HttpListener', {
@@ -81,7 +100,10 @@ export class Elb extends Construct {
     this.httpsListener = this.loadBalancer.addListener('HttpsListener', {
       port: 443,
       certificates: [{ certificateArn: props.network.sslCertificateArn }],
-      open: true
+      defaultAction: elbv2.ListenerAction.fixedResponse(503, {
+        contentType: 'text/html',
+        messageBody: '<h1>Service Temporarily Unavailable</h1><p>AuthInfra is starting up...</p>'
+      })
     });
 
     // Store the DNS name

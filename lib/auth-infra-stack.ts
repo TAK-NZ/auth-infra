@@ -129,7 +129,7 @@ export class AuthInfraStack extends cdk.Stack {
 
     // S3
     const s3ConfBucket = s3.Bucket.fromBucketArn(this, 'S3ConfBucket',
-      Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.S3_BUCKET))
+      Fn.importValue(createBaseImportValue(stackNameComponent, BASE_EXPORT_NAMES.S3_ENV_CONFIG))
     );
 
 
