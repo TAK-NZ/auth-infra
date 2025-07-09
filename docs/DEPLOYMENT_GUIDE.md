@@ -28,10 +28,10 @@ npm run deploy:prod
 
 | Environment | Stack Name | Domain | Cost/Month* | Features |
 |-------------|------------|--------|-------------|----------|
-| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | ~$106 | Cost-optimized, Aurora Serverless v2 |
-| **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | ~$367 | High availability, multi-AZ deployment |
+| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | ~$106 USD | Cost-optimized, Aurora Serverless v2 |
+| **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | ~$367 USD | High availability, multi-AZ deployment |
 
-*Estimated AWS costs for ap-southeast-2, excluding data transfer and usage
+*Estimated AWS costs in USD for ap-southeast-2 region, excluding data transfer and storage usage
 
 ---
 
