@@ -23,12 +23,12 @@ npx cdk deploy --context env=prod --profile your-aws-profile
 ## Environment Comparison
 
 ### Development Environment (`dev-test`)
-- ✅ **Cost optimized** (~$106/month)
+- ✅ **Cost optimized** (~$106 USD/month)
 - ✅ **Same core functionality** as production
 - ✅ **Perfect for development** and testing
 - ✅ **Aurora Serverless v2** (pay-per-use scaling)
 - ❌ **Single AZ deployment** (potential downtime during maintenance)
-- ❌ **No encryption** (reduced security)
+- ❌ **Basic encryption** (KMS encrypted storage only)
 - ❌ **Basic monitoring** (limited insights)
 
 ### Production Environment (`prod`)
@@ -37,7 +37,7 @@ npx cdk deploy --context env=prod --profile your-aws-profile
 - ✅ **Enhanced monitoring** (Performance Insights, Container Insights)
 - ✅ **Production-grade database** (dedicated instances)
 - ✅ **Data protection** (retention policies)
-- ❌ **Higher cost** (~$367/month)
+- ❌ **Higher cost** (~$367 USD/month)
 
 ## Configuration Override Examples
 
@@ -72,19 +72,19 @@ npm run deploy:dev -- \
 | **ECR Repositories** | 2 | 2 | Authentik server + LDAP |
 | **CloudWatch Logs** | Basic | Enhanced | Retention and insights |
 
-## Cost Breakdown (Estimated for ap-southeast-2)
+## Cost Breakdown (Estimated USD for ap-southeast-2)
 
-### Development Environment (~$106/month)
+### Development Environment (~$106 USD/month)
 - **Aurora Serverless v2**: ~$45/month (0.5 ACU average)
 - **ElastiCache**: ~$15/month (cache.t3.micro)
-- **ECS Fargate**: ~$25/month (1 task)
+- **ECS Fargate**: ~$25/month (1 task × 512 CPU/1024 MB)
 - **Load Balancers**: ~$18/month (ALB + NLB)
 - **Storage & Other**: ~$3/month (EFS, logs, secrets)
 
-### Production Environment (~$367/month)
+### Production Environment (~$367 USD/month)
 - **Aurora Multi-AZ**: ~$280/month (2 × db.t4g.large)
 - **ElastiCache**: ~$30/month (2 × cache.t3.small)
-- **ECS Fargate**: ~$50/month (2 tasks)
+- **ECS Fargate**: ~$50/month (2 tasks × 1024 CPU/2048 MB)
 - **Load Balancers**: ~$18/month (ALB + NLB)
 - **Enhanced Features**: ~$15/month (monitoring, insights)
 

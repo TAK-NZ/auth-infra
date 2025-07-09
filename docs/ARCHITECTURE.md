@@ -98,9 +98,9 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 ### 1. Environment Types
 
 #### **dev-test** (Default)
-- **Focus**: Cost optimization and development efficiency
+- **Focus**: Cost optimization and development efficiency (~$106 USD/month)
 - **Database**: Aurora Serverless v2 (single instance, auto-scaling)
-- **Redis**: Single node, no encryption
+- **Redis**: Single node, basic encryption (KMS at-rest only)
 - **ECS**: Minimal CPU/memory allocation (512/1024)
 - **Container Insights**: Disabled
 - **ECS Exec**: Enabled (debugging access)
@@ -109,9 +109,9 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 - **Resource Removal**: DESTROY policy (allows cleanup)
 
 #### **prod**
-- **Focus**: High availability, security, and production readiness
+- **Focus**: High availability, security, and production readiness (~$367 USD/month)
 - **Database**: Aurora PostgreSQL (2 instances, multi-AZ)
-- **Redis**: Multi-node cluster with encryption
+- **Redis**: Multi-node cluster with full encryption (transit + at-rest)
 - **ECS**: Higher resource allocation (1024/2048)
 - **Container Insights**: Enabled (monitoring and observability)
 - **ECS Exec**: Disabled (security)

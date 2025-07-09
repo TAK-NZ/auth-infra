@@ -10,19 +10,6 @@ This repository deploys the authentication layer infrastructure for a complete T
 
 It is specifically targeted at the deployment of [TAK.NZ](https://tak.nz) via a CI/CD pipeline. Nevertheless others interested in deploying a similar infrastructure can do so by adapting the configuration items.
 
-> [!CAUTION]
-> **New Deployment Tool**
-> 
-> This is the new [AWS CDK](https://aws.amazon.com/cdk/) version of the Authentication Infrastructure Layer. It is **not compatible** with the [previous version](../../tree/legacy) that uses the [OpenAddresses Deploy Tool](https://github.com/openaddresses/deploy).
-> 
-> **For new deployments:**
-> - Choose either CDK **OR** Deploy Tool for your entire stack - both approaches cannot be mixed
-> - CDK versions are not yet available for all stack layers - verify complete CDK coverage before choosing this approach
-> - Existing Deploy Tool deployments can remain unchanged - no migration required
-> 
-> **When to choose CDK:** All future feature enhancements and updates will only be made to the CDK version. New deployments should use CDK when all required stack layers are available.
-### Architecture Layers
-
 This authentication infrastructure requires the base infrastructure and is the foundation of additional higher level layers. Layers can be deployed in multiple independent environments. As an example:
 
 ```
@@ -31,12 +18,6 @@ This authentication infrastructure requires the base infrastructure and is the f
 
 ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
 │         CloudTAK                │    │         CloudTAK                │
-│    CloudFormation Stack         │    │    CloudFormation Stack         │
-└─────────────────────────────────┘    └─────────────────────────────────┘
-                │                                        │
-                ▼                                        ▼
-┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│        VideoInfra               │    │        VideoInfra               │
 │    CloudFormation Stack         │    │    CloudFormation Stack         │
 └─────────────────────────────────┘    └─────────────────────────────────┘
                 │                                        │
@@ -64,11 +45,10 @@ This authentication infrastructure requires the base infrastructure and is the f
 |-------|------------|-------------|
 | **BaseInfra** | [`base-infra`](https://github.com/TAK-NZ/base-infra)  | Foundation: VPC, ECS, S3, KMS, ACM |
 | **AuthInfra** | `auth-infra` (this repo) | SSO via Authentik, LDAP |
-| **TAKInfra** | [`tak-infra`](https://github.com/TAK-NZ/tak-infra) | TAK Server |
 | **VideoInfra** | [`video-infra`](https://github.com/TAK-NZ/video-infra) | Video Server based on Mediamtx |
-| **CloudTAK** | [`CloudTAK`](https://github.com/TAK-NZ/CloudTAK) | CloudTAK web interface and ETL |
+| **CloudTAK** | [`CloudTAK`](https://github.com/TAK-NZ/CloudTAK) | CloudTAK web interface, ETL, and media services |
 
-**Deployment Order**: BaseInfra must be deployed first, followed by AuthInfra, TakInfra, VideoInfra, and finally CloudTAK. Each layer imports outputs from the layer below via CloudFormation exports.
+**Deployment Order**: BaseInfra must be deployed first, followed by AuthInfra, TakInfra, and finally CloudTAK. Each layer imports outputs from the layer below via CloudFormation exports.
 
 ## Quick Start
 
@@ -162,10 +142,10 @@ npm run deploy:local:prod   # Builds images locally
 
 | Environment | Stack Name | Description | Domain | Monthly Cost* |
 |-------------|------------|-------------|--------|---------------|
-| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | `auth.dev.tak.nz` | ~$85 |
-| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `auth.tak.nz` | ~$245 |
+| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | `auth.dev.tak.nz` | ~$106 USD |
+| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `auth.tak.nz` | ~$367 USD |
 
-*Estimated AWS costs for ap-southeast-2, excluding data processing and storage usage
+*Estimated AWS costs in USD for ap-southeast-2 region, excluding data transfer and storage usage
 
 ## Development Workflow
 

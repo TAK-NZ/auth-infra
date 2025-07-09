@@ -125,10 +125,10 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
 
 | Environment | Stack Name | Description | Monthly Cost* |
 |-------------|------------|-------------|---------------|
-| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | ~$106 |
-| `prod` | `TAK-Prod-AuthInfra` | High-availability production | ~$367 |
+| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | ~$106 USD |
+| `prod` | `TAK-Prod-AuthInfra` | High-availability production | ~$367 USD |
 
-*Estimated AWS costs for ap-southeast-2, excluding data processing and storage usage
+*Estimated AWS costs in USD for ap-southeast-2 region, excluding data transfer and storage usage
 
 ### **Key Configuration Differences**
 
@@ -236,11 +236,11 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 ## **Cost Optimization**
 
 ### **Development Environment Optimizations**
-- **Aurora Serverless v2**: Pay-per-use database scaling (~$45/month savings)
-- **Single Redis Node**: Eliminates multi-AZ costs (~$25/month savings)
-- **No Encryption**: Reduces compute overhead
-- **Smaller ECS Tasks**: Minimal CPU/memory allocation (~$30/month savings)
-- **Container Insights Disabled**: Reduces CloudWatch costs
+- **Aurora Serverless v2**: Pay-per-use database scaling (~$235 USD/month savings vs prod)
+- **Single Redis Node**: Eliminates multi-AZ costs (~$15 USD/month savings vs prod)
+- **Basic Encryption**: KMS storage encryption only (vs full transit + at-rest)
+- **Smaller ECS Tasks**: Minimal CPU/memory allocation (~$25 USD/month savings vs prod)
+- **Container Insights Disabled**: Reduces CloudWatch costs (~$15 USD/month savings vs prod)
 
 ### **Production Environment Features**
 - **High Availability**: Multi-AZ database and Redis deployment
