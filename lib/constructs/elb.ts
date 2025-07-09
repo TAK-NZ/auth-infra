@@ -64,7 +64,7 @@ export class Elb extends Construct {
     const logsBucket = s3.Bucket.fromBucketArn(
       this,
       'LogsBucket',
-      Fn.importValue(createBaseImportValue(props.contextConfig.stackName, BASE_EXPORT_NAMES.S3_ALB_LOGS))
+      Fn.importValue(createBaseImportValue(props.contextConfig.stackName, BASE_EXPORT_NAMES.S3_ELB_LOGS))
     );
 
     // Create load balancer with dualstack IP addressing
