@@ -15,7 +15,7 @@ export const BASE_EXPORT_NAMES = {
   SUBNET_PUBLIC_A: 'SubnetPublicA',
   SUBNET_PUBLIC_B: 'SubnetPublicB',
   ECS_CLUSTER: 'EcsClusterArn',
-  ECR_REPO: 'EcrRepoArn',
+  ECR_REPO: 'EcrArtifactsRepoArn',
   KMS_KEY: 'KmsKeyArn',
   KMS_ALIAS: 'KmsAlias',
   S3_ENV_CONFIG: 'S3EnvConfigArn',
