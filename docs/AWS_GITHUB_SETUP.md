@@ -25,22 +25,8 @@ In your AuthInfra GitHub repository, go to **Settings → Environments** and cre
    - **Protection rules:**
      - Deployment branches and tags: Select "Selected branches and tags"
        - Add rule: "main"
-   - **Environment variables:**
-     - `DEMO_TEST_DURATION`: `300` (wait time in seconds, default 5 minutes)
-     - `STACK_NAME`: `Demo`
-     - `AUTHENTIK_ADMIN_EMAIL`: `admin@tak.nz`
 
-### 3.2 Configure Environment Secrets
-
-**For `production` environment:**
-- `AWS_ACCOUNT_ID`: `111111111111`
-- `AWS_ROLE_ARN`: `arn:aws:iam::111111111111:role/GitHubActions-TAK-Role`
-- `AWS_REGION`: `ap-southeast-6`
-
-**For `demo` environment:**
-- `AWS_ACCOUNT_ID`: `222222222222`
-- `AWS_ROLE_ARN`: `arn:aws:iam::222222222222:role/GitHubActions-TAK-Role`
-- `AWS_REGION`: `ap-southeast-2`
+> **Note:** The organization variables and secrets configured in BaseInfra will be used for both environments.
 
 ## 4. Branch Protection Setup
 
@@ -65,16 +51,20 @@ In your AuthInfra GitHub repository, go to **Settings → Environments** and cre
 - Application Load Balancer replacements
 - Secrets Manager secret deletions
 
-### 5.2 Override Mechanism
+### 5.2 Implementation
+
+AuthInfra uses the same breaking change detection system as BaseInfra:
+
+1. **Stage 1 (PR Level)**: CDK diff analysis during pull requests - fast feedback
+2. **Stage 2 (Deploy Level)**: CloudFormation change set validation before demo deployment - comprehensive validation
+
+### 5.3 Override Mechanism
 
 To deploy breaking changes intentionally:
 
-1. **Include `[force-deploy]` in commit message**:
-```bash
-git commit -m "feat: upgrade PostgreSQL engine version [force-deploy]"
-```
-
+1. **Include `[force-deploy]` in commit message**
 2. **The workflows will detect the override and proceed with deployment**
+3. **Use with caution** - ensure dependent stacks are updated accordingly
 
 ## 6. GitHub Actions Workflows
 
@@ -134,36 +124,50 @@ Tag v* → [Tests + Build Images] → Deploy Production
 
 **Demo Build (`demo-build.yml`):**
 - Triggers on push to main (docker/ or cdk.json changes)
+- Uses organization variables for demo environment
 - Uses `dev-test` context from cdk.json
 - Pushes to demo ECR repository
 
 **Production Build (`production-build.yml`):**
 - Triggers only on version tags (`v*`)
+- Uses organization variables for production environment
 - Uses `prod` context from cdk.json
 - Pushes to production ECR repository
 
-### 6.5 Required Secrets and Variables
+### 6.5 Required Organization Secrets and Variables
 
-**Environment Secrets (per environment):**
+**Organization Secrets (configured in BaseInfra):**
 
-| Secret | Description | Example |
+| Secret | Description | Used For |
 |--------|-------------|----------|
-| `AWS_ACCOUNT_ID` | AWS account ID | `123456789012` |
-| `AWS_ROLE_ARN` | GitHub Actions IAM role ARN | `arn:aws:iam::123456789012:role/GitHubActions-TAK-Role` |
-| `AWS_REGION` | AWS deployment region | `ap-southeast-2` |
+| `DEMO_AWS_ACCOUNT_ID` | Demo AWS account ID | Demo environment |
+| `DEMO_AWS_ROLE_ARN` | Demo GitHub Actions IAM role ARN | Demo environment |
+| `DEMO_AWS_REGION` | Demo AWS deployment region | Demo environment |
+| `PROD_AWS_ACCOUNT_ID` | Production AWS account ID | Production environment |
+| `PROD_AWS_ROLE_ARN` | Production GitHub Actions IAM role ARN | Production environment |
+| `PROD_AWS_REGION` | Production AWS deployment region | Production environment |
 
-**Environment Variables:**
+**Organization Variables (configured in BaseInfra):**
 
-| Variable | Environment | Description | Example | Required |
-|----------|-------------|-------------|---------|----------|
-| `STACK_NAME` | demo, prod | Stack name suffix | `Demo`, `Prod` | ✅ |
-| `AUTHENTIK_ADMIN_EMAIL` | demo, prod | Admin email address | `admin@tak.nz` | ✅ |
-| `DEMO_TEST_DURATION` | demo | Test wait time in seconds | `300` | ❌ |
+| Variable | Description | Used For |
+|----------|-------------|----------|
+| `DEMO_STACK_NAME` | Stack name suffix for demo | Demo environment |
+| `DEMO_TEST_DURATION` | Test wait time in seconds | Demo environment |
+| `DEMO_R53_ZONE_NAME` | Demo Route53 zone name | Demo environment |
 
-**Required for Production Environment:**
-- All production workflows now use the same `STACK_NAME` and `AUTHENTIK_ADMIN_EMAIL` variables
+**AuthInfra-Specific Variables:**
+
+Add these variables to the organization variables in GitHub:
+
+| Variable | Description | Example |
+|----------|-------------|----------|
+| `DEMO_AUTHENTIK_ADMIN_EMAIL` | Admin email for demo | `admin@demo.tak.nz` |
+| `PROD_AUTHENTIK_ADMIN_EMAIL` | Admin email for production | `admin@tak.nz` |
+
+**Workflow Configuration:**
+- All workflows use organization secrets and variables
 - Production build workflow uses `prod` context from cdk.json
-- Production deployment integrates with image building for consistent deployments
+- Demo workflow uses `dev-test` context from cdk.json
 
 ## 7. Composite Actions
 
@@ -177,33 +181,20 @@ Location: `.github/actions/setup-cdk/action.yml`
 - AWS credentials configuration
 - Dependency installation
 
-**Usage:**
-```yaml
-- name: Setup CDK Environment
-  uses: ./.github/actions/setup-cdk
-  with:
-    aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
-    aws-region: ${{ secrets.AWS_REGION }}
-    role-session-name: GitHubActions-Demo
-```
-
 **Benefits:**
 - Consistent setup across all workflows
 - Easier maintenance and updates
 - Reduced workflow file size
 - Centralized Node.js and AWS configuration
 
+
+
 ## 8. Verification
 
 Test the AuthInfra setup:
 
 1. **Demo Testing:** Push to `main` branch → Should deploy demo with prod profile → Wait → Run tests → Revert to dev-test profile
-2. **Production:** Create and push version tag:
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
-   → Should require approval → Deploy after approval
+2. **Production:** Create and push version tag (e.g., `v1.0.0`) → Should require approval → Deploy after approval
 
 ### 8.1 Deployment Flow
 
@@ -217,6 +208,11 @@ Push to main → Tests → Demo (prod profile) → Wait → Tests → Demo (dev-
 Tag v* → Tests → Production (prod profile) [requires approval]
 ```
 
+**Benefits:**
+- Cost optimization: Demo runs dev-test profile between deployments
+- Risk mitigation: Both profiles tested in demo before production
+- Separation: Independent workflows for demo testing vs production deployment
+
 ## 9. Troubleshooting
 
 ### 9.1 Common Workflow Issues
@@ -225,28 +221,13 @@ Tag v* → Tests → Production (prod profile) [requires approval]
 
 | Issue | Symptoms | Solution |
 |-------|----------|----------|
-| **Missing Secrets** | `Error: Could not assume role` | Verify environment secrets are set correctly |
-| **Missing Variables** | `Error: Required variable not set` | Ensure `STACK_NAME` and `AUTHENTIK_ADMIN_EMAIL` are configured |
+| **Missing Secrets** | `Error: Could not assume role` | Verify organization secrets are set correctly |
+| **Missing Variables** | `Error: Required variable not set` | Ensure organization variables are configured |
 | **Breaking Changes** | Workflow stops at validation | Use `[force-deploy]` in commit message or fix changes |
 | **Image Build Fails** | Docker build errors | Check Dockerfile and build context |
 | **CDK Synthesis Fails** | `cdk synth` command fails | Verify cdk.json context values |
 | **Deployment Timeout** | Job runs for hours | Check AWS resources and add timeout settings |
 | **Composite Action Error** | `Can't find action.yml` | Ensure checkout step runs before composite action |
-
-**Environment Setup Issues:**
-
-```bash
-# Verify environment variables
-echo "Stack: ${{ vars.STACK_NAME }}"
-echo "Email: ${{ vars.AUTHENTIK_ADMIN_EMAIL }}"
-
-# Test AWS credentials
-aws sts get-caller-identity
-
-# Validate CDK context
-npm run cdk context --clear
-npm run cdk synth --context envType=demo
-```
 
 ### 9.2 AuthInfra Specific Issues
 
@@ -257,32 +238,18 @@ npm run cdk synth --context envType=demo
 - **Redis Connection Issues:** Check Redis cluster connectivity and security groups
 - **Load Balancer Issues:** Verify ALB target group health and certificate configuration
 - **OIDC Configuration:** Check Authentik OIDC provider settings and client configurations
+- **EFS Mount Issues:** Verify EFS mount points and access points are correctly configured
+- **Secrets Manager Issues:** Check that secrets are properly created and accessible
 
-**Debug Commands:**
+**Troubleshooting Steps:**
 
-```bash
-# Check Authentik version
-jq -r '.context."dev-test".authentik.authentikVersion' cdk.json
-
-# Check stack status
-aws cloudformation describe-stacks --stack-name TAK-Demo-AuthInfra
-
-# View stack events
-aws cloudformation describe-stack-events --stack-name TAK-Demo-AuthInfra
-
-# Check ECR images
-aws ecr describe-images --repository-name tak-auth-infra
-
-# Test image tags
-VERSION=$(jq -r '.context."dev-test".authentik.authentikVersion' cdk.json)
-echo "Expected tag: authentik-${VERSION}-tak-r1"
-
-# Test database connectivity
-aws rds describe-db-clusters --db-cluster-identifier tak-demo-postgres
-
-# Check Redis cluster
-aws elasticache describe-cache-clusters --cache-cluster-id tak-demo-redis
-```
+1. Check Authentik version in cdk.json
+2. Verify stack status in CloudFormation console
+3. Review stack events for specific error messages
+4. Confirm ECR images are built and tagged correctly
+5. Test database connectivity through AWS console
+6. Verify Redis cluster status and endpoint
+7. Check ECS service logs for container startup issues
 
 ### 9.3 Breaking Change Detection
 
@@ -302,75 +269,7 @@ The system detects these critical changes:
 3. **Monitor deployment:** Watch for issues during deployment
 4. **Verify functionality:** Test all services after deployment
 
-**Example Override:**
-```bash
-git commit -m "feat: upgrade PostgreSQL to version 15 [force-deploy]
-
-Breaking change: This will cause brief downtime during upgrade.
-Tested in staging environment successfully."
-```
-
-### 9.4 Rollback Procedures
-
-**Demo Environment Rollback:**
-```bash
-# Manual revert to previous version
-git revert <commit-hash>
-git push origin main
-
-# Or redeploy specific version
-npm run cdk deploy -- --context envType=dev-test
-```
-
-**Production Rollback:**
-```bash
-# Create rollback tag
-git tag v1.0.1-rollback <previous-good-commit>
-git push origin v1.0.1-rollback
-
-# Or manual deployment
-npm run cdk deploy -- --context envType=prod
-```
-
-### 9.5 Monitoring and Alerts
-
-**Workflow Monitoring:**
-- GitHub Actions tab shows all workflow runs
-- Failed workflows send notifications to repository watchers
-- Use GitHub CLI for programmatic monitoring:
-
-```bash
-# Check recent workflow runs
-gh run list --limit 10
-
-# View specific run details
-gh run view <run-id>
-
-# Download logs
-gh run download <run-id>
-```
-
-**AWS Resource Monitoring:**
-- CloudFormation stack events
-- ECS service health checks
-- Application Load Balancer target health
-- RDS and Redis cluster status
-
-### 9.6 Performance Optimization
-
-**Workflow Speed Improvements:**
-- Use npm cache in Node.js setup
-- Parallel job execution where possible
-- Skip unnecessary steps with path filters
-- Use composite actions to reduce duplication
-
-**Resource Optimization:**
-- Right-size ECS tasks and RDS instances
-- Use appropriate Redis node types
-- Optimize Docker image sizes
-- Enable CDK asset caching
-
-### 9.7 Dependencies on BaseInfra
+### 9.4 Dependencies on BaseInfra
 
 **Required BaseInfra Resources:**
 - VPC and networking (subnets, security groups)
@@ -379,17 +278,5 @@ gh run download <run-id>
 - Route 53 hosted zones
 - S3 buckets for CDK assets and backups
 - ECR repositories
-
-**Verification Commands:**
-```bash
-# Check BaseInfra stack
-aws cloudformation describe-stacks --stack-name TAK-Demo-BaseInfra
-
-# Verify VPC exists
-aws ec2 describe-vpcs --filters "Name=tag:Name,Values=TAK-Demo-VPC"
-
-# Check ECS cluster
-aws ecs describe-clusters --clusters TAK-Demo-Cluster
-```
 
 Ensure BaseInfra is deployed and stable before deploying AuthInfra changes.

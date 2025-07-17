@@ -34,14 +34,14 @@ jobs:
       - name: Setup CDK Environment
         uses: ./.github/actions/setup-cdk
         with:
-          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-role-arn: ${{ secrets.PROD_AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.PROD_AWS_REGION }}
           role-session-name: GitHubActions-Production
 
       - name: Bootstrap CDK (if needed)
         run: |
           if ! aws cloudformation describe-stacks --stack-name CDKToolkit 2>/dev/null; then
-            npx cdk bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ secrets.AWS_REGION }} --context envType=prod
+            npx cdk bootstrap aws://${{ secrets.PROD_AWS_ACCOUNT_ID }}/${{ secrets.PROD_AWS_REGION }} --context envType=prod
           fi
 
       - name: Extract Image Tags
@@ -64,8 +64,8 @@ jobs:
           if [[ "$COMMIT_MSG" == *"[force-deploy]"* ]]; then
             echo "🚨 Force deploy detected - skipping change set validation"
           else
-            ./scripts/github/validate-changeset.sh TAK-${{ vars.STACK_NAME }}-AuthInfra
+            ./scripts/github/validate-changeset.sh TAK-${{ vars.PROD_STACK_NAME }}-AuthInfra
           fi
 
       - name: Deploy Production
-        run: npm run cdk deploy -- --context envType=prod --context stackName=${{ vars.STACK_NAME }} --context adminUserEmail=${{ vars.AUTHENTIK_ADMIN_EMAIL }} --context usePreBuiltImages=true --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} --require-approval never
+        run: npm run cdk deploy -- --context envType=prod --context stackName=${{ vars.PROD_STACK_NAME }} --context adminUserEmail=${{ vars.PROD_AUTHENTIK_ADMIN_EMAIL }} --context usePreBuiltImages=true --context authentikImageTag=${{ steps.images.outputs.authentik-tag }} --context ldapImageTag=${{ steps.images.outputs.ldap-tag }} --require-approval never
