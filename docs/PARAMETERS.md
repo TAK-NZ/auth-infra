@@ -166,6 +166,7 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 | `monitoringInterval` | Enhanced monitoring interval (seconds) | `0` | `60` |
 | `backupRetentionDays` | Backup retention period (days) | `7` | `30` |
 | `deleteProtection` | Enable deletion protection | `false` | `true` |
+| `enableCloudWatchLogs` | Enable CloudWatch logs for database | `false` | `false` |
 
 ### **Redis Configuration**
 | Parameter | Description | dev-test | prod |
@@ -194,7 +195,7 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 | `useS3AuthentikConfigFile` | Use S3 configuration file | `false` | `true` |
 | `enablePostgresReadReplicas` | Enable read replicas (currently disabled) | `false` | `false` |
 | `branding` | Docker image branding variant | `tak-nz` | `tak-nz` |
-| `authentikVersion` | Authentik version | `2025.6.2` | `2025.6.2` |
+| `authentikVersion` | Authentik version | `2025.6.3` | `2025.6.3` |
 | `outboundEmailServerPort` | Email server port for outbound connections | `587` | `587` |
 
 ### **ECR Configuration**
@@ -391,6 +392,7 @@ npm run deploy:dev -- --context tak-region="us-east-1"
 | `monitoringInterval` | number | Enhanced monitoring interval (seconds) | `0`, `15`, `30`, `60` |
 | `backupRetentionDays` | number | Backup retention period (days) | `1-35` |
 | `deleteProtection` | boolean | Enable deletion protection | `true`, `false` |
+| `enableCloudWatchLogs` | boolean | Enable CloudWatch logs for database | `true`, `false` |
 
 ### **Redis Configuration**
 | Parameter | Type | Description | Valid Values |
