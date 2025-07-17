@@ -28,7 +28,8 @@
         "enablePerformanceInsights": false,
         "monitoringInterval": 0,
         "backupRetentionDays": 7,
-        "deleteProtection": false
+        "deleteProtection": false,
+        "enableCloudWatchLogs": false
       },
       "redis": {
         "nodeType": "cache.t3.micro",
@@ -74,7 +75,8 @@
         "enablePerformanceInsights": true,
         "monitoringInterval": 60,
         "backupRetentionDays": 30,
-        "deleteProtection": true
+        "deleteProtection": true,
+        "enableCloudWatchLogs": false
       },
       "redis": {
         "nodeType": "cache.t3.small",

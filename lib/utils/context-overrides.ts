@@ -30,12 +30,14 @@ export function applyContextOverrides(
       ...baseConfig.database,
       instanceClass: app.node.tryGetContext('instanceClass') ?? baseConfig.database.instanceClass,
       instanceCount: Number(app.node.tryGetContext('instanceCount')) || baseConfig.database.instanceCount,
+      engineVersion: app.node.tryGetContext('engineVersion') ?? baseConfig.database.engineVersion,
       allocatedStorage: Number(app.node.tryGetContext('allocatedStorage')) || baseConfig.database.allocatedStorage,
       maxAllocatedStorage: Number(app.node.tryGetContext('maxAllocatedStorage')) || baseConfig.database.maxAllocatedStorage,
       enablePerformanceInsights: contextBoolean(app, 'enablePerformanceInsights', baseConfig.database.enablePerformanceInsights),
       monitoringInterval: Number(app.node.tryGetContext('monitoringInterval')) || baseConfig.database.monitoringInterval,
       backupRetentionDays: Number(app.node.tryGetContext('backupRetentionDays')) || baseConfig.database.backupRetentionDays,
       deleteProtection: contextBoolean(app, 'deleteProtection', baseConfig.database.deleteProtection),
+      enableCloudWatchLogs: contextBoolean(app, 'enableCloudWatchLogs', baseConfig.database.enableCloudWatchLogs),
     },
     redis: {
       ...baseConfig.redis,
@@ -48,6 +50,7 @@ export function applyContextOverrides(
       taskMemory: Number(app.node.tryGetContext('taskMemory')) || baseConfig.ecs.taskMemory,
       desiredCount: Number(app.node.tryGetContext('desiredCount')) || baseConfig.ecs.desiredCount,
       enableDetailedLogging: contextBoolean(app, 'enableDetailedLogging', baseConfig.ecs.enableDetailedLogging),
+      enableEcsExec: contextBoolean(app, 'enableEcsExec', baseConfig.ecs.enableEcsExec),
     },
     authentik: {
       ...baseConfig.authentik,
@@ -60,6 +63,7 @@ export function applyContextOverrides(
       branding: app.node.tryGetContext('branding') ?? baseConfig.authentik.branding,
       authentikVersion: app.node.tryGetContext('authentikVersion') ?? baseConfig.authentik.authentikVersion,
       buildRevision: Number(app.node.tryGetContext('buildRevision')) || baseConfig.authentik.buildRevision,
+      outboundEmailServerPort: Number(app.node.tryGetContext('outboundEmailServerPort')) || baseConfig.authentik.outboundEmailServerPort,
     },
     ecr: {
       imageRetentionCount: Number(app.node.tryGetContext('imageRetentionCount')) || baseConfig.ecr.imageRetentionCount,
