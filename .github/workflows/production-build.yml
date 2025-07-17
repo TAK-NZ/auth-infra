@@ -33,7 +33,7 @@ permissions:
 jobs:
   build-images:
     runs-on: ubuntu-latest
-    environment: prod
+    environment: production
     outputs:
       authentik-tag: ${{ steps.tags.outputs.authentik-tag }}
       ldap-tag: ${{ steps.tags.outputs.ldap-tag }}
@@ -44,8 +44,8 @@ jobs:
       - name: Setup CDK Environment
         uses: ./.github/actions/setup-cdk
         with:
-          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-role-arn: ${{ secrets.PROD_AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.PROD_AWS_REGION }}
           role-session-name: GitHubActions-DockerBuild
       
       - name: Get ECR Repository and Build Tags
@@ -53,7 +53,7 @@ jobs:
         run: |
           # Get ECR repository ARN from BaseInfra exports
           ECR_REPO_ARN=$(aws cloudformation describe-stacks \
-            --stack-name TAK-${{ vars.STACK_NAME }}-BaseInfra \
+            --stack-name TAK-${{ vars.PROD_STACK_NAME }}-BaseInfra \
             --query 'Stacks[0].Outputs[?OutputKey==`EcrArtifactsRepoArnOutput`].OutputValue' \
             --output text)
           
@@ -64,7 +64,7 @@ jobs:
           
           # Extract repository name from ARN and build URI
           ECR_REPO_NAME=$(echo $ECR_REPO_ARN | cut -d'/' -f2)
-          ECR_REPO_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_REPO_NAME}"
+          ECR_REPO_URI="${{ secrets.PROD_AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.PROD_AWS_REGION }}.amazonaws.com/${ECR_REPO_NAME}"
           
           VERSION=$(jq -r '.context."prod".authentik.authentikVersion' cdk.json)
           BRANDING=$(jq -r '.context."prod".authentik.branding' cdk.json)
@@ -89,7 +89,7 @@ jobs:
       
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+          aws ecr get-login-password --region ${{ secrets.PROD_AWS_REGION }} | \
             docker login --username AWS --password-stdin \
             ${{ steps.tags.outputs.ecr-repo-uri }}
       
