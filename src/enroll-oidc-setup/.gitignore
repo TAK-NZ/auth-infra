@@ -1,0 +1,14 @@
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Test output
+*.log
+
+# Node.js dependencies
+node_modules/
+
+# Explicitly include these files (negated patterns)
+!index.js
+!test-local.js

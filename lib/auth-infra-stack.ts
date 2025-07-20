@@ -20,6 +20,7 @@ import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 import { Route53 } from './constructs/route53-ldap';
 import { Route53Authentik } from './constructs/route53-authentik';
+import { EnrollOidcSetup } from './constructs/enroll-oidc-setup';
 
 // Configuration imports
 import type {
@@ -404,7 +405,7 @@ export class AuthInfraStack extends cdk.Stack {
     // DNS SETUP (AUTHENTIK)
     // =================
 
-    // Route53 Authentik DNS Records (needed before LDAP token retriever)
+    // Route53 Authentik DNS Records (needed before LDAP token retriever and OIDC setup)
     const route53Authentik = new Route53Authentik(this, 'Route53Authentik', {
       environment: props.environment,
       contextConfig: envConfig,
@@ -479,6 +480,17 @@ export class AuthInfraStack extends cdk.Stack {
     ldapTokenRetriever.customResource.node.addDependency(route53Authentik.authentikAAAARecord);
 
     // =================
+    // OIDC SETUP FOR TAK ENROLLMENT
+    // =================
+
+    // Create OIDC provider and application for TAK enrollment
+    const oidcSetup = new EnrollOidcSetup(this, 'OidcSetup', {
+      stackConfig: envConfig,
+      authentikAdminSecret: secretsManager.adminUserToken,
+      authentikUrl: route53Authentik.getAuthentikUrl()
+    });
+
+    // =================
     // STACK OUTPUTS
     // =================
 
@@ -507,7 +519,15 @@ export class AuthInfraStack extends cdk.Stack {
       ldapEndpoint: `ldap://${ldapCustomDomain}:389`,
       ldapsEndpoint: `ldaps://${ldapCustomDomain}:636`,
       ldapBaseDn: ldapBaseDn,
-      ldapTokenRetrieverLambdaArn: ldapTokenRetriever.lambdaFunction.functionArn
+      ldapTokenRetrieverLambdaArn: ldapTokenRetriever.lambdaFunction.functionArn,
+      oidcClientId: oidcSetup.clientId,
+      oidcClientSecret: oidcSetup.clientSecret,
+      oidcProviderName: oidcSetup.providerName,
+      oidcIssuer: oidcSetup.issuer,
+      oidcAuthorizeUrl: oidcSetup.authorizeUrl,
+      oidcTokenUrl: oidcSetup.tokenUrl,
+      oidcUserInfoUrl: oidcSetup.userInfoUrl,
+      oidcJwksUri: oidcSetup.jwksUri
     });
   }
 

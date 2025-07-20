@@ -1,0 +1,11 @@
+{
+  "name": "enroll-oidc-setup",
+  "version": "1.0.0",
+  "description": "Enrollment OIDC setup Lambda function",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.848.0",
+    "axios": "^1.10.0",
+    "form-data": "^4.0.4"
+  }
+}

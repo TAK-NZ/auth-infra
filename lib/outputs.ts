@@ -24,6 +24,14 @@ export interface OutputParams {
   ldapsEndpoint: string;
   ldapBaseDn: string;
   ldapTokenRetrieverLambdaArn: string;
+  oidcClientId: string;
+  oidcClientSecret: string;
+  oidcProviderName: string;
+  oidcIssuer: string;
+  oidcAuthorizeUrl: string;
+  oidcTokenUrl: string;
+  oidcUserInfoUrl: string;
+  oidcJwksUri: string;
 }
 
 export function registerOutputs(params: OutputParams): void {
@@ -53,6 +61,14 @@ export function registerOutputs(params: OutputParams): void {
     { key: 'LdapEndpoint', value: params.ldapEndpoint, description: 'LDAP endpoint URL' },
     { key: 'LdapsEndpoint', value: params.ldapsEndpoint, description: 'LDAPS endpoint URL' },
     { key: 'LdapBaseDn', value: params.ldapBaseDn, description: 'LDAP base DN for directory structure' },
+    { key: 'OidcClientId', value: params.oidcClientId, description: 'OIDC client ID for TAK enrollment' },
+    { key: 'OidcClientSecret', value: params.oidcClientSecret, description: 'OIDC client secret for TAK enrollment' },
+    { key: 'OidcProviderName', value: params.oidcProviderName, description: 'OIDC provider name for TAK enrollment' },
+    { key: 'OidcIssuer', value: params.oidcIssuer, description: 'OIDC issuer URL' },
+    { key: 'OidcAuthorizeUrl', value: params.oidcAuthorizeUrl, description: 'OIDC authorization endpoint URL' },
+    { key: 'OidcTokenUrl', value: params.oidcTokenUrl, description: 'OIDC token endpoint URL' },
+    { key: 'OidcUserInfoUrl', value: params.oidcUserInfoUrl, description: 'OIDC user info endpoint URL' },
+    { key: 'OidcJwksUri', value: params.oidcJwksUri, description: 'OIDC JWKS URI for key validation' },
   ];
 
   // Create internal outputs without exports
