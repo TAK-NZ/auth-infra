@@ -11,15 +11,27 @@ console.log('Loading enrollment function');
 exports.handler = async (event, context) => {
     try {
         console.log('Event: ' + JSON.stringify(event));
+        console.log('Headers: ' + JSON.stringify(event.headers || {}));
         
-        if (event.path !== '/' && event.path !== undefined) {
-            console.log('Request not for the root path: ' + event.path);
+        // Check if this is an ALB request with OIDC authentication
+        if (!event.headers || !event.headers['x-amzn-oidc-data']) {
+            console.error('Missing OIDC data in request headers');
+            return {
+                statusCode: 400,
+                body: 'Bad Request: Missing OIDC authentication data',
+                headers: { 'Content-Type': 'text/plain' }
+            };
+        }
+        
+        // Accept requests to root path or the OAuth2 callback path
+        if (event.path !== '/' && event.path !== undefined && event.path !== '/oauth2/idpresponse') {
+            console.log('Request not for a supported path: ' + event.path);
             return {
                 statusCode: 404,
                 body: 'Not Found',
                 headers: { 'Content-Type': 'text/plain' }
             };
-        } 
+        }
 
         // Get configuration from environment variables
         const takServer = process.env.TAK_SERVER_DOMAIN;
@@ -90,6 +102,7 @@ exports.handler = async (event, context) => {
             takCallsign = userIdData.results[0].attributes.takCallsign;
         } catch (e) {
             console.log('TAK Callsign not found, using default');
+            takCallsign = 'None';
         } 
         console.log('TAK Callsign: ' + takCallsign);
         
@@ -98,6 +111,7 @@ exports.handler = async (event, context) => {
             takColor = userIdData.results[0].attributes.takColor;
         } catch (e) {
             console.log('TAK Color not found, using default');
+            takColor = 'None';
         } 
         console.log('TAK Color: ' + takColor);
         
@@ -106,6 +120,7 @@ exports.handler = async (event, context) => {
             takRole = userIdData.results[0].attributes.takRole;
         } catch (e) {
             console.log('TAK Role not found, using default');
+            takRole = 'None';
         } 
         console.log('TAK Role: ' + takRole);
 
@@ -259,10 +274,6 @@ async function putApi(url, data, headers) {
             res.on('end', () => {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     resolve({
-                        statusCode: res.statusCode,
-                        body: responseData,
-                        headers: res.headers,
-                    });olve({
                         statusCode: res.statusCode,
                         body: responseData,
                         headers: res.headers,

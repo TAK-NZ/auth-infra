@@ -4,6 +4,7 @@ import * as elbv2_actions from 'aws-cdk-lib/aws-elasticloadbalancingv2-actions';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as targets from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { ContextEnvironmentConfig } from '../stack-config';
 import { ENROLLMENT_CONSTANTS } from '../utils/constants';
@@ -77,19 +78,14 @@ export interface EnrollAlbOidcProps {
 
 export class EnrollAlbOidc extends Construct {
   /**
-   * The target group for the enrollment application
-   */
-  public readonly targetGroup: elbv2.IApplicationTargetGroup;
-  
-  /**
    * The secret containing the OIDC client credentials
    */
   public readonly oidcClientSecret: secretsmanager.ISecret;
   
   /**
-   * The ARN of the listener rule for the enrollment application
+   * The ARN of the listener for the enrollment application
    */
-  public readonly ruleArn: string;
+  public readonly listenerArn: string;
 
   constructor(scope: Construct, id: string, props: EnrollAlbOidcProps) {
     super(scope, id);
@@ -137,37 +133,30 @@ export class EnrollAlbOidc extends Construct {
       description: 'The name of the OIDC client secret',
     });
     
-    // Create a target group for the enrollment application
-    // If a target function is provided, use it as the target
-    // Otherwise, create an empty target group that can be used later
+    // We no longer create the target group here
+    // It's created in the main stack to avoid circular dependencies
+    
+    // Add debug output for Lambda target if provided
     if (targetFunction) {
-      this.targetGroup = new elbv2.ApplicationTargetGroup(this, 'EnrollmentTargetGroup', {
-        targetType: elbv2.TargetType.LAMBDA,
-        targets: [new targets.LambdaTarget(targetFunction)],
-      });
-    } else {
-      this.targetGroup = new elbv2.ApplicationTargetGroup(this, 'EnrollmentTargetGroup', {
-        targetType: elbv2.TargetType.LAMBDA,
-        // No targets yet - they will be added later
+      new cdk.CfnOutput(this, 'EnrollmentLambdaTarget', {
+        value: targetFunction.functionArn,
+        description: 'Lambda function ARN used as target',
       });
     }
     
     // Construct the enrollment domain
     const enrollmentDomain = `${enrollmentConfig.enrollmentHostname}.${domainName}`;
     
-    // Add a listener rule for the enrollment domain
-    // Use the addAction method which is available on the listener
-    httpsListener.addAction('EnrollmentRule', {
-      priority: ENROLLMENT_CONSTANTS.LISTENER_PRIORITY,
-      conditions: [
-        elbv2.ListenerCondition.hostHeaders([enrollmentDomain]),
-      ],
-      action: elbv2.ListenerAction.forward([this.targetGroup]),
-    });
-    
-    // Store the listener ARN instead of trying to reference a specific rule
+    // Store the listener ARN
     // This will be used by the custom resource to find and modify the rule
-    this.ruleArn = httpsListener.listenerArn;
+    this.listenerArn = httpsListener.listenerArn;
+    
+    // We no longer create the listener rule here
+    // The EnrollAlbOidcAuth construct will create the rule with OIDC authentication
+    // This breaks the circular dependency between the two constructs
+    
+    // We no longer need to add dependencies here
+    // Dependencies are managed in the main stack
     
     // Note: AWS CDK doesn't currently have a direct AuthenticateOidcAction class
     // We'll need to implement this using CloudFormation directly in the main stack

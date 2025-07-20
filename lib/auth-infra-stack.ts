@@ -4,6 +4,10 @@ import { RemovalPolicy, StackProps, Fn, CfnOutput, Token } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as targets from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 
@@ -24,7 +28,7 @@ import { Route53Enrollment } from './constructs/route53-enrollment';
 import { EnrollOidcSetup } from './constructs/enroll-oidc-setup';
 import { EnrollAlbOidc } from './constructs/enroll-alb-oidc';
 import { EnrollAlbOidcAuth } from './constructs/enroll-alb-oidc-auth';
-import { EnrollmentLambda } from './constructs/enrollment-lambda';
+import { EnrollmentLambda } from './constructs/enrollment-lambda-fix';
 
 // Configuration imports
 import type {
@@ -480,8 +484,14 @@ export class AuthInfraStack extends cdk.Stack {
     });
 
     // Add dependency for LDAP token retriever to wait for Authentik DNS records
+    // Use the DNS records as the dependency point rather than the services
+    // This helps break circular dependencies while maintaining the correct execution order
     ldapTokenRetriever.customResource.node.addDependency(route53Authentik.authentikARecord);
     ldapTokenRetriever.customResource.node.addDependency(route53Authentik.authentikAAAARecord);
+    
+    // Ensure LDAP service depends on the token retriever, not the other way around
+    // This breaks the circular dependency chain
+    ldap.node.addDependency(ldapTokenRetriever);
 
     // =================
     // OIDC SETUP FOR TAK ENROLLMENT
@@ -518,7 +528,7 @@ export class AuthInfraStack extends cdk.Stack {
       description: 'Complete OIDC setup information',
     });
     
-    // Create enrollment Lambda function
+    // First create the Lambda function
     const enrollmentLambda = new EnrollmentLambda(this, 'EnrollmentLambda', {
       stackConfig: envConfig,
       authentikAdminSecret: secretsManager.adminUserToken,
@@ -528,7 +538,43 @@ export class AuthInfraStack extends cdk.Stack {
       stackName: stackNameComponent
     });
     
-    // Configure ALB with OIDC authentication for enrollment
+    // Add Lambda permission for ALB invocation BEFORE creating the target group
+    // This is critical - the permission must exist before the target group references the Lambda
+    const lambdaPermission = new lambda.CfnPermission(this, 'EnrollmentLambdaPermission', {
+      action: 'lambda:InvokeFunction',
+      functionName: enrollmentLambda.function.functionName,
+      principal: 'elasticloadbalancing.amazonaws.com'
+    });
+    
+    // Create the target group with the Lambda target
+    const enrollmentTargetGroup = new elbv2.ApplicationTargetGroup(this, 'EnrollmentTargetGroup', {
+      targetType: elbv2.TargetType.LAMBDA,
+      targets: [new targets.LambdaTarget(enrollmentLambda.function)]
+    });
+    
+    // Ensure the target group depends on the Lambda permission
+    enrollmentTargetGroup.node.addDependency(lambdaPermission);
+    
+    // Configure OIDC authentication for the enrollment listener rule
+    const enrollAlbOidcAuth = new EnrollAlbOidcAuth(this, 'EnrollAlbOidcAuth', {
+      listenerArn: authentikELB.httpsListener.listenerArn,
+      enrollmentHostname: envConfig.enrollment?.enrollmentHostname || 'enroll',
+      targetGroupArn: enrollmentTargetGroup.targetGroupArn,
+      clientId: oidcSetup.clientId,
+      clientSecret: oidcSetup.clientSecret,
+      issuer: oidcSetup.issuer,
+      authorizeUrl: oidcSetup.authorizeUrl,
+      tokenUrl: oidcSetup.tokenUrl,
+      userInfoUrl: oidcSetup.userInfoUrl,
+      stackName: stackNameComponent,
+      priority: 110
+    });
+    
+    // Add dependencies to ensure proper order of resource creation
+    enrollAlbOidcAuth.node.addDependency(oidcSetup);
+    enrollAlbOidcAuth.node.addDependency(enrollmentTargetGroup);
+    
+    // Configure ALB with OIDC authentication for enrollment (optional, can be removed if not needed)
     const enrollAlbOidc = new EnrollAlbOidc(this, 'EnrollAlbOidc', {
       alb: authentikELB.loadBalancer,
       httpsListener: authentikELB.httpsListener,
@@ -542,19 +588,6 @@ export class AuthInfraStack extends cdk.Stack {
       userInfoUrl: oidcSetup.userInfoUrl,
       jwksUri: oidcSetup.jwksUri,
       targetFunction: enrollmentLambda.function,
-      stackName: stackNameComponent
-    });
-    
-    // Configure OIDC authentication for the enrollment listener rule
-    const enrollAlbOidcAuth = new EnrollAlbOidcAuth(this, 'EnrollAlbOidcAuth', {
-      listenerArn: enrollAlbOidc.ruleArn,
-      enrollmentHostname: envConfig.enrollment?.enrollmentHostname || 'enroll',
-      clientId: oidcSetup.clientId,
-      clientSecret: oidcSetup.clientSecret,
-      issuer: oidcSetup.issuer,
-      authorizeUrl: oidcSetup.authorizeUrl,
-      tokenUrl: oidcSetup.tokenUrl,
-      userInfoUrl: oidcSetup.userInfoUrl,
       stackName: stackNameComponent
     });
     
@@ -611,7 +644,7 @@ export class AuthInfraStack extends cdk.Stack {
       oidcTokenUrl: oidcSetup.tokenUrl,
       oidcUserInfoUrl: oidcSetup.userInfoUrl,
       oidcJwksUri: oidcSetup.jwksUri,
-      enrollmentTargetGroupArn: enrollAlbOidc.targetGroup.targetGroupArn,
+      enrollmentTargetGroupArn: enrollmentTargetGroup.targetGroupArn,
       enrollmentUrl: route53Enrollment.getEnrollmentUrl()
     });
   }

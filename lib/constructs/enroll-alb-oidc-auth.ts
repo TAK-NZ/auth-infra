@@ -8,6 +8,8 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as path from 'path';
 import { Construct } from 'constructs';
 import { ENROLLMENT_CONSTANTS } from '../utils/constants';
+import { CustomResource } from 'aws-cdk-lib';
+import { CfnOutput } from 'aws-cdk-lib';
 
 export interface EnrollAlbOidcAuthProps {
   /**
@@ -51,9 +53,26 @@ export interface EnrollAlbOidcAuthProps {
   readonly userInfoUrl: string;
   
   /**
+   * The target group ARN
+   */
+  readonly targetGroupArn: string;
+  
+  /**
    * The stack name for resource naming
    */
   readonly stackName: string;
+  
+  /**
+   * Optional priority for the listener rule
+   * If not provided, will use the default from ENROLLMENT_CONSTANTS
+   */
+  readonly priority?: number;
+  
+  /**
+   * Optional listener rule ARN
+   * If provided, will modify this rule instead of creating a new one
+   */
+  readonly listenerRuleArn?: string;
 }
 
 /**
@@ -61,6 +80,7 @@ export interface EnrollAlbOidcAuthProps {
  * This is needed because AWS CDK doesn't currently have a direct AuthenticateOidcAction class
  */
 export class EnrollAlbOidcAuth extends Construct {
+  public readonly customResource: CustomResource;
   constructor(scope: Construct, id: string, props: EnrollAlbOidcAuthProps) {
     super(scope, id);
 
@@ -73,6 +93,7 @@ export class EnrollAlbOidcAuth extends Construct {
       authorizeUrl,
       tokenUrl,
       userInfoUrl,
+      targetGroupArn,
       stackName
     } = props;
 
@@ -95,7 +116,9 @@ export class EnrollAlbOidcAuth extends Construct {
     setupLambda.addToRolePolicy(new iam.PolicyStatement({
       actions: [
         'elasticloadbalancing:DescribeRules',
-        'elasticloadbalancing:ModifyRule'
+        'elasticloadbalancing:ModifyRule',
+        'elasticloadbalancing:CreateRule',
+        'elasticloadbalancing:DeleteRule'
       ],
       resources: ['*']
     }));
@@ -109,23 +132,42 @@ export class EnrollAlbOidcAuth extends Construct {
       })
     });
     
+    // Create a unique physical ID for this resource to avoid conflicts
+    const physicalResourceId = `EnrollAlbOidcAuth-${props.stackName}-${props.enrollmentHostname}`;
+    
     // Log the values being passed to the custom resource for debugging
     new cdk.CfnOutput(this, 'OidcDebugInfo', {
       value: JSON.stringify({
         clientId: clientId ? 'provided' : 'missing',
         issuer: issuer ? 'provided' : 'missing',
-        clientIdValue: clientId,
-        issuerValue: issuer
+        listenerArn: listenerArn ? 'provided' : 'missing',
+        hostname: enrollmentHostname ? 'provided' : 'missing'
       }),
       description: 'Debug information for OIDC setup',
     });
     
+    // Add more detailed debug output
+    new cdk.CfnOutput(this, 'OidcAuthDetails', {
+      value: JSON.stringify({
+        listenerArn: listenerArn,
+        enrollmentHostname: enrollmentHostname,
+        clientId: clientId,
+        issuer: issuer,
+        authorizeUrl: authorizeUrl,
+        tokenUrl: tokenUrl,
+        userInfoUrl: userInfoUrl
+      }),
+      description: 'Detailed OIDC auth configuration',
+    });
+    
     // Create custom resource that will invoke the Lambda
-    const customResource = new cdk.CustomResource(this, 'OidcAuthResource', {
+    this.customResource = new cdk.CustomResource(this, 'OidcAuthResource', {
       serviceToken: provider.serviceToken,
       properties: {
+        PhysicalResourceId: physicalResourceId,
         ListenerArn: listenerArn,
         EnrollmentHostname: enrollmentHostname,
+        TargetGroupArn: targetGroupArn,
         ClientId: clientId,
         ClientSecret: clientSecret,
         Issuer: issuer,
@@ -135,9 +177,17 @@ export class EnrollAlbOidcAuth extends Construct {
         Scope: ENROLLMENT_CONSTANTS.OIDC_SCOPES,
         SessionCookieName: ENROLLMENT_CONSTANTS.SESSION_COOKIE_NAME,
         SessionTimeout: ENROLLMENT_CONSTANTS.SESSION_TIMEOUT_DAYS * 86400, // Convert days to seconds
+        Priority: props.priority || ENROLLMENT_CONSTANTS.LISTENER_PRIORITY,
+        ListenerRuleArn: props.listenerRuleArn || '',
         // Add a timestamp to force the custom resource to update on each deployment
         Timestamp: new Date().toISOString(),
       },
+    });
+    
+    // Add output for debugging
+    new CfnOutput(this, 'OidcAuthResourceId', {
+      value: physicalResourceId,
+      description: 'Physical ID of the OIDC auth resource',
     });
   }
 }

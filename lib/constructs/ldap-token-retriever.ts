@@ -929,8 +929,9 @@ exports.handler = async (event, context) => {
     this.customResource.node.addDependency(props.token.adminTokenSecret);
     this.customResource.node.addDependency(props.token.ldapTokenSecret);
     
-    // Add dependency to ensure the custom resource runs after ECS services are deployed
-    this.customResource.node.addDependency(props.token.authentikServerService);
-    this.customResource.node.addDependency(props.token.authentikWorkerService);
+    // Instead of adding direct dependencies on ECS services, which can create circular dependencies,
+    // we'll rely on the CloudFormation dependency chain through the secrets
+    // The ECS services already depend on the secrets, and we depend on the secrets too
+    // This breaks the circular dependency while maintaining the correct execution order
   }
 }

@@ -72,6 +72,20 @@ export class SecurityGroups extends Construct {
     super(scope, id);
 
     const emailServerPort = props.outboundEmailServerPort ?? 587;
+    
+    // Allow ALB to talk to any destination over HTTPS (port 443)
+    // This is required for OIDC authentication 
+    props.albSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      'Allow ALB to talk to any destination over HTTPS (IPv4)'
+    );
+    
+    props.albSecurityGroup.addEgressRule(
+      ec2.Peer.anyIpv6(),
+      ec2.Port.tcp(443),
+      'Allow ALB to talk to any destination over HTTPS (IPv6)'
+    );
 
     // Create Authentik Server security group
     this.authentikServer = new ec2.SecurityGroup(this, 'AuthentikServer', {
@@ -127,28 +141,13 @@ export class SecurityGroups extends Construct {
       allowAllOutbound: false
     });
 
-    // LDAP NLB inbound rules
-    this.addLdapNlbInboundRules(this.ldapNlb, props.stackNameComponent);
-
-    // Create LDAP security group
+    // Create LDAP security group first
     this.ldap = new ec2.SecurityGroup(this, 'AuthentikLdap', {
       vpc: props.vpc,
       description: 'Security group for LDAP ECS tasks',
       allowAllOutbound: false
     });
-
-    // LDAP inbound rules
-    this.ldap.addIngressRule(
-      ec2.Peer.securityGroupId(this.ldapNlb.securityGroupId),
-      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAP_PORT),
-      'Allow LDAP traffic from NLB'
-    );
-    this.ldap.addIngressRule(
-      ec2.Peer.securityGroupId(this.ldapNlb.securityGroupId),
-      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAPS_PORT),
-      'Allow LDAPS traffic from NLB'
-    );
-
+    
     // LDAP outbound rules (minimal)
     this.ldap.addEgressRule(
       ec2.Peer.anyIpv4(),
@@ -161,8 +160,23 @@ export class SecurityGroups extends Construct {
       'Allow HTTPS access to Authentik server IPv6'
     );
     this.addDnsRules(this.ldap);
+    
+    // LDAP NLB inbound rules
+    this.addLdapNlbInboundRules(this.ldapNlb, props.stackNameComponent);
 
-    // LDAP NLB outbound rules for health checks
+    // LDAP inbound rules - add after NLB security group is fully configured
+    this.ldap.addIngressRule(
+      ec2.Peer.securityGroupId(this.ldapNlb.securityGroupId),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAP_PORT),
+      'Allow LDAP traffic from NLB'
+    );
+    this.ldap.addIngressRule(
+      ec2.Peer.securityGroupId(this.ldapNlb.securityGroupId),
+      ec2.Port.tcp(AUTHENTIK_CONSTANTS.NLB_LDAPS_PORT),
+      'Allow LDAPS traffic from NLB'
+    );
+
+    // LDAP NLB outbound rules for health checks - add at the end to avoid circular dependencies
     this.addLdapNlbOutboundRules(this.ldapNlb, props.stackNameComponent);
 
     // Create database security group
