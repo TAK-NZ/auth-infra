@@ -56,6 +56,7 @@ export interface ContextEnvironmentConfig {
     invalidationFlowName?: string;
     groupName?: string;
     description?: string;
+    listenerPriority?: number;
   };
   ecr: {
     imageRetentionCount: number;

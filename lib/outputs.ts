@@ -32,6 +32,8 @@ export interface OutputParams {
   oidcTokenUrl: string;
   oidcUserInfoUrl: string;
   oidcJwksUri: string;
+  enrollmentTargetGroupArn: string;
+  enrollmentUrl: string;
 }
 
 export function registerOutputs(params: OutputParams): void {
@@ -69,6 +71,8 @@ export function registerOutputs(params: OutputParams): void {
     { key: 'OidcTokenUrl', value: params.oidcTokenUrl, description: 'OIDC token endpoint URL' },
     { key: 'OidcUserInfoUrl', value: params.oidcUserInfoUrl, description: 'OIDC user info endpoint URL' },
     { key: 'OidcJwksUri', value: params.oidcJwksUri, description: 'OIDC JWKS URI for key validation' },
+    { key: 'EnrollmentTargetGroupArn', value: params.enrollmentTargetGroupArn, description: 'ARN of the target group for the enrollment application' },
+    { key: 'EnrollmentUrl', value: params.enrollmentUrl, description: 'Enrollment application URL' },
   ];
 
   // Create internal outputs without exports

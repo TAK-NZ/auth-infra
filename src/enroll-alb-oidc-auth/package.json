@@ -1,0 +1,9 @@
+{
+  "name": "enroll-alb-oidc-auth",
+  "version": "1.0.0",
+  "description": "Lambda function to configure OIDC authentication for ALB listener rules",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-elastic-load-balancing-v2": "^3.515.0"
+  }
+}

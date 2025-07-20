@@ -20,7 +20,11 @@ import { Ldap } from './constructs/ldap';
 import { LdapTokenRetriever } from './constructs/ldap-token-retriever';
 import { Route53 } from './constructs/route53-ldap';
 import { Route53Authentik } from './constructs/route53-authentik';
+import { Route53Enrollment } from './constructs/route53-enrollment';
 import { EnrollOidcSetup } from './constructs/enroll-oidc-setup';
+import { EnrollAlbOidc } from './constructs/enroll-alb-oidc';
+import { EnrollAlbOidcAuth } from './constructs/enroll-alb-oidc-auth';
+import { EnrollmentLambda } from './constructs/enrollment-lambda';
 
 // Configuration imports
 import type {
@@ -489,6 +493,85 @@ export class AuthInfraStack extends cdk.Stack {
       authentikAdminSecret: secretsManager.adminUserToken,
       authentikUrl: route53Authentik.getAuthentikUrl()
     });
+    
+    // Add debug outputs for OIDC setup
+    new cdk.CfnOutput(this, 'OidcSetupClientId', {
+      value: oidcSetup.clientId || 'undefined',
+      description: 'OIDC Client ID from setup',
+    });
+    
+    new cdk.CfnOutput(this, 'OidcSetupIssuer', {
+      value: oidcSetup.issuer || 'undefined',
+      description: 'OIDC Issuer from setup',
+    });
+    
+    // Add comprehensive debug output for OIDC setup
+    new cdk.CfnOutput(this, 'OidcSetupDebugInfo', {
+      value: JSON.stringify({
+        clientId: oidcSetup.clientId,
+        issuer: oidcSetup.issuer,
+        authorizeUrl: oidcSetup.authorizeUrl,
+        tokenUrl: oidcSetup.tokenUrl,
+        userInfoUrl: oidcSetup.userInfoUrl,
+        jwksUri: oidcSetup.jwksUri
+      }),
+      description: 'Complete OIDC setup information',
+    });
+    
+    // Create enrollment Lambda function
+    const enrollmentLambda = new EnrollmentLambda(this, 'EnrollmentLambda', {
+      stackConfig: envConfig,
+      authentikAdminSecret: secretsManager.adminUserToken,
+      authentikUrl: route53Authentik.getAuthentikUrl(),
+      takServerDomain: `ops.${hostedZoneName}`,
+      domainName: hostedZoneName,
+      stackName: stackNameComponent
+    });
+    
+    // Configure ALB with OIDC authentication for enrollment
+    const enrollAlbOidc = new EnrollAlbOidc(this, 'EnrollAlbOidc', {
+      alb: authentikELB.loadBalancer,
+      httpsListener: authentikELB.httpsListener,
+      stackConfig: envConfig,
+      domainName: hostedZoneName,
+      clientId: oidcSetup.clientId,
+      clientSecret: oidcSetup.clientSecret,
+      issuer: oidcSetup.issuer,
+      authorizeUrl: oidcSetup.authorizeUrl,
+      tokenUrl: oidcSetup.tokenUrl,
+      userInfoUrl: oidcSetup.userInfoUrl,
+      jwksUri: oidcSetup.jwksUri,
+      targetFunction: enrollmentLambda.function,
+      stackName: stackNameComponent
+    });
+    
+    // Configure OIDC authentication for the enrollment listener rule
+    const enrollAlbOidcAuth = new EnrollAlbOidcAuth(this, 'EnrollAlbOidcAuth', {
+      listenerArn: enrollAlbOidc.ruleArn,
+      enrollmentHostname: envConfig.enrollment?.enrollmentHostname || 'enroll',
+      clientId: oidcSetup.clientId,
+      clientSecret: oidcSetup.clientSecret,
+      issuer: oidcSetup.issuer,
+      authorizeUrl: oidcSetup.authorizeUrl,
+      tokenUrl: oidcSetup.tokenUrl,
+      userInfoUrl: oidcSetup.userInfoUrl,
+      stackName: stackNameComponent
+    });
+    
+    // Create Route53 DNS records for enrollment
+    const enrollmentNetworkConfig: NetworkConfig = {
+      hostedZoneId: hostedZoneId,
+      hostedZoneName: hostedZoneName,
+      sslCertificateArn: sslCertificateArn,
+      hostname: envConfig.enrollment?.enrollmentHostname || 'enroll'
+    };
+    
+    const route53Enrollment = new Route53Enrollment(this, 'Route53Enrollment', {
+      environment: props.environment,
+      contextConfig: envConfig,
+      network: enrollmentNetworkConfig,
+      loadBalancer: authentikELB.loadBalancer
+    });
 
     // =================
     // STACK OUTPUTS
@@ -527,7 +610,9 @@ export class AuthInfraStack extends cdk.Stack {
       oidcAuthorizeUrl: oidcSetup.authorizeUrl,
       oidcTokenUrl: oidcSetup.tokenUrl,
       oidcUserInfoUrl: oidcSetup.userInfoUrl,
-      oidcJwksUri: oidcSetup.jwksUri
+      oidcJwksUri: oidcSetup.jwksUri,
+      enrollmentTargetGroupArn: enrollAlbOidc.targetGroup.targetGroupArn,
+      enrollmentUrl: route53Enrollment.getEnrollmentUrl()
     });
   }
 

@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cr from 'aws-cdk-lib/custom-resources';
 import * as logs from 'aws-cdk-lib/aws-logs';
@@ -42,14 +43,22 @@ export class EnrollOidcSetup extends Construct {
     const redirectUri = `https://${enrollmentConfig.enrollmentHostname}.${domain}/oauth2/idpresponse`;
     const launchUrl = `https://${enrollmentConfig.enrollmentHostname}.${domain}/`;
 
-    // Create Lambda function for Authentik OIDC setup
-    const setupLambda = new lambda.Function(this, 'SetupLambda', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'index.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../../src/enroll-oidc-setup'), {
-        exclude: ['.env', '.env.example']
-      }),
-      timeout: cdk.Duration.minutes(5),
+    // Create Lambda function for Authentik OIDC setup using NodejsFunction
+    const setupLambda = new nodejs.NodejsFunction(this, 'SetupLambda', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: path.join(__dirname, '../../src/enroll-oidc-setup/index.js'),
+      handler: 'handler',
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        target: 'node22',
+        externalModules: ['aws-sdk'], // AWS SDK is available in the Lambda runtime
+        forceDockerBundling: false, // Force local bundling
+      },
+      // Increase timeout to allow for potential API delays
+      timeout: cdk.Duration.minutes(10),
+      memorySize: 512,
+      retryAttempts: 2,
       environment: {
         AUTHENTIK_URL: authentikUrl,
         AUTHENTIK_ADMIN_SECRET_ARN: authentikAdminSecret.secretArn,
@@ -107,7 +116,8 @@ export class EnrollOidcSetup extends Construct {
     }
 
     // Create custom resource that will invoke the Lambda
-    const customResource = new cdk.CustomResource(this, 'CustomResource', {
+    // Use a unique ID to force recreation
+    const customResource = new cdk.CustomResource(this, 'OidcSetupResource', {
       serviceToken: provider.serviceToken,
       properties: {
         // Add a timestamp to force the custom resource to update on each deployment
@@ -116,13 +126,63 @@ export class EnrollOidcSetup extends Construct {
     });
 
     // Export the client ID, secret, and OIDC endpoints from the custom resource outputs
-    this.clientId = customResource.getAttString('clientId');
-    this.clientSecret = customResource.getAttString('clientSecret');
+    // Try both formats - with and without 'Data.' prefix
+    // The Lambda returns these values in a 'Data' object, but the CDK custom resource
+    // provider might flatten this structure or keep it nested
+    // Set provider name from config
     this.providerName = enrollmentConfig.providerName;
-    this.issuer = customResource.getAttString('issuer');
-    this.authorizeUrl = customResource.getAttString('authorizeUrl');
-    this.tokenUrl = customResource.getAttString('tokenUrl');
-    this.userInfoUrl = customResource.getAttString('userInfoUrl');
-    this.jwksUri = customResource.getAttString('jwksUri');
+    
+    // Try both formats to get the attributes
+    // First try direct access
+    let directAccess = false;
+    try {
+      this.clientId = customResource.getAttString('clientId');
+      this.clientSecret = customResource.getAttString('clientSecret');
+      this.issuer = customResource.getAttString('issuer');
+      this.authorizeUrl = customResource.getAttString('authorizeUrl');
+      this.tokenUrl = customResource.getAttString('tokenUrl') || customResource.getAttString('token_endpoint');
+      this.userInfoUrl = customResource.getAttString('userInfoUrl') || customResource.getAttString('userinfo_endpoint');
+      this.jwksUri = customResource.getAttString('jwksUri') || customResource.getAttString('jwks_uri');
+      directAccess = true;
+    } catch (error) {
+      // Ignore error and try with Data prefix
+    }
+    
+    // If direct access failed, try with Data prefix
+    if (!directAccess) {
+      try {
+        this.clientId = customResource.getAttString('Data.clientId');
+        this.clientSecret = customResource.getAttString('Data.clientSecret');
+        this.issuer = customResource.getAttString('Data.issuer');
+        this.authorizeUrl = customResource.getAttString('Data.authorizeUrl');
+        this.tokenUrl = customResource.getAttString('Data.tokenUrl') || customResource.getAttString('Data.token_endpoint');
+        this.userInfoUrl = customResource.getAttString('Data.userInfoUrl') || customResource.getAttString('Data.userinfo_endpoint');
+        this.jwksUri = customResource.getAttString('Data.jwksUri') || customResource.getAttString('Data.jwks_uri');
+      } catch (error) {
+        // If both access methods fail, use default values
+        const appSlug = enrollmentConfig.applicationSlug || 
+                        enrollmentConfig.applicationName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        
+        this.clientId = 'error-retrieving-client-id';
+        this.clientSecret = 'error-retrieving-client-secret';
+        this.issuer = `${authentikUrl}/application/o/${appSlug}/`;
+        this.authorizeUrl = `${authentikUrl}/application/o/authorize/`;
+        this.tokenUrl = `${authentikUrl}/application/o/token/`;
+        this.userInfoUrl = `${authentikUrl}/application/o/userinfo/`;
+        this.jwksUri = `${authentikUrl}/application/o/jwks/`;
+      }
+    }
+    
+    // Add debug output
+    new cdk.CfnOutput(this, 'OidcSetupDebug', {
+      value: JSON.stringify({
+        clientIdAvailable: this.clientId !== 'error-retrieving-client-id',
+        issuerAvailable: this.issuer.startsWith('http'),
+        accessMethod: directAccess ? 'direct' : 'nested',
+        clientId: this.clientId,
+        issuer: this.issuer
+      }),
+      description: 'OIDC setup debug information',
+    });
   }
 }

@@ -169,9 +169,36 @@ exports.handler = async (event, context) => {
     const oidcConfig = await getOidcConfiguration(authentikUrl, applicationSlug);
     console.log('OIDC configuration retrieved:', JSON.stringify(oidcConfig, null, 2));
     
+    // Log the provider data to debug
+    console.log('Provider data:', JSON.stringify(provider, null, 2));
+    
+    // Ensure client_id and client_secret are available
+    if (!provider.client_id) {
+      throw new Error('Provider client_id is missing in the response from Authentik');
+    }
+    
+    // Ensure issuer is available
+    if (!oidcConfig.issuer) {
+      throw new Error('OIDC issuer is missing in the configuration');
+    }
+    
+    // Log critical values
+    console.log('Critical OIDC values:', {
+      clientId: provider.client_id,
+      issuer: oidcConfig.issuer
+    });
+    
     // Return the client ID, secret, and OIDC endpoints for ALB OIDC configuration
+    // Include clientId at both the top level and in the Data object to ensure it's accessible
     const response = {
       PhysicalResourceId: provider.pk.toString(),
+      clientId: provider.client_id, // Add at top level for compatibility
+      clientSecret: provider.client_secret, // Add at top level for compatibility
+      issuer: oidcConfig.issuer, // Add at top level for compatibility
+      authorizeUrl: oidcConfig.authorizeUrl, // Add at top level for compatibility
+      tokenUrl: oidcConfig.tokenUrl, // Add at top level for compatibility
+      userInfoUrl: oidcConfig.userInfoUrl, // Add at top level for compatibility
+      jwksUri: oidcConfig.jwksUri, // Add at top level for compatibility
       Data: {
         clientId: provider.client_id,
         clientSecret: provider.client_secret,
@@ -179,17 +206,52 @@ exports.handler = async (event, context) => {
         issuer: oidcConfig.issuer,
         authorizeUrl: oidcConfig.authorizeUrl,
         tokenUrl: oidcConfig.tokenUrl,
+        token_endpoint: oidcConfig.tokenUrl, // Add snake_case version for compatibility
         userInfoUrl: oidcConfig.userInfoUrl,
-        jwksUri: oidcConfig.jwksUri
+        userinfo_endpoint: oidcConfig.userInfoUrl, // Add snake_case version for compatibility
+        jwksUri: oidcConfig.jwksUri,
+        jwks_uri: oidcConfig.jwksUri // Add snake_case version for compatibility
       },
     };
     
+    // Log the response structure to help debug
+    console.log('Response structure:', JSON.stringify({
+      hasClientId: !!response.clientId,
+      hasIssuer: !!response.issuer,
+      dataHasClientId: !!response.Data.clientId,
+      dataHasIssuer: !!response.Data.issuer
+    }));
+    
     // For CloudFormation custom resources, we need to include Status
     if (event.RequestType) {
-      response.Status = 'SUCCESS';
-      response.StackId = event.StackId;
-      response.RequestId = event.RequestId;
-      response.LogicalResourceId = event.LogicalResourceId;
+      // Ensure we're following the exact format expected by CloudFormation
+      const cfnResponse = {
+        Status: 'SUCCESS',
+        PhysicalResourceId: response.PhysicalResourceId,
+        StackId: event.StackId,
+        RequestId: event.RequestId,
+        LogicalResourceId: event.LogicalResourceId,
+        // Include Data at the top level for CloudFormation
+        Data: {
+          ...response.Data,
+          // Ensure these are also at the top level of Data
+          clientId: provider.client_id,
+          clientSecret: provider.client_secret,
+          issuer: response.Data.issuer
+        },
+        // Also include at the top level for backward compatibility
+        clientId: provider.client_id,
+        clientSecret: provider.client_secret,
+        issuer: response.Data.issuer
+      };
+      
+      console.log('Returning CloudFormation response:', JSON.stringify(cfnResponse, (key, value) => {
+        // Mask sensitive values in logs
+        if (key === 'clientSecret') return '***';
+        return value;
+      }, 2));
+      
+      return cfnResponse;
     }
     
     console.log('Returning successful response');
@@ -199,14 +261,25 @@ exports.handler = async (event, context) => {
     
     // For CloudFormation custom resources, we need to return a specific format
     if (event.RequestType) {
-      return {
+      // Provide more detailed error information
+      let errorDetails = error.message;
+      if (error.response && error.response.data) {
+        errorDetails += ` - API Response: ${JSON.stringify(error.response.data)}`;
+      }
+      
+      const errorResponse = {
         Status: 'FAILED',
-        Reason: `Error: ${error.message}`,
+        Reason: `Error: ${errorDetails}`,
         PhysicalResourceId: event.PhysicalResourceId || 'authentik-oidc-setup-failed',
         StackId: event.StackId,
         RequestId: event.RequestId,
         LogicalResourceId: event.LogicalResourceId,
+        // Include empty Data to avoid undefined errors
+        Data: {}
       };
+      
+      console.log('Returning error response:', JSON.stringify(errorResponse));
+      return errorResponse;
     }
     
     throw error;
@@ -273,18 +346,32 @@ async function createOrUpdateProvider(api, providerData) {
       params: { name: providerData.name }
     });
     
+    let provider;
+    
     if (existingProviders.data.results && existingProviders.data.results.length > 0) {
       // Update existing provider
       const existingProvider = existingProviders.data.results[0];
       console.log(`Updating existing provider with ID ${existingProvider.pk}`);
       const response = await api.patch(`/api/v3/providers/oauth2/${existingProvider.pk}/`, providerData);
-      return response.data;
+      provider = response.data;
     } else {
       // Create new provider
       console.log('Creating new OAuth2 provider');
       const response = await api.post('/api/v3/providers/oauth2/', providerData);
-      return response.data;
+      provider = response.data;
     }
+    
+    // Ensure we have client_id and client_secret
+    if (!provider.client_id || !provider.client_secret) {
+      // If missing, fetch the provider details to get the client_id and client_secret
+      console.log(`Provider created/updated, but client_id or client_secret is missing. Fetching provider details...`);
+      const detailsResponse = await api.get(`/api/v3/providers/oauth2/${provider.pk}/`);
+      provider = detailsResponse.data;
+      
+      console.log(`Provider details fetched. Has client_id: ${!!provider.client_id}, Has client_secret: ${!!provider.client_secret}`);
+    }
+    
+    return provider;
   } catch (error) {
     console.error('Error creating/updating provider:', error.message);
     if (error.response) {
@@ -472,8 +559,11 @@ async function getOidcConfiguration(authentikUrl, applicationSlug) {
         issuer: appResponse.data.issuer,
         authorizeUrl: appResponse.data.authorization_endpoint,
         tokenUrl: appResponse.data.token_endpoint,
+        token_endpoint: appResponse.data.token_endpoint,
         userInfoUrl: appResponse.data.userinfo_endpoint,
-        jwksUri: appResponse.data.jwks_uri
+        userinfo_endpoint: appResponse.data.userinfo_endpoint,
+        jwksUri: appResponse.data.jwks_uri,
+        jwks_uri: appResponse.data.jwks_uri
       };
     } catch (appError) {
       console.warn('Application-specific configuration not available:', appError.message);
@@ -488,8 +578,11 @@ async function getOidcConfiguration(authentikUrl, applicationSlug) {
           issuer: `${authentikUrl}/application/o/${applicationSlug}/`,
           authorizeUrl: wellKnownResponse.data.authorization_endpoint,
           tokenUrl: wellKnownResponse.data.token_endpoint,
+          token_endpoint: wellKnownResponse.data.token_endpoint,
           userInfoUrl: wellKnownResponse.data.userinfo_endpoint,
-          jwksUri: wellKnownResponse.data.jwks_uri
+          userinfo_endpoint: wellKnownResponse.data.userinfo_endpoint,
+          jwksUri: wellKnownResponse.data.jwks_uri,
+          jwks_uri: wellKnownResponse.data.jwks_uri
         };
       } catch (wellKnownError) {
         console.warn('Could not retrieve OIDC configuration from well-known endpoint:', wellKnownError.message);
@@ -500,8 +593,11 @@ async function getOidcConfiguration(authentikUrl, applicationSlug) {
           issuer: `${baseUrl}/application/o/${applicationSlug}/`,
           authorizeUrl: `${baseUrl}/application/o/authorize/`,
           tokenUrl: `${baseUrl}/application/o/token/`,
+          token_endpoint: `${baseUrl}/application/o/token/`,
           userInfoUrl: `${baseUrl}/application/o/userinfo/`,
-          jwksUri: `${baseUrl}/application/o/jwks/`
+          userinfo_endpoint: `${baseUrl}/application/o/userinfo/`,
+          jwksUri: `${baseUrl}/application/o/jwks/`,
+          jwks_uri: `${baseUrl}/application/o/jwks/`
         };
       }
     }
@@ -516,8 +612,11 @@ async function getOidcConfiguration(authentikUrl, applicationSlug) {
       issuer: `${authentikUrl}/application/o/${applicationSlug}/`,
       authorizeUrl: `${authentikUrl}/application/o/authorize/`,
       tokenUrl: `${authentikUrl}/application/o/token/`,
+      token_endpoint: `${authentikUrl}/application/o/token/`,
       userInfoUrl: `${authentikUrl}/application/o/userinfo/`,
-      jwksUri: `${authentikUrl}/application/o/jwks/`
+      userinfo_endpoint: `${authentikUrl}/application/o/userinfo/`,
+      jwksUri: `${authentikUrl}/application/o/jwks/`,
+      jwks_uri: `${authentikUrl}/application/o/jwks/`
     };
   }
 }
