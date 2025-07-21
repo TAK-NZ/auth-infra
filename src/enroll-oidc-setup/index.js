@@ -417,45 +417,19 @@ async function createOrUpdateApplication(api, applicationData) {
   }
 }
 
-// Helper function to get or create a group and assign it to an application
-async function assignGroupToApplication(api, appPk, groupName) {
+// Helper function to assign a group to an application
+async function assignGroupToApplication(api, appSlug, groupName) {
   try {
     if (!groupName) {
       console.log('No group name provided, skipping group assignment');
       return null;
     }
     
-    console.log(`Looking for group: ${groupName}`);
+    console.log(`Setting group name: ${groupName} for application: ${appSlug}`);
     
-    // Check if group exists
-    const existingGroups = await api.get('/api/v3/core/groups/', {
-      params: { name: groupName }
-    });
-    
-    let groupPk;
-    
-    if (existingGroups.data.results && existingGroups.data.results.length > 0) {
-      // Use existing group
-      groupPk = existingGroups.data.results[0].pk;
-      console.log(`Found existing group: ${groupName}, pk: ${groupPk}`);
-    } else {
-      // Create new group
-      console.log(`Creating new group: ${groupName}`);
-      const newGroup = await api.post('/api/v3/core/groups/', {
-        name: groupName,
-        is_superuser: false
-      });
-      groupPk = newGroup.data.pk;
-      console.log(`Created new group with pk: ${groupPk}`);
-    }
-    
-    // Assign group to application
-    console.log(`Assigning group ${groupPk} to application ${appPk}`);
-    const response = await api.post('/api/v3/core/applications/set_policy_binding/', {
-      target: appPk,
-      group: groupPk,
-      policy: null, // Use default policy
-      negate: false
+    // Update the application with the group name
+    const response = await api.patch(`/api/v3/core/applications/${appSlug}/`, {
+      group: groupName
     });
     
     console.log('Group assigned successfully');
