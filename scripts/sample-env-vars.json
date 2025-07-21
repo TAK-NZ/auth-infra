@@ -1,0 +1,6 @@
+{
+  "AUTHENTIK_API_TOKEN_SECRET_ARN": "arn:aws:secretsmanager:us-west-2:453572736517:secret:TAK-Demo-AuthInfra/Authentik/Admin-API-Token-rLsDLa",
+  "AUTHENTIK_API_ENDPOINT": "https://account.test.tak.nz",
+  "TAK_SERVER_DOMAIN": "test.tak.nz",
+  "BRANDING": "generic"
+}

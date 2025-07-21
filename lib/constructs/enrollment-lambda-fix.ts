@@ -116,7 +116,9 @@ export class EnrollmentLambda extends Construct {
           },
           afterBundling(inputDir: string, outputDir: string): string[] {
             return [
-              `cp ${path.join(__dirname, '../../src/enrollment-lambda/template.html')} ${outputDir}/`
+              // Copy the views directory structure
+              `mkdir -p ${outputDir}/views/partials`,
+              `cp -r ${path.join(__dirname, '../../src/enrollment-lambda/views')}/* ${outputDir}/views/`
             ];
           },
         },
@@ -126,6 +128,7 @@ export class EnrollmentLambda extends Construct {
         AUTHENTIK_API_TOKEN_SECRET_ARN: authentikAdminSecret.secretArn,
         AUTHENTIK_API_ENDPOINT: authentikUrl,
         TAK_SERVER_DOMAIN: takServerDomain,
+        BRANDING: stackConfig.authentik.branding || 'generic',
       },
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,

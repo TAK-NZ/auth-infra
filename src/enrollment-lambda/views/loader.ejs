@@ -1,0 +1,19 @@
+<%- include('partials/header') %>
+
+<div class="loading-container" style="height: auto; margin: 30px 0;">
+    <div style="margin-bottom:50px; text-align: center;" class="spinner" style="width: 50px; height: 50px; border-width: 8px;"></div>
+    <p>Loading enrollment information...</p>
+</div>
+
+<form id="enrollmentForm" method="POST" action="?load=true" style="display:none;">
+    <input type="hidden" name="x-amzn-oidc-data" value="<%= oidcData %>">
+</form>
+
+<script>
+    // Submit the form after a short delay to ensure the spinner is visible
+    setTimeout(function() {
+        document.getElementById('enrollmentForm').submit();
+    }, 500);
+</script>
+
+<%- include('partials/footer') %>

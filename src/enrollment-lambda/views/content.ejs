@@ -1,0 +1,102 @@
+<%- include('partials/header') %>
+
+<div class="form-group">
+    <label class="text-info">Enrollment data</label><br>
+    <b>TAK Server:</b> <%= server %></br>
+    <b>User:</b> <%= user %></br>
+    <b>Callsign:</b> <%= takCallsign %></br>
+    <b>Team Color:</b> <%= takColor %>  <svg width="15" height="15">
+    <rect width="15" height="15" style="fill:<%= takColor %>" />
+    </svg></br>
+    <b>Role:</b> <%= takRole %></br>
+</div>
+<hr>
+<div class="form-group">
+    <label class="text-info">Before you enroll</label><br>
+    Please consider the following important constraints:
+    <ul>
+        <li>The enrolled device will be linked to your accont. Only enroll your own devices!</li>
+        <!-- <li>You have to complete this enrollment within 30 minutes. After <i><%= expire %> NZT</i> the data on this page is no longer valid.</li> -->
+        <li>Your device remains enrolled for up to 1 year. You should re-enroll your device again before <i><%= reenroll %> NZT</i>.</li>
+    </ul>
+</div>
+<hr>
+<div <%= hide_enrollment_link %> class="form-group">
+    <label class="text-info">Enroll this device</label><br>
+    Already have ATAK installed on this Android device? You can directly enroll this device. 
+</div>
+
+<div <%= hide_enrollment_link %> id="enroll_link" class="form-group" align="center">
+    <a class="btn btn-dark" href="<%= link %>">Enroll now</a>	
+</div>
+<hr <%= hide_enrollment_link %>>
+<div class="form-group">
+    <label class="text-info">Enroll a different device</label><br>
+    Want to enroll a different mobile device with ATAK already installed? Scan the QR with the other device's camera. 
+</div>
+
+<div style="text-align: center"><img src="<%= qrcode %>" alt="QR Code" class="center"></div>
+<div style="text-align: center">The QR-Code will expire in: 
+    <p id="timer"></p>
+    Please scan the QR-Code with your mobile device's camera app.</div>
+<hr>
+<div class="form-group">
+    <label class="text-info">TAK Mobile Apps</label><br>
+    Need to install ATAK? 
+</div>
+
+<style>
+.storeLink {
+position: relative;
+display: inline-block;
+width: 120px;
+height: 40px;
+border-radius: 6px;
+overflow: hidden;
+background-color: black;
+}
+.storeLink > img {
+--width: 100%;
+position: absolute;
+width: var(--width);
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+}
+</style>
+<div style="text-align: center">
+<a href='https://play.google.com/store/apps/details?id=com.atakmap.app.civ' target='_blank' class='storeLink'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png' style='--width: 128%';/></a>
+<!-- <a href='https://apps.apple.com/us/app/itak/id1561656396' target='_blank' class='storeLink'><img src='https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&amp;releaseDate=1276560000&h=7e7b68fad19738b5649a1bfb78ff46e9' alt='Download on the App Store' ></a> -->
+
+<script>
+    // Set the date we're counting down to
+    var countDownDate = new Date("<%= expire_utc %>").getTime();
+
+    // Update the count down every 1 second
+    var x = setInterval(function() {
+
+        // Get today's date and time
+        var now = new Date().getTime();
+        
+        // Find the distance between now and the count down date
+        var distance = countDownDate - now;
+        
+        // Time calculations for days, hours, minutes and seconds
+        var days = String(Math.floor(distance / (1000 * 60 * 60 * 24))).padStart(2, '0');
+        var hours = String(Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
+        var minutes = String(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+        var seconds = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
+        
+        // Output the result in an element with id="demo"
+        document.getElementById("timer").innerHTML =  minutes + " : " + seconds;
+        
+        // If the count down is over, write some text 
+        if (distance < 0) {
+            clearInterval(x);
+            document.getElementById("timer").innerHTML = "EXPIRED";
+            document.getElementById("enroll_link").innerHTML = "Enrollment link EXPIRED";
+        }
+    }, 1000);
+</script>
+
+<%- include('partials/footer') %>
