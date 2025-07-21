@@ -65,7 +65,7 @@
         "authorizationFlowName": "default-provider-authorization-implicit-consent",
         "invalidationFlowName": "default-provider-invalidation-flow",
         "groupName": "Team Awareness Kit",
-        "description": "Enroll an Android device with ATAK to the TAK server"
+        "description": "Enroll a mobile device with ATAK/iTAK to the TAK server"
       },
       "ecr": {
         "imageRetentionCount": 5,

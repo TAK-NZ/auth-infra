@@ -425,10 +425,22 @@ async function assignGroupToApplication(api, appSlug, groupName) {
       return null;
     }
     
-    console.log(`Setting group name: ${groupName} for application: ${appSlug}`);
+    console.log(`Assigning group '${groupName}' to application`);
+    
+    // Get the application by slug to ensure we have the correct slug
+    const existingApps = await api.get('/api/v3/core/applications/', {
+      params: { slug: appSlug }
+    });
+    
+    if (!(existingApps.data.results && existingApps.data.results.length > 0)) {
+      throw new Error(`Application with slug '${appSlug}' not found`);
+    }
+    
+    const app = existingApps.data.results[0];
+    console.log(`Found application: ${app.name} (${app.slug})`);
     
     // Update the application with the group name
-    const response = await api.patch(`/api/v3/core/applications/${appSlug}/`, {
+    const response = await api.patch(`/api/v3/core/applications/${app.slug}/`, {
       group: groupName
     });
     

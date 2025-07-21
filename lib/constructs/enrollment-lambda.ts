@@ -121,7 +121,7 @@ export class EnrollmentLambda extends Construct {
               `mkdir -p ${outputDir}/views`,
               `cp -r ${path.join(enrollmentLambdaDir, 'views')}/* ${outputDir}/views/`,
               // Copy any other files that might be needed
-              `find ${enrollmentLambdaDir} -maxdepth 1 -type f -not -name "index.js" -not -name "index-simple.js" -exec cp {} ${outputDir}/ \;`
+              `find ${enrollmentLambdaDir} -maxdepth 1 -type f -not -name "index.js" -not -name "index-simple.js" -exec cp {} ${outputDir}/ ';'`
             ];
           },
         },
