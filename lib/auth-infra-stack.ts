@@ -28,7 +28,7 @@ import { Route53Enrollment } from './constructs/route53-enrollment';
 import { EnrollOidcSetup } from './constructs/enroll-oidc-setup';
 import { EnrollAlbOidc } from './constructs/enroll-alb-oidc';
 import { EnrollAlbOidcAuth } from './constructs/enroll-alb-oidc-auth';
-import { EnrollmentLambda } from './constructs/enrollment-lambda-fix';
+import { EnrollmentLambda } from './constructs/enrollment-lambda';
 
 // Configuration imports
 import type {

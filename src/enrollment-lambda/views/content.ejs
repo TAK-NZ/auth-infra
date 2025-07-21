@@ -1,4 +1,41 @@
 <%- include('partials/header') %>
+<% 
+// Define Android icon SVG
+const androidIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 553.048 553.048" width="24" height="24" style="vertical-align: middle; margin-right: 5px;">
+<g>
+	<g>
+		<path d="M76.774,179.141c-9.529,0-17.614,3.323-24.26,9.969c-6.646,6.646-9.97,14.621-9.97,23.929v142.914
+			c0,9.541,3.323,17.619,9.97,24.266c6.646,6.646,14.731,9.97,24.26,9.97c9.522,0,17.558-3.323,24.101-9.97
+			c6.53-6.646,9.804-14.725,9.804-24.266V213.039c0-9.309-3.323-17.283-9.97-23.929C94.062,182.464,86.082,179.141,76.774,179.141z"
+			/>
+		<path d="M351.972,50.847L375.57,7.315c1.549-2.882,0.998-5.092-1.658-6.646c-2.883-1.34-5.098-0.661-6.646,1.989l-23.928,43.88
+			c-21.055-9.309-43.324-13.972-66.807-13.972c-23.488,0-45.759,4.664-66.806,13.972l-23.929-43.88
+			c-1.555-2.65-3.77-3.323-6.646-1.989c-2.662,1.561-3.213,3.764-1.658,6.646l23.599,43.532
+			c-23.929,12.203-42.987,29.198-57.167,51.022c-14.18,21.836-21.273,45.698-21.273,71.628h307.426
+			c0-25.924-7.094-49.787-21.273-71.628C394.623,80.045,375.675,63.05,351.972,50.847z M215.539,114.165
+			c-2.552,2.558-5.6,3.831-9.143,3.831c-3.55,0-6.536-1.273-8.972-3.831c-2.436-2.546-3.654-5.582-3.654-9.137
+			c0-3.543,1.218-6.585,3.654-9.137c2.436-2.546,5.429-3.819,8.972-3.819s6.591,1.273,9.143,3.819
+			c2.546,2.558,3.825,5.594,3.825,9.137C219.357,108.577,218.079,111.619,215.539,114.165z M355.625,114.165
+			c-2.441,2.558-5.434,3.831-8.971,3.831c-3.551,0-6.598-1.273-9.145-3.831c-2.551-2.546-3.824-5.582-3.824-9.137
+			c0-3.543,1.273-6.585,3.824-9.137c2.547-2.546,5.594-3.819,9.145-3.819c3.543,0,6.529,1.273,8.971,3.819
+			c2.438,2.558,3.654,5.594,3.654,9.137C359.279,108.577,358.062,111.619,355.625,114.165z"/>
+		<path d="M123.971,406.804c0,10.202,3.543,18.838,10.63,25.925c7.093,7.087,15.729,10.63,25.924,10.63h24.596l0.337,75.454
+			c0,9.528,3.323,17.619,9.969,24.266s14.627,9.97,23.929,9.97c9.523,0,17.613-3.323,24.26-9.97s9.97-14.737,9.97-24.266v-75.447
+			h45.864v75.447c0,9.528,3.322,17.619,9.969,24.266s14.73,9.97,24.26,9.97c9.523,0,17.613-3.323,24.26-9.97
+			s9.969-14.737,9.969-24.266v-75.447h24.928c9.969,0,18.494-3.544,25.594-10.631c7.086-7.087,10.631-15.723,10.631-25.924V185.45
+			H123.971V406.804z"/>
+		<path d="M476.275,179.141c-9.309,0-17.283,3.274-23.93,9.804c-6.646,6.542-9.969,14.578-9.969,24.094v142.914
+			c0,9.541,3.322,17.619,9.969,24.266s14.627,9.97,23.93,9.97c9.523,0,17.613-3.323,24.26-9.97s9.969-14.725,9.969-24.266V213.039
+			c0-9.517-3.322-17.552-9.969-24.094C493.888,182.415,485.798,179.141,476.275,179.141z"/>
+	</g>
+</g>
+</svg>`;
+
+// Define Apple icon SVG
+const appleIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="20" height="24" style="vertical-align: middle; margin-right: 5px;">
+<path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+</svg>`;
+%>
 
 <div class="form-group">
     <label class="text-info">Enrollment data</label><br>
@@ -12,17 +49,15 @@
 </div>
 <hr>
 <div class="form-group">
-    <label class="text-info">Before you enroll</label><br>
-    Please consider the following important constraints:
+    <label class="text-info">Device Enrollment Requirements</label><br>
     <ul>
-        <li>The enrolled device will be linked to your accont. Only enroll your own devices!</li>
-        <!-- <li>You have to complete this enrollment within 30 minutes. After <i><%= expire %> NZT</i> the data on this page is no longer valid.</li> -->
-        <li>Your device remains enrolled for up to 1 year. You should re-enroll your device again before <i><%= reenroll %> NZT</i>.</li>
+        <li>Device Registration: This device will be linked to your account. You may only enroll devices that you personally own.</li>
+        <li>Enrollment Duration: Your device enrollment is valid for 1 year. To maintain access, please renew your enrollment before: <i><%= reenroll %></i>.</li>
     </ul>
 </div>
 <hr>
 <div <%= hide_enrollment_link %> class="form-group">
-    <label class="text-info">Enroll this device</label><br>
+    <label class="text-info">Add This Device</label><br>
     Already have ATAK installed on this Android device? You can directly enroll this device. 
 </div>
 
@@ -30,19 +65,94 @@
     <a class="btn btn-dark" href="<%= link %>">Enroll now</a>	
 </div>
 <hr <%= hide_enrollment_link %>>
+
 <div class="form-group">
-    <label class="text-info">Enroll a different device</label><br>
-    Want to enroll a different mobile device with ATAK already installed? Scan the QR with the other device's camera. 
+    <label class="text-info">Add Another Device</label><br>
+    Access this page from a desktop computer to enroll your mobile device.
+
+<div class="tab-container">
+    <!-- Tab buttons -->
+    <div class="tab-buttons">
+        <button class="tab-button active" onclick="openTab('android-tab')"><%- androidIcon %> <b>Android (ATAK)</b></button>
+        <button class="tab-button" onclick="openTab('iphone-tab')"><%- appleIcon %> <b>iPhone (iTAK)</b></button>
+    </div>
+
+    <!-- Tab content -->
+    <div id="android-tab" class="tab-content active">
+        <div class="form-group">
+            <ul>
+                <li>ATAK must already be installed</li>
+                <li>Open the camera app on your Android device (must have ATAK installed)</li>
+                <li>Point the camera at the QR code below</li>
+                <li>Follow the on-screen prompts to complete enrollment</li>
+            </ul>
+        </div>
+        <div style="text-align: center"><img src="<%= atakQrcode %>" alt="QR Code" class="center"></div>
+        <div style="text-align: center">The QR-Code will expire in: 
+            <p id="timer"></p>
+        </div>
+    </div>
+
+    <div id="iphone-tab" class="tab-content">
+        <div class="form-group">
+            <ul>
+                <li>Within iTAK tap <i>"Network"</i>, then <i>"Servers"</i></li>
+                <li>Select the plus icon (+) in the bottom right</li>
+                <li>Tap on Scan QR and scan the QR code below</li>
+                <li>You will be prompted to enter your username and password</li>
+            </ul>
+        </div>
+        <div style="text-align: center"><img src="<%= itakQrcode %>" alt="QR Code" class="center"></div>
+    </div>
+</div>
 </div>
 
-<div style="text-align: center"><img src="<%= qrcode %>" alt="QR Code" class="center"></div>
-<div style="text-align: center">The QR-Code will expire in: 
-    <p id="timer"></p>
-    Please scan the QR-Code with your mobile device's camera app.</div>
-<hr>
+<style>
+/* Tab styles */
+.tab-container {
+    width: 100%;
+    margin: 20px 0;
+}
+
+.tab-buttons {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+}
+
+.tab-button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+}
+
+.tab-button:hover {
+    background-color: #ddd;
+}
+
+.tab-button.active {
+    background-color: #ccc;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-top: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+</style>
+
 <div class="form-group">
     <label class="text-info">TAK Mobile Apps</label><br>
-    Need to install ATAK? 
+    Need to install ATAK or iTAK? Use the links below to install them.
 </div>
 
 <style>
@@ -66,7 +176,7 @@ transform: translate(-50%, -50%);
 </style>
 <div style="text-align: center">
 <a href='https://play.google.com/store/apps/details?id=com.atakmap.app.civ' target='_blank' class='storeLink'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png' style='--width: 128%';/></a>
-<!-- <a href='https://apps.apple.com/us/app/itak/id1561656396' target='_blank' class='storeLink'><img src='https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&amp;releaseDate=1276560000&h=7e7b68fad19738b5649a1bfb78ff46e9' alt='Download on the App Store' ></a> -->
+<a href='https://apps.apple.com/us/app/itak/id1561656396' target='_blank' class='storeLink'><img src='https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&amp;releaseDate=1276560000&h=7e7b68fad19738b5649a1bfb78ff46e9' alt='Download on the App Store' ></a>
 
 <script>
     // Set the date we're counting down to
@@ -97,6 +207,25 @@ transform: translate(-50%, -50%);
             document.getElementById("enroll_link").innerHTML = "Enrollment link EXPIRED";
         }
     }, 1000);
+    
+    // Tab functionality
+    function openTab(tabName) {
+        // Hide all tab content
+        var tabContents = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+
+        // Remove active class from all tab buttons
+        var tabButtons = document.getElementsByClassName("tab-button");
+        for (var i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove("active");
+        }
+
+        // Show the selected tab content and mark button as active
+        document.getElementById(tabName).classList.add("active");
+        event.currentTarget.classList.add("active");
+    }
 </script>
 
 <%- include('partials/footer') %>

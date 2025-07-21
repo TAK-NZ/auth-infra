@@ -10,7 +10,8 @@ console.log('Loading enrollment function');
 
 exports.handler = async (event, context) => {
     // Check if this is the initial request or the actual data request
-    const isDataRequest = event.queryStringParameters && event.queryStringParameters.load === 'true' && event.httpMethod === 'POST';
+    const isDataRequest = (event.queryStringParameters && event.queryStringParameters.load === 'true' && event.httpMethod === 'POST') || 
+                         (event.body && event.body.includes('load=true') && event.httpMethod === 'POST');
     try {
         console.log('Event: ' + JSON.stringify(event));
         console.log('Headers: ' + JSON.stringify(event.headers || {}));
@@ -69,6 +70,7 @@ exports.handler = async (event, context) => {
             const loadingData = {
                 title: 'Loading Enrollment',
                 heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
+                footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
                 branding: branding,
                 oidcData: oidcData,
                 customScripts: `
@@ -200,7 +202,7 @@ exports.handler = async (event, context) => {
         let takCallsign = 'None';
         try {
             takCallsign = userIdData.results[0].attributes.takCallsign;
-            if (takCallsign === 'undefined') takCallsign = 'None';
+            if (takCallsign === 'undefined' || takCallsign === undefined) takCallsign = 'None';
         } catch (e) {
             console.log('TAK Callsign not found, using default');
             takCallsign = 'None';
@@ -210,7 +212,7 @@ exports.handler = async (event, context) => {
         let takColor = 'None';
         try {
             takColor = userIdData.results[0].attributes.takColor;
-            if (takColor === 'undefined') takColor = 'None';
+            if (takColor === 'undefined' || takColor === undefined) takColor = 'None';
         } catch (e) {
             console.log('TAK Color not found, using default');
             takColor = 'None';
@@ -220,7 +222,7 @@ exports.handler = async (event, context) => {
         let takRole = 'None';
         try {
             takRole = userIdData.results[0].attributes.takRole;
-            if (takRole === 'undefined') takRole = 'None';
+            if (takRole === 'undefined' || takRole === undefined) takRole = 'None';
         } catch (e) {
             console.log('TAK Role not found, using default');
             takRole = 'None';
@@ -232,7 +234,7 @@ exports.handler = async (event, context) => {
             identifier: tokenIdentifier,
             intent: 'app_password',
             user: userId,
-            description: 'ATAK/iTAK enrollment token',
+            description: 'ATAK enrollment token',
             expires: tokenExpirationDate.toISOString(),
             expiring: true
         };
@@ -247,20 +249,25 @@ exports.handler = async (event, context) => {
         const app_password = await getApi(appPasswordUrl, requestHeaders);
         const tokenKey = JSON.parse(app_password.data).key;
 
-        // Generate QR code
-        const qrCodeData = 'tak://com.atakmap.app/enroll?host=' + takServer + '&username=' + user + '&token=' + tokenKey;
-        const base64QRCode = await generateBase64QRCode(qrCodeData);
+        // Generate QR codes
+        const ATAKqrCodeData = 'tak://com.atakmap.app/enroll?host=' + takServer + '&username=' + user + '&token=' + tokenKey;
+        const ATAKbase64QRCode = await generateBase64QRCode(ATAKqrCodeData);
+
+        const iTAKqrCodeData = takServer + ',' + takServer + '8089,ssl';
+        const iTAKbase64QRCode = await generateBase64QRCode(iTAKqrCodeData);
 
         // Prepare template data
         const data = {
             title: 'Device Enrollment',
             heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
+            footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
             branding: branding,
             server: takServer,
             user: user,
             token: tokenKey,
-            link: qrCodeData,
-            qrcode: base64QRCode,
+            link: ATAKqrCodeData,
+            atakQrcode: ATAKbase64QRCode,
+            itakQrcode: iTAKbase64QRCode,
             expire: expireTimeInNZ,
             expire_utc: tokenExpirationDate.toISOString(),
             reenroll: reenrollTimeInNZ,

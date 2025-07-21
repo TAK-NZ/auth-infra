@@ -45,11 +45,6 @@ export class EnrollmentLambda extends Construct {
    * The Lambda function
    */
   public readonly function: lambda.Function;
-  
-  /**
-   * The Lambda target for the ALB
-   */
-  public readonly lambdaTarget: targets.LambdaTarget;
 
   constructor(scope: Construct, id: string, props: EnrollmentLambdaProps) {
     super(scope, id);
@@ -120,8 +115,13 @@ export class EnrollmentLambda extends Construct {
             return [];
           },
           afterBundling(inputDir: string, outputDir: string): string[] {
+            const enrollmentLambdaDir = path.join(__dirname, '../../src/enrollment-lambda');
             return [
-              `cp ${path.join(__dirname, '../../src/enrollment-lambda/template.html')} ${outputDir}/`
+              // Copy the views directory and all its contents
+              `mkdir -p ${outputDir}/views`,
+              `cp -r ${path.join(enrollmentLambdaDir, 'views')}/* ${outputDir}/views/`,
+              // Copy any other files that might be needed
+              `find ${enrollmentLambdaDir} -maxdepth 1 -type f -not -name "index.js" -not -name "index-simple.js" -exec cp {} ${outputDir}/ \;`
             ];
           },
         },
@@ -131,19 +131,11 @@ export class EnrollmentLambda extends Construct {
         AUTHENTIK_API_TOKEN_SECRET_ARN: authentikAdminSecret.secretArn,
         AUTHENTIK_API_ENDPOINT: authentikUrl,
         TAK_SERVER_DOMAIN: takServerDomain,
+        BRANDING: stackConfig.authentik.branding || 'generic',
       },
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
       description: 'TAK Device Enrollment Lambda'
-    });
-    
-    // Create Lambda target for ALB
-    this.lambdaTarget = new targets.LambdaTarget(this.function);
-    
-    // Add permission for ALB to invoke Lambda
-    this.function.addPermission('AllowALBInvocation', {
-      principal: new iam.ServicePrincipal('elasticloadbalancing.amazonaws.com'),
-      action: 'lambda:InvokeFunction',
     });
     
     // Add outputs
