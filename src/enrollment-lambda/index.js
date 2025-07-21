@@ -169,8 +169,14 @@ exports.handler = async (event, context) => {
         
         const expireTimeInNZ = tokenExpirationDate.toLocaleTimeString('en-NZ', options);
         console.log('Token expires at: ' + expireTimeInNZ);
-        const reenrollTimeInNZ = reEnrollDate.toLocaleTimeString('en-NZ', options);
-        console.log('Re-enroll before: ' + reenrollTimeInNZ);
+        // Format reenroll time based on branding
+        let reenrollTime;
+        if (branding === 'tak-nz') {
+            reenrollTime = reEnrollDate.toLocaleTimeString('en-NZ', options) + ' NZT';
+        } else {
+            reenrollTime = reEnrollDate.toLocaleTimeString('en-US', { timeZone: 'UTC', ...options }) + ' UTC';
+        }
+        console.log('Re-enroll before: ' + reenrollTime);
 
         const tokenIdentifier = 'TAK-Enrollment-' + user.replace(/[@.]/g, "-") + '-' + randomString;
         console.log('Token Expiration: '+ tokenExpirationDate.toISOString());
@@ -270,7 +276,7 @@ exports.handler = async (event, context) => {
             itakQrcode: iTAKbase64QRCode,
             expire: expireTimeInNZ,
             expire_utc: tokenExpirationDate.toISOString(),
-            reenroll: reenrollTimeInNZ,
+            reenroll: reenrollTime,
             hide_enrollment_link: hide_enrollment_link,
             takRole: takRole,
             takColor: takColor,
