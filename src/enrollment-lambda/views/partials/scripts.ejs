@@ -1,0 +1,87 @@
+<script>
+// Tab functionality
+function openTab(tabName) {
+    // Hide all tab content
+    var tabContents = document.getElementsByClassName("tab-content");
+    for (var i = 0; i < tabContents.length; i++) {
+        tabContents[i].classList.remove("active");
+    }
+
+    // Remove active class from all tab buttons
+    var tabButtons = document.getElementsByClassName("tab-button");
+    for (var i = 0; i < tabButtons.length; i++) {
+        tabButtons[i].classList.remove("active");
+    }
+
+    // Show the selected tab content and mark button as active
+    document.getElementById(tabName).classList.add("active");
+    event.currentTarget.classList.add("active");
+}
+
+// Timer functionality
+function setupTimer(expirationTime) {
+    // Set the date we're counting down to
+    var countDownDate = new Date(expirationTime).getTime();
+    var timerElement = document.getElementById("timer");
+    var enrollLinkElement = document.getElementById("enroll_link");
+    
+    if (!timerElement) return;
+    
+    // Update the count down every 1 second
+    var x = setInterval(function() {
+        // Get today's date and time
+        var now = new Date().getTime();
+        
+        // Find the distance between now and the count down date
+        var distance = countDownDate - now;
+        
+        // Time calculations for minutes and seconds
+        var minutes = String(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+        var seconds = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
+        
+        // Output the result
+        timerElement.innerHTML = minutes + " : " + seconds;
+        
+        // Add warning classes as time gets closer to expiration
+        if (distance < 60000) { // Less than 1 minute
+            timerElement.className = "timer danger";
+        } else if (distance < 300000) { // Less than 5 minutes
+            timerElement.className = "timer warning";
+        }
+        
+        // If the count down is over, write some text 
+        if (distance < 0) {
+            clearInterval(x);
+            timerElement.innerHTML = "EXPIRED";
+            timerElement.className = "timer danger";
+            
+            if (enrollLinkElement) {
+                enrollLinkElement.innerHTML = "Enrollment link EXPIRED";
+            }
+        }
+    }, 1000);
+}
+
+// Add visual feedback when enrollment link is clicked
+function setupEnrollmentLink() {
+    var enrollButton = document.getElementById("enroll-button");
+    if (!enrollButton) return;
+    
+    enrollButton.addEventListener("click", function() {
+        this.textContent = "Opening...";
+        this.style.backgroundColor = "#27ae60";
+    });
+}
+
+// Initialize all functionality when DOM is loaded
+document.addEventListener("DOMContentLoaded", function() {
+    // Setup timer if expiration time exists
+    var expireUtc = document.getElementById("expire-utc");
+    if (expireUtc) {
+        setupTimer(expireUtc.getAttribute("data-time"));
+    }
+    
+    // Setup enrollment link
+    setupEnrollmentLink();
+});
+</script>
