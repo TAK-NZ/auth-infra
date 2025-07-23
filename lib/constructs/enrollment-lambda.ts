@@ -95,37 +95,18 @@ export class EnrollmentLambda extends Construct {
       resources: ['*']
     }));
     
-    // Create Lambda function using NodejsFunction
-    this.function = new nodejs.NodejsFunction(this, 'EnrollmentFunction', {
+    // Create Lambda function using regular Lambda construct
+    // This avoids the bundling issues with NodejsFunction
+    const enrollmentLambdaDir = path.join(__dirname, '../../src/enrollment-lambda');
+    
+    this.function = new lambda.Function(this, 'EnrollmentFunction', {
       functionName: `TAK-${props.stackName}-AuthInfra-enrollment`,
       runtime: lambda.Runtime.NODEJS_22_X,
-      entry: path.join(__dirname, '../../src/enrollment-lambda/index.js'),
-      handler: 'handler',
-      bundling: {
-        minify: true,
-        sourceMap: true,
-        target: 'node22',
-        externalModules: ['aws-sdk'], // AWS SDK is available in the Lambda runtime
-        forceDockerBundling: false, // Force local bundling
-        commandHooks: {
-          beforeBundling(inputDir: string, outputDir: string): string[] {
-            return [];
-          },
-          beforeInstall(inputDir: string, outputDir: string): string[] {
-            return [];
-          },
-          afterBundling(inputDir: string, outputDir: string): string[] {
-            const enrollmentLambdaDir = path.join(__dirname, '../../src/enrollment-lambda');
-            return [
-              // Copy the views directory and all its contents
-              `mkdir -p ${outputDir}/views`,
-              `cp -r ${path.join(enrollmentLambdaDir, 'views')}/* ${outputDir}/views/`,
-              // Copy any other files that might be needed
-              `find ${enrollmentLambdaDir} -maxdepth 1 -type f -not -name "index.js" -not -name "index-simple.js" -exec cp {} ${outputDir}/ ';'`
-            ];
-          },
-        },
-      },
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(enrollmentLambdaDir, {
+        // Exclude unnecessary files
+        exclude: ['*.ts', '*.map', 'node_modules/.bin/*']
+      }),
       role: enrollmentLambdaRole,
       environment: {
         AUTHENTIK_API_TOKEN_SECRET_ARN: authentikAdminSecret.secretArn,

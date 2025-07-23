@@ -3,41 +3,138 @@ const https = require('https');
 const crypto = require('crypto');
 const QRCode = require('qrcode');
 const ejs = require('ejs');
-const fs = require('fs');
 const path = require('path');
+
+// Configuration constants
+const CONFIG = {
+  TOKEN_EXPIRATION_MINUTES: 30,
+  REENROLL_DAYS: 365,
+  FORM_SUBMIT_DELAY_MS: 500,
+  DEFAULT_BRANDING: 'generic'
+};
+
+// Helper function declarations at the top for better readability
+async function getAuthToken() {
+  try {
+    const secretsManager = new SecretsManagerClient();
+    const secretArn = process.env.AUTHENTIK_API_TOKEN_SECRET_ARN;
+    
+    if (!secretArn) {
+      throw new Error('AUTHENTIK_API_TOKEN_SECRET_ARN environment variable is not set');
+    }
+    
+    const command = new GetSecretValueCommand({ SecretId: secretArn });
+    const response = await secretsManager.send(command);
+    
+    if (!response.SecretString) {
+      throw new Error('Secret value is empty');
+    }
+    
+    try {
+      // Try to parse as JSON
+      const secret = JSON.parse(response.SecretString);
+      return secret.token || response.SecretString;
+    } catch (e) {
+      // If not valid JSON, use the raw string
+      return response.SecretString;
+    }
+  } catch (error) {
+    console.error('Error retrieving Authentik API token');
+    throw error;
+  }
+}
+
+async function httpRequest(url, method, headers, data = null) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    
+    const options = {
+      hostname: urlObj.hostname,
+      path: urlObj.pathname + urlObj.search,
+      port: urlObj.port || 443,
+      method: method,
+      headers: headers
+    };
+    
+    const req = https.request(options, (res) => {
+      let responseData = '';
+
+      res.on('data', (chunk) => {
+        responseData += chunk;
+      });
+
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve({
+            statusCode: res.statusCode,
+            headers: res.headers,
+            data: responseData,
+          });
+        } else {
+          reject({
+            statusCode: res.statusCode,
+            headers: res.headers,
+            data: responseData,
+          });
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    if (data) {
+      const jsonData = JSON.stringify(data);
+      req.write(jsonData);
+    }
+    req.end();
+  });
+}
+
+async function getApi(url, headers) {
+  return httpRequest(url, 'GET', headers);
+}
+
+async function postApi(url, data, headers) {
+  return httpRequest(url, 'POST', headers, data);
+}
+
+async function generateBase64QRCode(text) {
+  try {
+    return await QRCode.toDataURL(text);
+  } catch (error) {
+    console.error("Error generating QR code");
+    throw error;
+  }
+}
+
+function generateRandomString(length) {
+  return crypto.randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
+}
+
+function escapeHtml(unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 console.log('Loading enrollment function');
 
+/**
+ * Main Lambda handler function
+ */
 exports.handler = async (event, context) => {
     // Check if this is the initial request or the actual data request
     const isDataRequest = (event.queryStringParameters && event.queryStringParameters.load === 'true' && event.httpMethod === 'POST') || 
                          (event.body && event.body.includes('load=true') && event.httpMethod === 'POST');
     try {
-        console.log('Event: ' + JSON.stringify(event));
-        console.log('Headers: ' + JSON.stringify(event.headers || {}));
-        
-        // Check if this is an ALB request with OIDC authentication
-        let oidcData = event.headers ? event.headers['x-amzn-oidc-data'] : null;
-        
-        // For POST requests, also check the body for OIDC data
-        if (!oidcData && event.httpMethod === 'POST' && event.body) {
-            try {
-                // Try to parse the body as form data
-                const formData = new URLSearchParams(event.body);
-                oidcData = formData.get('x-amzn-oidc-data');
-                
-                // If we found OIDC data in the body, add it to the headers for later use
-                if (oidcData) {
-                    event.headers = event.headers || {};
-                    event.headers['x-amzn-oidc-data'] = oidcData;
-                }
-            } catch (e) {
-                console.error('Error parsing form data:', e);
-            }
-        }
-        
+        // Extract and validate OIDC data
+        const oidcData = extractOidcData(event);
         if (!oidcData) {
-            console.error('Missing OIDC data in request');
             return {
                 statusCode: 400,
                 body: 'Bad Request: Missing OIDC authentication data',
@@ -45,9 +142,8 @@ exports.handler = async (event, context) => {
             };
         }
         
-        // Accept requests to root path or the OAuth2 callback path
-        if (event.path !== '/' && event.path !== undefined && event.path !== '/oauth2/idpresponse') {
-            console.log('Request not for a supported path: ' + event.path);
+        // Validate request path
+        if (!isValidPath(event.path)) {
             return {
                 statusCode: 404,
                 body: 'Not Found',
@@ -57,289 +153,22 @@ exports.handler = async (event, context) => {
         
         // If this is the initial request, return the loading page immediately
         if (!isDataRequest) {
-            console.log('Initial request - returning loading page');
-            
-            // Get branding from environment variables
-            const branding = process.env.BRANDING || 'generic';
-            
-            // Store the OIDC data for the second request
-            const oidcData = event.headers['x-amzn-oidc-data'];
-            
-            const loaderPath = path.join(__dirname, 'views/loader.ejs');
-            
-            const loadingData = {
-                title: 'Loading Enrollment',
-                heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
-                footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
-                branding: branding,
-                oidcData: oidcData,
-                customScripts: `
-                    // Immediately execute when DOM is ready
-                    document.addEventListener('DOMContentLoaded', function() {
-                        console.log('DOM loaded, submitting form...');
-                        
-                        // Get the OIDC data directly from the variable passed to the template
-                        const oidcData = '${oidcData}';
-                        
-                        if (oidcData) {
-                            // Create a form to submit the OIDC data
-                            const form = document.createElement('form');
-                            form.method = 'POST';
-                            form.action = window.location.href + '?load=true';
-                            
-                            // Add the OIDC data as a hidden field
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'x-amzn-oidc-data';
-                            input.value = oidcData;
-                            form.appendChild(input);
-                            
-                            // Add the form to the document and submit it
-                            document.body.appendChild(form);
-                            setTimeout(function() {
-                                form.submit();
-                            }, 500); // Small delay to ensure DOM is fully ready
-                        } else {
-                            console.error('No OIDC data found');
-                            document.querySelector('.loading-container p').textContent = 'Error: Authentication data not found';
-                        }
-                    });
-                `
-            };
-            
-            const renderedHTML = ejs.renderFile(loaderPath, loadingData, { async: false });
-            
-            return {
-                statusCode: 200,
-                isBase64Encoded: false,
-                headers: {
-                    "Content-Type": "text/html"
-                },
-                body: await renderedHTML,
-            };
+            return await handleInitialRequest(oidcData);
         }
         
         // For data requests, continue with the full processing
         console.log('Data request - processing enrollment');
-        console.log('HTTP Method:', event.httpMethod);
-        console.log('Query Parameters:', JSON.stringify(event.queryStringParameters));
-        console.log('Headers:', JSON.stringify(event.headers));
-
-        // Get configuration from environment variables
-        const takServer = process.env.TAK_SERVER_DOMAIN;
-        const apiHost = process.env.AUTHENTIK_API_ENDPOINT;
-        const branding = process.env.BRANDING || 'generic';
         
-        console.log('TAK Server Domain:', takServer);
-        console.log('Authentik API Endpoint:', apiHost);
-        console.log('Branding:', branding);
-        
-        // Get the auth token from Secrets Manager
-        const auth_token = await getAuthToken();
-        
-        // Extract user information from the OIDC token
-        const decodedToken = JSON.parse(Buffer.from(
-            event.headers['x-amzn-oidc-data'].split('.')[1], 
-            'base64'
-        ).toString());
-        
-        const device_platform = event.headers['sec-ch-ua-platform'];
-        const user = decodedToken.preferred_username || decodedToken.email;
-        
-        const randomString = generateRandomString(16);
-        const now = new Date();
-        const tokenExpirationDate = new Date(now.getTime() + 30 * 60 * 1000); // Add 30 minutes
-        const reEnrollDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // Add 365 days
-
-        // Hide enrollment link on non-Android devices
-        let hide_enrollment_link = '';
-        if (device_platform !== '"Android"') {
-            hide_enrollment_link = ' hidden ';
-        }
-
-        const options = {
-            timeZone: 'Pacific/Auckland',
-            hour12: false,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        };
-        
-        const expireTimeInNZ = tokenExpirationDate.toLocaleTimeString('en-NZ', options);
-        console.log('Token expires at: ' + expireTimeInNZ);
-        // Format reenroll time based on branding
-        let reenrollTime;
-        if (branding === 'tak-nz') {
-            reenrollTime = reEnrollDate.toLocaleTimeString('en-NZ', options) + ' NZT';
-        } else {
-            reenrollTime = reEnrollDate.toLocaleTimeString('en-US', { timeZone: 'UTC', ...options }) + ' UTC';
-        }
-        console.log('Re-enroll before: ' + reenrollTime);
-
-        const tokenIdentifier = 'TAK-Enrollment-' + user.replace(/[@.]/g, "-") + '-' + randomString;
-        console.log('Token Expiration: '+ tokenExpirationDate.toISOString());
-        console.log('User: ' + user);
-
-        const requestHeaders = {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + auth_token, 
-        };
-        
-        // Get user ID from Authentik
-        // Ensure apiHost doesn't end with a slash
-        const apiHostNormalized = apiHost.endsWith('/') ? apiHost.slice(0, -1) : apiHost;
-        const userUrl = `${apiHostNormalized}/api/v3/core/users/?username=${encodeURIComponent(user)}`;
-        console.log('User API URL:', userUrl);
-        
-        const userIdResponse = await getApi(userUrl, requestHeaders);
-        console.log('User API Response Status:', userIdResponse.statusCode);
-        const userIdData = JSON.parse(userIdResponse.data);
-        
-        if (!userIdData.results || userIdData.results.length === 0) {
-            throw new Error(`User ${user} not found in Authentik`);
-        }
-        
-        const userId = userIdData.results[0].pk;
-        console.log('User ID: ' + userId);
-        
-        // Get TAK attributes
-        let takCallsign = 'None';
-        try {
-            takCallsign = userIdData.results[0].attributes.takCallsign;
-            if (takCallsign === 'undefined' || takCallsign === undefined) takCallsign = 'None';
-        } catch (e) {
-            console.log('TAK Callsign not found, using default');
-            takCallsign = 'None';
-        } 
-        console.log('TAK Callsign: ' + takCallsign);
-        
-        let takColor = 'None';
-        try {
-            takColor = userIdData.results[0].attributes.takColor;
-            if (takColor === 'undefined' || takColor === undefined) takColor = 'None';
-        } catch (e) {
-            console.log('TAK Color not found, using default');
-            takColor = 'None';
-        } 
-        console.log('TAK Color: ' + takColor);
-        
-        let takRole = 'None';
-        try {
-            takRole = userIdData.results[0].attributes.takRole;
-            if (takRole === 'undefined' || takRole === undefined) takRole = 'None';
-        } catch (e) {
-            console.log('TAK Role not found, using default');
-            takRole = 'None';
-        } 
-        console.log('TAK Role: ' + takRole);
-
-        // Create enrollment token
-        const requestData = {
-            identifier: tokenIdentifier,
-            intent: 'app_password',
-            user: userId,
-            description: 'ATAK enrollment token',
-            expires: tokenExpirationDate.toISOString(),
-            expiring: true
-        };
-
-        const tokenUrl = `${apiHostNormalized}/api/v3/core/tokens/`;
-        console.log('Token API URL:', tokenUrl);
-        await putApi(tokenUrl, requestData, requestHeaders);
-
-        // Get the token key
-        const appPasswordUrl = `${apiHostNormalized}/api/v3/core/tokens/${tokenIdentifier}/view_key/`;
-        console.log('App Password API URL:', appPasswordUrl);
-        const app_password = await getApi(appPasswordUrl, requestHeaders);
-        const tokenKey = JSON.parse(app_password.data).key;
-
-        // Generate QR codes
-        const ATAKqrCodeData = 'tak://com.atakmap.app/enroll?host=' + takServer + '&username=' + user + '&token=' + tokenKey;
-        const ATAKbase64QRCode = await generateBase64QRCode(ATAKqrCodeData);
-
-        const iTAKqrCodeData = takServer + ',' + takServer + '8089,ssl';
-        const iTAKbase64QRCode = await generateBase64QRCode(iTAKqrCodeData);
-
-        // Prepare template data
-        const data = {
-            title: 'Device Enrollment',
-            heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
-            footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
-            branding: branding,
-            server: takServer,
-            user: user,
-            token: tokenKey,
-            link: ATAKqrCodeData,
-            atakQrcode: ATAKbase64QRCode,
-            itakQrcode: iTAKbase64QRCode,
-            expire: expireTimeInNZ,
-            expire_utc: tokenExpirationDate.toISOString(),
-            reenroll: reenrollTime,
-            hide_enrollment_link: hide_enrollment_link,
-            takRole: takRole,
-            takColor: takColor,
-            takCallsign: takCallsign
-        };
-        
-        // Add countdown timer script to data
-        data.customScripts = `
-            // Set the date we're counting down to
-            var countDownDate = new Date("${data.expire_utc}").getTime();
-
-            // Update the count down every 1 second
-            var x = setInterval(function() {
-                // Get today's date and time
-                var now = new Date().getTime();
-                
-                // Find the distance between now and the count down date
-                var distance = countDownDate - now;
-                
-                // Time calculations for days, hours, minutes and seconds
-                var days = String(Math.floor(distance / (1000 * 60 * 60 * 24))).padStart(2, '0');
-                var hours = String(Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
-                var minutes = String(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
-                var seconds = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
-                
-                // Output the result in an element with id="timer"
-                document.getElementById("timer").innerHTML =  minutes + " : " + seconds;
-                
-                // If the count down is over, write some text 
-                if (distance < 0) {
-                    clearInterval(x);
-                    document.getElementById("timer").innerHTML = "EXPIRED";
-                    document.getElementById("enroll_link").innerHTML = "Enrollment link EXPIRED";
-                }
-            }, 1000);
-        `;
-        
-        // Use the content.ejs template
-        const contentPath = path.join(__dirname, 'views/content.ejs');
-        
-        // Render the final HTML - use sync rendering to avoid Promise issues
-        const renderedHTML = ejs.renderFile(contentPath, data, { async: false });
-
-        // Return the response
-        return {
-            statusCode: 200,
-            isBase64Encoded: false,
-            headers: {
-                "Content-Type": "text/html"
-            },
-            body: await renderedHTML,
-        };
-    }
-    catch (e) {
+        // Process the enrollment request
+        return await handleEnrollmentRequest(oidcData, event.headers);
+    } catch (e) {
         console.error('Error in handler:', e);
         
         // If the error is from an API call, include more details
         if (e.statusCode && e.data) {
-            console.error(`API Error Status: ${e.statusCode}`);
-            console.error(`API Error Data: ${e.data}`);
             return {
                 statusCode: e.statusCode,
-                body: `API Error: ${e.statusCode}\n${e.data}`,
+                body: `API Error: ${e.statusCode}`,
                 headers: { 'Content-Type': 'text/plain' }
             };
         }
@@ -352,158 +181,292 @@ exports.handler = async (event, context) => {
     }
 };
 
-// Get authentication token from Secrets Manager
-async function getAuthToken() {
-    try {
-        const secretsManager = new SecretsManagerClient();
-        const secretArn = process.env.AUTHENTIK_API_TOKEN_SECRET_ARN;
-        
-        if (!secretArn) {
-            throw new Error('AUTHENTIK_API_TOKEN_SECRET_ARN environment variable is not set');
-        }
-        
-        console.log('Getting Authentik API token from Secrets Manager');
-        const command = new GetSecretValueCommand({ SecretId: secretArn });
-        const response = await secretsManager.send(command);
-        
-        if (!response.SecretString) {
-            throw new Error('Secret value is empty');
-        }
-        
+/**
+ * Extract OIDC data from the event
+ */
+function extractOidcData(event) {
+    let oidcData = event.headers ? event.headers['x-amzn-oidc-data'] : null;
+    
+    // For POST requests, also check the body for OIDC data
+    if (!oidcData && event.httpMethod === 'POST' && event.body) {
         try {
-            // Try to parse as JSON
-            const secret = JSON.parse(response.SecretString);
-            return secret.token || response.SecretString;
+            // Try to parse the body as form data
+            const formData = new URLSearchParams(event.body);
+            oidcData = formData.get('x-amzn-oidc-data');
+            
+            // If we found OIDC data in the body, add it to the headers for later use
+            if (oidcData) {
+                event.headers = event.headers || {};
+                event.headers['x-amzn-oidc-data'] = oidcData;
+            }
         } catch (e) {
-            // If not valid JSON, use the raw string
-            return response.SecretString;
+            console.error('Error parsing form data');
         }
-    } catch (error) {
-        console.error('Error retrieving Authentik API token:', error);
-        throw error;
     }
+    
+    return oidcData;
 }
 
-// HTTP GET request
-async function getApi(url, headers) {
-    return new Promise((resolve, reject) => {
-        console.log(`Making GET request to: ${url}`);
-        console.log('Headers:', JSON.stringify(headers));
-        
-        // Parse the URL to extract hostname and path
-        const urlObj = new URL(url);
-        
-        const options = {
-            hostname: urlObj.hostname,
-            path: urlObj.pathname + urlObj.search,
-            port: urlObj.port || 443,
-            method: 'GET',
-            headers: headers
-        };
-        
-        console.log('Request options:', JSON.stringify(options));
-        
-        const req = https.request(options, (res) => {
-            let data = '';
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
-  
-            res.on('end', () => {
-                console.log(`Response status: ${res.statusCode}`);
-                if (res.statusCode >= 200 && res.statusCode < 300) {
-                    resolve({
-                        statusCode: res.statusCode,
-                        headers: res.headers,
-                        data: data,
-                    });
-                } else {
-                    console.error(`API Error: ${res.statusCode}`);
-                    console.error(`Response data: ${data}`);
-                    reject({
-                        statusCode: res.statusCode,
-                        headers: res.headers,
-                        data: data,
-                    });
-                }
-            });
-        });
-  
-        req.on('error', (error) => {
-            console.error(`Request error: ${error.message}`);
-            reject(error);
-        });
-  
-        req.end();
-    });
+/**
+ * Validate if the request path is supported
+ */
+function isValidPath(path) {
+    return path === '/' || path === undefined || path === '/oauth2/idpresponse';
 }
 
-// HTTP POST request
-async function putApi(url, data, headers) {
-    return new Promise((resolve, reject) => {
-        console.log(`Making POST request to: ${url}`);
-        console.log('Request data:', JSON.stringify(data));
-        console.log('Headers:', JSON.stringify(headers));
-        
-        // Parse the URL to extract hostname and path
-        const urlObj = new URL(url);
-        
-        const options = {
-            hostname: urlObj.hostname,
-            path: urlObj.pathname + urlObj.search,
-            port: urlObj.port || 443,
-            method: 'POST',
-            headers: headers
-        };
-        
-        console.log('Request options:', JSON.stringify(options));
-        
-        const req = https.request(options, (res) => {
-            let responseData = '';
-  
-            res.on('data', (chunk) => {
-                responseData += chunk;
+/**
+ * Handle the initial request by returning a loading page
+ */
+async function handleInitialRequest(oidcData) {
+    console.log('Initial request - returning loading page');
+    
+    // Get branding from environment variables
+    const branding = process.env.BRANDING || CONFIG.DEFAULT_BRANDING;
+    
+    const loaderPath = path.join(__dirname, 'views/loader.ejs');
+    
+    // Escape the OIDC data to prevent XSS
+    const escapedOidcData = escapeHtml(oidcData);
+    
+    const loadingData = {
+        title: 'Loading Enrollment',
+        heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
+        footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
+        branding: branding,
+        oidcData: escapedOidcData,
+        customScripts: `
+            // Immediately execute when DOM is ready
+            document.addEventListener('DOMContentLoaded', function() {
+                // Create a form to submit the OIDC data
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = window.location.href + '?load=true';
+                
+                // Add the OIDC data as a hidden field
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'x-amzn-oidc-data';
+                input.value = "${escapedOidcData}";
+                form.appendChild(input);
+                
+                // Add the form to the document and submit it
+                document.body.appendChild(form);
+                setTimeout(function() {
+                    form.submit();
+                }, ${CONFIG.FORM_SUBMIT_DELAY_MS});
             });
-  
-            res.on('end', () => {
-                console.log(`Response status: ${res.statusCode}`);
-                if (res.statusCode >= 200 && res.statusCode < 300) {
-                    resolve({
-                        statusCode: res.statusCode,
-                        body: responseData,
-                        headers: res.headers,
-                    });
-                } else {
-                    console.error(`API Error: ${res.statusCode}`);
-                    console.error(`Response data: ${responseData}`);
-                    reject(new Error(`Request failed with status code ${res.statusCode}: ${responseData}`));
-                }
-            });
-        });
-  
-        req.on('error', (error) => {
-            console.error(`Request error: ${error.message}`);
-            reject(error);
-        });
-  
-        const jsonData = JSON.stringify(data);
-        req.write(jsonData);
-        req.end();
-    });
-}
-
-// Generate QR code
-async function generateBase64QRCode(text) {
+        `
+    };
+    
     try {
-        const qrCodeDataURL = await QRCode.toDataURL(text);
-        return qrCodeDataURL;
+        const renderedHTML = await ejs.renderFile(loaderPath, loadingData);
+        
+        return {
+            statusCode: 200,
+            isBase64Encoded: false,
+            headers: {
+                "Content-Type": "text/html"
+            },
+            body: renderedHTML,
+        };
     } catch (error) {
-        console.error("Error generating QR code:", error);
+        console.error('Error rendering loading page');
         throw error;
     }
 }
 
-// Generate random string
-function generateRandomString(length) {
-    return crypto.randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
+/**
+ * Handle the enrollment request
+ */
+async function handleEnrollmentRequest(oidcData, headers) {
+    // Get configuration from environment variables
+    const takServer = process.env.TAK_SERVER_DOMAIN;
+    const apiHost = process.env.AUTHENTIK_API_ENDPOINT;
+    const branding = process.env.BRANDING || CONFIG.DEFAULT_BRANDING;
+    
+    if (!takServer || !apiHost) {
+        throw new Error('Missing required environment variables');
+    }
+    
+    // Get the auth token from Secrets Manager
+    const auth_token = await getAuthToken();
+    
+    // Extract user information from the OIDC token
+    const decodedToken = JSON.parse(Buffer.from(
+        oidcData.split('.')[1], 
+        'base64'
+    ).toString());
+    
+    const device_platform = headers['sec-ch-ua-platform'];
+    const user = decodedToken.preferred_username || decodedToken.email;
+    
+    const randomString = generateRandomString(16);
+    const now = new Date();
+    const tokenExpirationDate = new Date(now.getTime() + CONFIG.TOKEN_EXPIRATION_MINUTES * 60 * 1000);
+    const reEnrollDate = new Date(now.getTime() + CONFIG.REENROLL_DAYS * 24 * 60 * 60 * 1000);
+
+    // Hide enrollment link on non-Android devices
+    const hide_enrollment_link = device_platform !== '"Android"' ? ' hidden ' : '';
+
+    const dateOptions = {
+        timeZone: 'Pacific/Auckland',
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+    
+    const expireTimeInNZ = tokenExpirationDate.toLocaleTimeString('en-NZ', dateOptions);
+    
+    // Format reenroll time based on branding
+    const reenrollTime = branding === 'tak-nz' 
+        ? reEnrollDate.toLocaleTimeString('en-NZ', dateOptions) + ' NZT'
+        : reEnrollDate.toLocaleTimeString('en-US', { timeZone: 'UTC', ...dateOptions }) + ' UTC';
+
+    const tokenIdentifier = `TAK-Enrollment-${user.replace(/[@.]/g, "-")}-${randomString}`;
+
+    const requestHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${auth_token}`, 
+    };
+    
+    // Get user ID from Authentik
+    const apiHostNormalized = apiHost.endsWith('/') ? apiHost.slice(0, -1) : apiHost;
+    const userUrl = `${apiHostNormalized}/api/v3/core/users/?username=${encodeURIComponent(user)}`;
+    
+    const userIdResponse = await getApi(userUrl, requestHeaders);
+    const userIdData = JSON.parse(userIdResponse.data);
+        
+    if (!userIdData.results || userIdData.results.length === 0) {
+        throw new Error(`User ${user} not found in Authentik`);
+    }
+    
+    const userId = userIdData.results[0].pk;
+    
+    // Extract TAK attributes with default fallbacks
+    const userData = userIdData.results[0];
+    const userAttributes = userData.attributes || {};
+    
+    const takAttributes = {
+        takCallsign: extractAttribute(userAttributes, 'takCallsign'),
+        takColor: extractAttribute(userAttributes, 'takColor'),
+        takRole: extractAttribute(userAttributes, 'takRole')
+    };
+    
+    // Create enrollment token
+    const requestData = {
+        identifier: tokenIdentifier,
+        intent: 'app_password',
+        user: userId,
+        description: 'ATAK enrollment token',
+        expires: tokenExpirationDate.toISOString(),
+        expiring: true
+    };
+
+    const tokenUrl = `${apiHostNormalized}/api/v3/core/tokens/`;
+    await postApi(tokenUrl, requestData, requestHeaders);
+
+    // Get the token key
+    const appPasswordUrl = `${apiHostNormalized}/api/v3/core/tokens/${tokenIdentifier}/view_key/`;
+    const app_password = await getApi(appPasswordUrl, requestHeaders);
+    const tokenKey = JSON.parse(app_password.data).key;
+
+    // Generate QR codes in parallel
+    const ATAKqrCodeData = `tak://com.atakmap.app/enroll?host=${takServer}&username=${user}&token=${tokenKey}`;
+    const iTAKqrCodeData = `${takServer},${takServer}8089,ssl`;
+    
+    const [ATAKbase64QRCode, iTAKbase64QRCode] = await Promise.all([
+        generateBase64QRCode(ATAKqrCodeData),
+        generateBase64QRCode(iTAKqrCodeData)
+    ]);
+
+    // Prepare template data
+    const data = {
+        title: 'Device Enrollment',
+        heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
+        footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
+        branding: branding,
+        server: takServer,
+        user: user,
+        token: tokenKey,
+        link: ATAKqrCodeData,
+        atakQrcode: ATAKbase64QRCode,
+        itakQrcode: iTAKbase64QRCode,
+        expire: expireTimeInNZ,
+        expire_utc: tokenExpirationDate.toISOString(),
+        reenroll: reenrollTime,
+        hide_enrollment_link: hide_enrollment_link,
+        takRole: takAttributes.takRole,
+        takColor: takAttributes.takColor,
+        takCallsign: takAttributes.takCallsign,
+        customScripts: generateCountdownScript(tokenExpirationDate.toISOString())
+    };
+    
+    // Use the content.ejs template
+    const contentPath = path.join(__dirname, 'views/content.ejs');
+    
+    try {
+        // Render the final HTML
+        const renderedHTML = await ejs.renderFile(contentPath, data);
+
+        // Return the response
+        return {
+            statusCode: 200,
+            isBase64Encoded: false,
+            headers: {
+                "Content-Type": "text/html"
+            },
+            body: renderedHTML,
+        };
+    } catch (error) {
+        console.error('Error rendering enrollment page');
+        throw error;
+    }
+}
+
+/**
+ * Extract an attribute with a default fallback
+ */
+function extractAttribute(attributes, attributeName, defaultValue = 'None') {
+    try {
+        const value = attributes[attributeName];
+        return (value === undefined || value === 'undefined') ? defaultValue : value;
+    } catch (e) {
+        return defaultValue;
+    }
+}
+
+/**
+ * Generate the countdown timer script
+ */
+function generateCountdownScript(expirationTime) {
+    return `
+        // Set the date we're counting down to
+        var countDownDate = new Date("${expirationTime}").getTime();
+
+        // Update the count down every 1 second
+        var x = setInterval(function() {
+            // Get today's date and time
+            var now = new Date().getTime();
+            
+            // Find the distance between now and the count down date
+            var distance = countDownDate - now;
+            
+            // Time calculations for minutes and seconds
+            var minutes = String(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+            var seconds = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
+            
+            // Output the result in an element with id="timer"
+            document.getElementById("timer").innerHTML = minutes + " : " + seconds;
+            
+            // If the count down is over, write some text 
+            if (distance < 0) {
+                clearInterval(x);
+                document.getElementById("timer").innerHTML = "EXPIRED";
+                document.getElementById("enroll_link").innerHTML = "Enrollment link EXPIRED";
+            }
+        }, 1000);
+    `;
 }
