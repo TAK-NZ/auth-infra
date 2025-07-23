@@ -1,0 +1,19 @@
+<%- include('partials/header') %>
+
+<div class="error-container" style="height: auto; margin: 30px 0; text-align: center;">
+    <div class="error-icon" style="margin-bottom: 20px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+    </div>
+    <h2 style="color: #e74c3c; margin-bottom: 15px;">Error</h2>
+    <p style="font-weight: bold; margin-bottom: 15px;"><%= errorMessage %></p>
+    <p style="margin-bottom: 20px;"><%= errorDetails %></p>
+    <div class="actions" style="margin-top: 20px;">
+        <a href="/" class="button" style="display: inline-block; padding: 10px 20px; background-color: #3498db; color: white; text-decoration: none; border-radius: 4px;">Try Again</a>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

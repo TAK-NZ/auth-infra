@@ -93,11 +93,21 @@ async function httpRequest(url, method, headers, data = null) {
 }
 
 async function getApi(url, headers) {
-  return httpRequest(url, 'GET', headers);
+  try {
+    return await httpRequest(url, 'GET', headers);
+  } catch (error) {
+    console.error(`GET request to ${url} failed:`, error.statusCode || error.message);
+    throw error;
+  }
 }
 
 async function postApi(url, data, headers) {
-  return httpRequest(url, 'POST', headers, data);
+  try {
+    return await httpRequest(url, 'POST', headers, data);
+  } catch (error) {
+    console.error(`POST request to ${url} failed:`, error.statusCode || error.message);
+    throw error;
+  }
 }
 
 async function generateBase64QRCode(text) {
@@ -164,20 +174,65 @@ exports.handler = async (event, context) => {
     } catch (e) {
         console.error('Error in handler:', e);
         
+        // Prepare error data for the template
+        let errorMessage = 'An error occurred during enrollment';
+        let errorDetails = 'Please try again later or contact support.';
+        let statusCode = 500;
+        
         // If the error is from an API call, include more details
         if (e.statusCode && e.data) {
+            statusCode = e.statusCode;
+            errorMessage = `API Error (${e.statusCode})`;
+            try {
+                // Try to parse the API error data for more details
+                const errorData = JSON.parse(e.data);
+                if (errorData.detail) {
+                    errorDetails = errorData.detail;
+                } else if (errorData.message) {
+                    errorDetails = errorData.message;
+                }
+            } catch {
+                errorDetails = 'Error communicating with authentication service';
+            }
+        } else if (e.message) {
+            // Use the error message if available
+            errorDetails = e.message;
+        }
+        
+        try {
+            // Get branding from environment variables
+            const branding = process.env.BRANDING || CONFIG.DEFAULT_BRANDING;
+            
+            const errorPath = path.join(__dirname, 'views/error.ejs');
+            
+            const errorData = {
+                title: 'Enrollment Error',
+                heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
+                footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
+                branding: branding,
+                errorMessage: errorMessage,
+                errorDetails: errorDetails
+            };
+            
+            const renderedHTML = await ejs.renderFile(errorPath, errorData);
+            
             return {
-                statusCode: e.statusCode,
-                body: `API Error: ${e.statusCode}`,
+                statusCode: statusCode,
+                isBase64Encoded: false,
+                headers: {
+                    "Content-Type": "text/html"
+                },
+                body: renderedHTML,
+            };
+        } catch (renderError) {
+            // Fallback if rendering the error page fails
+            console.error('Error rendering error page:', renderError);
+            return {
+                statusCode: 500,
+                body: 'Internal Server Error: ' + e.message,
                 headers: { 'Content-Type': 'text/plain' }
             };
         }
-        
-        return {
-            statusCode: 500,
-            body: 'Internal Server Error: ' + e.message,
-            headers: { 'Content-Type': 'text/plain' }
-        };
     }
 };
 
@@ -432,8 +487,9 @@ async function handleEnrollmentRequest(oidcData, headers) {
 function extractAttribute(attributes, attributeName, defaultValue = 'None') {
     try {
         const value = attributes[attributeName];
-        return (value === undefined || value === 'undefined') ? defaultValue : value;
+        return (value === undefined || value === 'undefined' || value === null) ? defaultValue : value;
     } catch (e) {
+        console.error(`Error extracting attribute ${attributeName}:`, e.message);
         return defaultValue;
     }
 }
