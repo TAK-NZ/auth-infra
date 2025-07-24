@@ -115,10 +115,12 @@ export class EnrollmentLambda extends Construct {
       description: 'TAK Device Enrollment Lambda',
       bundling: {
         commandHooks: {
+          beforeBundling(inputDir: string, outputDir: string): string[] {
+            return [`cd ${inputDir} && npm ci`];
+          },
           afterBundling(inputDir: string, outputDir: string): string[] {
             return [`cp -r ${enrollmentLambdaDir}/views ${outputDir}/`];
           },
-          beforeBundling(): string[] { return []; },
           beforeInstall(): string[] { return []; }
         }
       }
