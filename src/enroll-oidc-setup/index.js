@@ -610,10 +610,20 @@ async function getOidcConfiguration(authentikUrl, applicationSlug) {
 // Helper function to handle DELETE requests
 async function handleDelete(api, resourceProperties, physicalResourceId) {
   try {
-    const providerName = resourceProperties.PROVIDER_NAME;
-    const applicationSlug = resourceProperties.APPLICATION_SLUG || resourceProperties.APPLICATION_NAME?.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    // Get values from environment variables (primary source)
+    // Also check resourceProperties as fallback (though they're not set in our case)
+    const providerName = process.env.PROVIDER_NAME || resourceProperties.PROVIDER_NAME;
+    const applicationName = process.env.APPLICATION_NAME || resourceProperties.APPLICATION_NAME;
+    const applicationSlug = process.env.APPLICATION_SLUG || 
+                           resourceProperties.APPLICATION_SLUG || 
+                           applicationName?.toLowerCase().replace(/[^a-z0-9]/g, '-');
     
     console.log(`Cleaning up provider: ${providerName}, application: ${applicationSlug}`);
+    console.log('Environment variables:', {
+      PROVIDER_NAME: process.env.PROVIDER_NAME ? '***' : undefined,
+      APPLICATION_NAME: process.env.APPLICATION_NAME ? '***' : undefined,
+      APPLICATION_SLUG: process.env.APPLICATION_SLUG ? '***' : undefined
+    });
     
     // Delete application first
     if (applicationSlug) {
