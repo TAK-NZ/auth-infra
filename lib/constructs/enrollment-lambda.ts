@@ -95,18 +95,14 @@ export class EnrollmentLambda extends Construct {
       resources: ['*']
     }));
     
-    // Create Lambda function using regular Lambda construct
-    // This avoids the bundling issues with NodejsFunction
+    // Create Lambda function using NodejsFunction for automatic bundling
     const enrollmentLambdaDir = path.join(__dirname, '../../src/enrollment-lambda');
     
-    this.function = new lambda.Function(this, 'EnrollmentFunction', {
+    this.function = new nodejs.NodejsFunction(this, 'EnrollmentFunction', {
       functionName: `TAK-${props.stackName}-AuthInfra-enrollment`,
       runtime: lambda.Runtime.NODEJS_22_X,
-      handler: 'index.handler',
-      code: lambda.Code.fromAsset(enrollmentLambdaDir, {
-        // Exclude unnecessary files
-        exclude: ['*.ts', '*.map', 'node_modules/.bin/*']
-      }),
+      entry: path.join(enrollmentLambdaDir, 'index.js'),
+      handler: 'handler',
       role: enrollmentLambdaRole,
       environment: {
         AUTHENTIK_API_TOKEN_SECRET_ARN: authentikAdminSecret.secretArn,
@@ -116,7 +112,16 @@ export class EnrollmentLambda extends Construct {
       },
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
-      description: 'TAK Device Enrollment Lambda'
+      description: 'TAK Device Enrollment Lambda',
+      bundling: {
+        commandHooks: {
+          afterBundling(inputDir: string, outputDir: string): string[] {
+            return [`cp -r ${enrollmentLambdaDir}/views ${outputDir}/`];
+          },
+          beforeBundling(): string[] { return []; },
+          beforeInstall(): string[] { return []; }
+        }
+      }
     });
     
     // Add outputs

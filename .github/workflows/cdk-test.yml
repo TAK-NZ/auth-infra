@@ -44,6 +44,12 @@ jobs:
       - name: Install CDK package dependencies
         run: npm ci  # Use npm ci for faster, reliable installs
 
+      - name: Install Lambda dependencies
+        run: |
+          cd src/enrollment-lambda && npm ci
+          cd ../enroll-oidc-setup && npm ci
+          cd ../enroll-alb-oidc-auth && npm ci
+
       - name: TypeScript compilation check
         run: npx tsc --noEmit --skipLibCheck
 

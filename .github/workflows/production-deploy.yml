@@ -38,6 +38,12 @@ jobs:
           aws-region: ${{ secrets.PROD_AWS_REGION }}
           role-session-name: GitHubActions-Production
 
+      - name: Install Lambda dependencies
+        run: |
+          cd src/enrollment-lambda && npm ci
+          cd ../enroll-oidc-setup && npm ci
+          cd ../enroll-alb-oidc-auth && npm ci
+
       - name: Bootstrap CDK (if needed)
         run: |
           if ! aws cloudformation describe-stacks --stack-name CDKToolkit 2>/dev/null; then

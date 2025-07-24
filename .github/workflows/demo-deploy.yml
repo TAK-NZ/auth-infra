@@ -44,6 +44,12 @@ jobs:
           aws-region: ${{ secrets.DEMO_AWS_REGION }}
           role-session-name: GitHubActions-Demo
 
+      - name: Install Lambda dependencies
+        run: |
+          cd src/enrollment-lambda && npm ci
+          cd ../enroll-oidc-setup && npm ci
+          cd ../enroll-alb-oidc-auth && npm ci
+
       - name: Validate CDK Synthesis (Prod Profile)
         run: npm run cdk synth -- --context envType=prod --context stackName=${{ vars.DEMO_STACK_NAME }} --context adminUserEmail=${{ vars.DEMO_AUTHENTIK_ADMIN_EMAIL }}
 
@@ -76,6 +82,12 @@ jobs:
           aws-role-arn: ${{ secrets.DEMO_AWS_ROLE_ARN }}
           aws-region: ${{ secrets.DEMO_AWS_REGION }}
           role-session-name: GitHubActions-Demo
+
+      - name: Install Lambda dependencies
+        run: |
+          cd src/enrollment-lambda && npm ci
+          cd ../enroll-oidc-setup && npm ci
+          cd ../enroll-alb-oidc-auth && npm ci
 
       - name: Extract Image Tags
         id: images
@@ -132,6 +144,12 @@ jobs:
           aws-role-arn: ${{ secrets.DEMO_AWS_ROLE_ARN }}
           aws-region: ${{ secrets.DEMO_AWS_REGION }}
           role-session-name: GitHubActions-Demo
+
+      - name: Install Lambda dependencies
+        run: |
+          cd src/enrollment-lambda && npm ci
+          cd ../enroll-oidc-setup && npm ci
+          cd ../enroll-alb-oidc-auth && npm ci
 
       - name: Validate CDK Synthesis (Dev-Test Profile)
         run: npm run cdk synth -- --context envType=dev-test --context stackName=${{ vars.DEMO_STACK_NAME }} --context adminUserEmail=${{ vars.DEMO_AUTHENTIK_ADMIN_EMAIL }}
