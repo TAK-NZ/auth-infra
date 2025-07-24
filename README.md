@@ -87,6 +87,8 @@ npm run deploy:prod
 - **ECS Services** - Authentik server, worker, and LDAP outpost containers
 - **Auto Scaling** - Dynamic scaling based on CPU and memory utilization
 - **Load Balancers** - ALB for web interface, NLB for LDAP
+- **Enrollment Lambda** - Device enrollment web interface for ATAK/iTAK
+- **OIDC Provider** - OAuth2/OpenID Connect integration for device authentication
 
 ### Security & DNS
 - **AWS Secrets Manager** - Database credentials and API tokens
@@ -187,6 +189,12 @@ npm run deploy:prod -- --context authentikVersion=2025.6.3
 
 # Use different branding
 npm run deploy:dev -- --context branding=generic
+
+# Disable enrollment feature
+npm run deploy:dev -- --context enrollmentEnabled=false
+
+# Enable enrollment feature (if disabled in config)
+npm run deploy:prod -- --context enrollmentEnabled=true
 ```
 
 ## 📚 Documentation
@@ -195,6 +203,7 @@ npm run deploy:dev -- --context branding=generic
 - **[🏗️ Architecture Guide](docs/ARCHITECTURE.md)** - Technical architecture and design decisions  
 - **[⚡ Quick Reference](docs/QUICK_REFERENCE.md)** - Fast deployment commands and environment comparison
 - **[⚙️ Configuration Guide](docs/PARAMETERS.md)** - Complete configuration management reference
+- **[📱 Device Enrollment Guide](docs/ENROLLMENT_GUIDE.md)** - ATAK/iTAK device enrollment and OIDC authentication
 - **[🐳 Docker Image Strategy](docs/DOCKER_IMAGE_STRATEGY.md)** - Hybrid image strategy for fast CI/CD and flexible development
 - **[🧪 Test Organization](test/TEST_ORGANIZATION.md)** - Test structure and coverage information
 

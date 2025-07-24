@@ -18,16 +18,6 @@ exports.handler = async (event, context) => {
   });
   
   try {
-    // Handle CloudFormation custom resource events
-    if (event.RequestType === 'Delete') {
-      // For delete events, we don't need to do anything as Authentik resources
-      // will be managed separately from CloudFormation
-      return {
-        PhysicalResourceId: event.PhysicalResourceId || 'authentik-oidc-setup',
-        Status: 'SUCCESS',
-      };
-    }
-    
     // For local testing, use the token from environment variable if available
     let adminToken = process.env.AUTHENTIK_ADMIN_TOKEN;
     
@@ -92,6 +82,16 @@ exports.handler = async (event, context) => {
         'Content-Type': 'application/json',
       },
     });
+    
+    // Handle CloudFormation custom resource events
+    if (event.RequestType === 'Delete') {
+      console.log('Handling DELETE request - cleaning up Authentik resources');
+      await handleDelete(api, event.ResourceProperties, event.PhysicalResourceId);
+      return {
+        PhysicalResourceId: event.PhysicalResourceId || 'authentik-oidc-setup',
+        Status: 'SUCCESS',
+      };
+    }
     
     // Get or create authentication flow
     const authenticationFlowName = process.env.AUTHENTICATION_FLOW_NAME || '';
@@ -604,5 +604,60 @@ async function getOidcConfiguration(authentikUrl, applicationSlug) {
       jwksUri: `${authentikUrl}/application/o/jwks/`,
       jwks_uri: `${authentikUrl}/application/o/jwks/`
     };
+  }
+}
+
+// Helper function to handle DELETE requests
+async function handleDelete(api, resourceProperties, physicalResourceId) {
+  try {
+    const providerName = resourceProperties.PROVIDER_NAME;
+    const applicationSlug = resourceProperties.APPLICATION_SLUG || resourceProperties.APPLICATION_NAME?.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    
+    console.log(`Cleaning up provider: ${providerName}, application: ${applicationSlug}`);
+    
+    // Delete application first
+    if (applicationSlug) {
+      try {
+        console.log(`Deleting application: ${applicationSlug}`);
+        await api.delete(`/api/v3/core/applications/${applicationSlug}/`);
+        console.log(`Successfully deleted application: ${applicationSlug}`);
+      } catch (error) {
+        if (error.response?.status === 404) {
+          console.log(`Application ${applicationSlug} not found, already deleted`);
+        } else {
+          console.warn(`Failed to delete application ${applicationSlug}:`, error.message);
+        }
+      }
+    }
+    
+    // Delete OAuth2 provider
+    if (providerName) {
+      try {
+        // Find provider by name
+        const providersResponse = await api.get('/api/v3/providers/oauth2/', {
+          params: { name: providerName }
+        });
+        
+        if (providersResponse.data.results && providersResponse.data.results.length > 0) {
+          const provider = providersResponse.data.results[0];
+          console.log(`Deleting provider: ${providerName} (ID: ${provider.pk})`);
+          await api.delete(`/api/v3/providers/oauth2/${provider.pk}/`);
+          console.log(`Successfully deleted provider: ${providerName}`);
+        } else {
+          console.log(`Provider ${providerName} not found, already deleted`);
+        }
+      } catch (error) {
+        if (error.response?.status === 404) {
+          console.log(`Provider ${providerName} not found, already deleted`);
+        } else {
+          console.warn(`Failed to delete provider ${providerName}:`, error.message);
+        }
+      }
+    }
+    
+    console.log('Cleanup completed successfully');
+  } catch (error) {
+    console.error('Error during cleanup:', error.message);
+    // Don't throw error to avoid blocking stack deletion
   }
 }

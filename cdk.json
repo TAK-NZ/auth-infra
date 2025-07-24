@@ -50,11 +50,12 @@
         "useS3AuthentikConfigFile": false,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.6.3",
+        "authentikVersion": "2025.6.4",
         "buildRevision": 0,
         "outboundEmailServerPort": 587
       },
       "enrollment": {
+        "enrollmentEnabled": true,
         "providerName": "TAK-Device-Enrollment",
         "applicationName": "TAK Device Enrollment",
         "applicationSlug": "tak-device-enrollment",
@@ -109,11 +110,12 @@
         "useS3AuthentikConfigFile": true,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.6.3",
+        "authentikVersion": "2025.6.4",
         "buildRevision": 0,
         "outboundEmailServerPort": 587
       },
       "enrollment": {
+        "enrollmentEnabled": true,
         "providerName": "TAK-Device-Enrollment",
         "applicationName": "TAK Device Enrollment",
         "applicationSlug": "tak-device-enrollment",

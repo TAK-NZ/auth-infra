@@ -45,6 +45,7 @@ export interface ContextEnvironmentConfig {
     outboundEmailServerPort?: number;
   };
   enrollment?: {
+    enrollmentEnabled?: boolean;
     providerName: string;
     applicationName: string;
     applicationSlug?: string;

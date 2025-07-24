@@ -24,16 +24,16 @@ export interface OutputParams {
   ldapsEndpoint: string;
   ldapBaseDn: string;
   ldapTokenRetrieverLambdaArn: string;
-  oidcClientId: string;
-  oidcClientSecret: string;
-  oidcProviderName: string;
-  oidcIssuer: string;
-  oidcAuthorizeUrl: string;
-  oidcTokenUrl: string;
-  oidcUserInfoUrl: string;
-  oidcJwksUri: string;
-  enrollmentTargetGroupArn: string;
-  enrollmentUrl: string;
+  oidcClientId?: string;
+  oidcClientSecret?: string;
+  oidcProviderName?: string;
+  oidcIssuer?: string;
+  oidcAuthorizeUrl?: string;
+  oidcTokenUrl?: string;
+  oidcUserInfoUrl?: string;
+  oidcJwksUri?: string;
+  enrollmentTargetGroupArn?: string;
+  enrollmentUrl?: string;
 }
 
 export function registerOutputs(params: OutputParams): void {
@@ -63,16 +63,16 @@ export function registerOutputs(params: OutputParams): void {
     { key: 'LdapEndpoint', value: params.ldapEndpoint, description: 'LDAP endpoint URL' },
     { key: 'LdapsEndpoint', value: params.ldapsEndpoint, description: 'LDAPS endpoint URL' },
     { key: 'LdapBaseDn', value: params.ldapBaseDn, description: 'LDAP base DN for directory structure' },
-    { key: 'OidcClientId', value: params.oidcClientId, description: 'OIDC client ID for TAK enrollment' },
-    { key: 'OidcClientSecret', value: params.oidcClientSecret, description: 'OIDC client secret for TAK enrollment' },
-    { key: 'OidcProviderName', value: params.oidcProviderName, description: 'OIDC provider name for TAK enrollment' },
-    { key: 'OidcIssuer', value: params.oidcIssuer, description: 'OIDC issuer URL' },
-    { key: 'OidcAuthorizeUrl', value: params.oidcAuthorizeUrl, description: 'OIDC authorization endpoint URL' },
-    { key: 'OidcTokenUrl', value: params.oidcTokenUrl, description: 'OIDC token endpoint URL' },
-    { key: 'OidcUserInfoUrl', value: params.oidcUserInfoUrl, description: 'OIDC user info endpoint URL' },
-    { key: 'OidcJwksUri', value: params.oidcJwksUri, description: 'OIDC JWKS URI for key validation' },
-    { key: 'EnrollmentTargetGroupArn', value: params.enrollmentTargetGroupArn, description: 'ARN of the target group for the enrollment application' },
-    { key: 'EnrollmentUrl', value: params.enrollmentUrl, description: 'Enrollment application URL' },
+    ...(params.oidcClientId ? [{ key: 'OidcClientId', value: params.oidcClientId, description: 'OIDC client ID for TAK enrollment' }] : []),
+    ...(params.oidcClientSecret ? [{ key: 'OidcClientSecret', value: params.oidcClientSecret, description: 'OIDC client secret for TAK enrollment' }] : []),
+    ...(params.oidcProviderName ? [{ key: 'OidcProviderName', value: params.oidcProviderName, description: 'OIDC provider name for TAK enrollment' }] : []),
+    ...(params.oidcIssuer ? [{ key: 'OidcIssuer', value: params.oidcIssuer, description: 'OIDC issuer URL' }] : []),
+    ...(params.oidcAuthorizeUrl ? [{ key: 'OidcAuthorizeUrl', value: params.oidcAuthorizeUrl, description: 'OIDC authorization endpoint URL' }] : []),
+    ...(params.oidcTokenUrl ? [{ key: 'OidcTokenUrl', value: params.oidcTokenUrl, description: 'OIDC token endpoint URL' }] : []),
+    ...(params.oidcUserInfoUrl ? [{ key: 'OidcUserInfoUrl', value: params.oidcUserInfoUrl, description: 'OIDC user info endpoint URL' }] : []),
+    ...(params.oidcJwksUri ? [{ key: 'OidcJwksUri', value: params.oidcJwksUri, description: 'OIDC JWKS URI for key validation' }] : []),
+    ...(params.enrollmentTargetGroupArn ? [{ key: 'EnrollmentTargetGroupArn', value: params.enrollmentTargetGroupArn, description: 'ARN of the target group for the enrollment application' }] : []),
+    ...(params.enrollmentUrl ? [{ key: 'EnrollmentUrl', value: params.enrollmentUrl, description: 'Enrollment application URL' }] : []),
   ];
 
   // Create internal outputs without exports

@@ -28,7 +28,7 @@ exports.handler = async (event) => {
       }
       
       return {
-        PhysicalResourceId: physicalResourceId,
+        PhysicalResourceId: event.PhysicalResourceId || physicalResourceId,
         Status: 'SUCCESS',
       };
     }

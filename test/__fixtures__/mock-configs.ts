@@ -36,6 +36,7 @@ export const MOCK_CONFIGS = {
       buildRevision: 1
     },
     enrollment: {
+      enrollmentEnabled: true,
       enrollmentHostname: 'enroll',
       providerName: 'TAK Enrollment',
       applicationName: 'TAK Enrollment App',
@@ -89,6 +90,7 @@ export const MOCK_CONFIGS = {
       buildRevision: 1
     },
     enrollment: {
+      enrollmentEnabled: true,
       enrollmentHostname: 'enroll',
       providerName: 'TAK Enrollment',
       applicationName: 'TAK Enrollment App',
@@ -142,6 +144,7 @@ export const MOCK_CONFIGS = {
       buildRevision: 1
     },
     enrollment: {
+      enrollmentEnabled: true,
       enrollmentHostname: 'enroll',
       providerName: 'TAK Enrollment',
       applicationName: 'TAK Enrollment App',
