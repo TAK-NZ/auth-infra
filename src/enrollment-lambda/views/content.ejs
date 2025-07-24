@@ -43,8 +43,8 @@ const safeRole = sanitize(takRole);
 <div class="form-group">
     <label class="text-info">Device Enrollment Requirements</label><br>
     <ul>
-        <li>Device Registration: This device will be linked to your account. Only enroll devices that you are authorized to use and are personally responsible for.</li>
-        <li>Enrollment Duration: Your device enrollment is valid for 1 year. To maintain access, please renew your enrollment before: <i><%= reenroll %></i>.</li>
+        <li><b>Device Registration:</b> This device will be linked to your account. Only enroll devices that you are authorized to use and are personally responsible for.</li>
+        <li><b>Enrollment Duration:</b> Your device enrollment is valid for 1 year. To maintain access, please renew your enrollment before: <i><%= reenroll %></i>.</li>
     </ul>
 </div>
 <hr>
@@ -77,10 +77,10 @@ const safeRole = sanitize(takRole);
     <div id="android-tab" class="tab-content active">
         <div class="form-group">
             <ul>
-                <li>ATAK must already be installed</li>
-                <li>Open the camera app on your Android device (must have ATAK installed)</li>
-                <li>Point the camera at the QR code below</li>
-                <li>Follow the on-screen prompts to complete enrollment</li>
+                <li>ATAK must already be installed.</li>
+                <li>Open the camera app on your Android device.</li>
+                <li>Point the camera at the QR code below.</li>
+                <li>Follow the on-screen prompts to complete enrollment.</li>
             </ul>
         </div>
         <div class="qr-container">
@@ -103,10 +103,10 @@ const safeRole = sanitize(takRole);
     <div id="iphone-tab" class="tab-content">
         <div class="form-group">
             <ul>
-                <li>Within iTAK tap <i>"Network"</i>, then <i>"Servers"</i></li>
-                <li>Select the plus icon (+) in the bottom right</li>
-                <li>Tap on Scan QR and scan the QR code below</li>
-                <li>You will be prompted to enter your username and password</li>
+                <li>Within iTAK tap <i>"Network"</i>, then <i>"Servers".</i></li>
+                <li>Select the plus icon <i>(+)</i> in the bottom right.</li>
+                <li>Tap on <i>Scan QR</i> and scan the QR code below.</li>
+                <li>You will be prompted to enter your username and password.</li>
             </ul>
         </div>
         <div class="qr-container">
