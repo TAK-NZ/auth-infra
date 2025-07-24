@@ -204,6 +204,13 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 | `ecr.imageRetentionCount` | Number of ECR images to retain | `5` | `20` |
 | `ecr.scanOnPush` | Enable ECR vulnerability scanning | `false` | `true` |
 
+### **Enrollment Configuration**
+| Parameter | Description | dev-test | prod |
+|-----------|-------------|----------|------|
+| `enrollmentEnabled` | Enable device enrollment feature | `true` | `true` |
+
+**Note**: Other enrollment settings (provider name, application details, etc.) are only configurable via [`cdk.json`](../cdk.json) and cannot be overridden via CLI.
+
 ### **General Configuration**
 | Parameter | Description | dev-test | prod |
 |-----------|-------------|----------|------|
@@ -314,6 +321,12 @@ npm run deploy:dev -- --context useS3AuthentikConfigFile=true
 npm run deploy:prod -- \
   --context branding=generic \
   --context authentikVersion=2025.7.1
+
+# Disable enrollment feature
+npm run deploy:dev -- --context enrollmentEnabled=false
+
+# Enable enrollment feature (if disabled in config)
+npm run deploy:prod -- --context enrollmentEnabled=true
 ```
 
 ### **Override Syntax Rules**

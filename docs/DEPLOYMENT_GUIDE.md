@@ -26,10 +26,10 @@ npm run deploy:prod
 
 ## **📋 Environment Configurations**
 
-| Environment | Stack Name | Domain | Cost/Month* | Features |
-|-------------|------------|--------|-------------|----------|
-| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | ~$106 USD | Cost-optimized, Aurora Serverless v2 |
-| **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | ~$367 USD | High availability, multi-AZ deployment |
+| Environment | Stack Name | Domain | Enrollment | Cost/Month* | Features |
+|-------------|------------|--------|------------|-------------|----------|
+| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | `enroll.dev.tak.nz` | ~$106 USD | Cost-optimized, Aurora Serverless v2 |
+| **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | `enroll.tak.nz` | ~$367 USD | High availability, multi-AZ deployment |
 
 *Estimated AWS costs in USD for ap-southeast-2 region, excluding data transfer and storage usage
 
@@ -248,6 +248,7 @@ aws cloudformation describe-stacks --stack-name TAK-Dev-AuthInfra \
 
 ### **Access Services**
 - **Authentik Web Interface**: `https://account.{domain}`
+- **Device Enrollment**: `https://enroll.{domain}` - ATAK/iTAK device enrollment
 - **LDAP Endpoint**: `ldap.{domain}:389` (LDAP) / `ldap.{domain}:636` (LDAPS)
 
 ### **Cleanup**
@@ -268,4 +269,5 @@ npm run cdk:destroy -- --context env=prod
 - **[Main README](../README.md)** - Project overview and quick start
 - **[Architecture Guide](ARCHITECTURE.md)** - Technical architecture details
 - **[Configuration Guide](PARAMETERS.md)** - Complete configuration reference
+- **[Device Enrollment Guide](ENROLLMENT_GUIDE.md)** - ATAK/iTAK device enrollment
 - **[Quick Reference](QUICK_REFERENCE.md)** - Fast deployment commands

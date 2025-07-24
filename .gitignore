@@ -9,6 +9,24 @@ node_modules
 !eslint.config.js
 !jest.config.js
 
+# Keep Lambda function source files
+!src/enroll-oidc-setup/index.js
+!src/enroll-oidc-setup/test-local.js
+!src/enroll-oidc-setup/test-oidc-config.js
+!src/enroll-oidc-setup/package.json
+!src/enroll-oidc-setup/README.md
+!src/enroll-oidc-setup/TAK-Enroll.png
+!src/enrollment-lambda/index.js
+!src/enrollment-lambda/package.json
+!src/enrollment-lambda/template.html
+!src/enroll-alb-oidc-auth/index.js
+!src/enroll-alb-oidc-auth/package.json
+
+# Exclude node_modules
+src/enroll-oidc-setup/node_modules/
+src/enrollment-lambda/node_modules/
+src/enroll-alb-oidc-auth/node_modules/
+
 # CDK asset staging directory
 .cdk.staging
 cdk.out

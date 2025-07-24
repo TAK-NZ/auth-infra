@@ -44,6 +44,21 @@ export interface ContextEnvironmentConfig {
     buildRevision: number;
     outboundEmailServerPort?: number;
   };
+  enrollment?: {
+    enrollmentEnabled?: boolean;
+    providerName: string;
+    applicationName: string;
+    applicationSlug?: string;
+    enrollmentHostname: string;
+    enrollmentIcon?: string;
+    openInNewTab?: boolean;
+    authenticationFlowName?: string;
+    authorizationFlowName?: string;
+    invalidationFlowName?: string;
+    groupName?: string;
+    description?: string;
+    listenerPriority?: number;
+  };
   ecr: {
     imageRetentionCount: number;
     scanOnPush: boolean;

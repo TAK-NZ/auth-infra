@@ -67,6 +67,7 @@ npm run deploy:dev -- \
 | **ECS Tasks** | 1 × 512/1024 | 2 × 1024/2048 | CPU/Memory allocation |
 | **Application Load Balancer** | 1 | 1 | HTTPS termination |
 | **Network Load Balancer** | 1 | 1 | LDAP traffic |
+| **Enrollment Lambda** | 1 | 1 | Device enrollment interface |
 | **EFS File System** | 1 | 1 | Persistent storage |
 | **Secrets Manager** | 3 secrets | 3 secrets | Admin, DB, Redis credentials |
 | **ECR Repositories** | 2 | 2 | Authentik server + LDAP |
@@ -128,6 +129,7 @@ npm run cdk:bootstrap       # Bootstrap CDK
 After successful deployment:
 
 - **Authentik Web UI**: `https://account.{domain}`
+- **Device Enrollment**: `https://enroll.{domain}` - ATAK/iTAK device enrollment interface
 - **LDAP Service**: `ldap.{domain}:389` (LDAP) / `ldap.{domain}:636` (LDAPS)
 - **Admin Credentials**: Stored in AWS Secrets Manager
 - **Database**: Private endpoint (accessible via ECS tasks)
@@ -170,4 +172,5 @@ aws cloudformation describe-stack-events \
 - **[Main README](../README.md)** - Complete project overview
 - **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Detailed deployment instructions
 - **[Configuration Guide](PARAMETERS.md)** - Complete configuration reference
+- **[Device Enrollment Guide](ENROLLMENT_GUIDE.md)** - ATAK/iTAK device enrollment
 - **[Architecture Guide](ARCHITECTURE.md)** - Technical architecture details

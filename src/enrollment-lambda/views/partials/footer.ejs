@@ -1,0 +1,15 @@
+
+                    <div style="margin-bottom:50px; text-align: center;"><hr><%= footer %></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <% if (typeof customScripts !== 'undefined') { %>
+    <script>
+        <%= customScripts %>
+    </script>
+    <% } %>
+    <%- include('scripts') %>
+</body>
+</html>

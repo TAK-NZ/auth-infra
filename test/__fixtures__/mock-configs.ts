@@ -35,6 +35,14 @@ export const MOCK_CONFIGS = {
       authentikVersion: '2025.6.2',
       buildRevision: 1
     },
+    enrollment: {
+      enrollmentEnabled: true,
+      enrollmentHostname: 'enroll',
+      providerName: 'TAK Enrollment',
+      applicationName: 'TAK Enrollment App',
+      enrollmentIcon: 'https://example.com/icon.png',
+      authenticationFlowName: ''
+    },
     ecr: {
       imageRetentionCount: 5,
       scanOnPush: false
@@ -81,6 +89,14 @@ export const MOCK_CONFIGS = {
       authentikVersion: '2025.6.2',
       buildRevision: 1
     },
+    enrollment: {
+      enrollmentEnabled: true,
+      enrollmentHostname: 'enroll',
+      providerName: 'TAK Enrollment',
+      applicationName: 'TAK Enrollment App',
+      enrollmentIcon: 'https://example.com/icon.png',
+      authenticationFlowName: ''
+    },
     ecr: {
       imageRetentionCount: 20,
       scanOnPush: true
@@ -126,6 +142,14 @@ export const MOCK_CONFIGS = {
       branding: 'tak-nz',
       authentikVersion: '2025.6.2',
       buildRevision: 1
+    },
+    enrollment: {
+      enrollmentEnabled: true,
+      enrollmentHostname: 'enroll',
+      providerName: 'TAK Enrollment',
+      applicationName: 'TAK Enrollment App',
+      enrollmentIcon: 'https://example.com/icon.png',
+      authenticationFlowName: ''
     },
     ecr: {
       imageRetentionCount: 5,

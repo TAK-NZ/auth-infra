@@ -9,10 +9,10 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 │   Internet      │────│  Application     │────│   Authentik     │
 │   Users         │    │  Load Balancer   │    │   ECS Service   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-                                                        │
-                                                 ┌──────┴──────────┐
-                                                 │                 │
-┌─────────────────┐    ┌──────────────────┐      ▼                 ▼
+                                │                       │
+                        ┌───────┴────────┐       ┌──────┴──────────┐
+                        │                │       │                 │
+┌─────────────────┐    ┌▼─────────────────▼┐      ▼                 ▼
 │   TAK Server    │────│   Network        │ ┌──────────┐    ┌──────────────┐
 │   (External)    │    │   Load Balancer  │ │   RDS    │    │     EFS      │
 └─────────────────┘    │   (LDAP)         │ │ Aurora   │    │  Shared      │
@@ -52,8 +52,14 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 - **Access Method**: Connects to LDAP Outpost via Network Load Balancer
 - **Protocol**: LDAPS (LDAP over TLS) on port 636
 - **Purpose**: Authenticates TAK users against the centralized identity store
-- **Protocol**: LDAP over TLS on port 636
 - **Authentication**: Connects back to Authentik for user validation
+
+#### 4. Device Enrollment Service
+- **Technology**: Node.js Lambda function with EJS templating
+- **Purpose**: Web-based device enrollment interface for ATAK/iTAK mobile applications
+- **Authentication**: OIDC integration with Authentik for secure device onboarding
+- **Access**: Accessed via Application Load Balancer with OIDC authentication
+- **Features**: QR code generation, device configuration, app store links
 
 ### Data Layer
 
@@ -184,6 +190,10 @@ The infrastructure implements a layered security model with dedicated security g
 - **IAM Roles**: Service-specific roles with minimal permissions
 - **Security Groups**: Network-level access control (detailed above)
 - **Secrets Management**: AWS Secrets Manager for sensitive data
+- **OIDC Authentication**: OAuth2/OpenID Connect flow for device enrollment
+  - ALB listener rules with OIDC authentication
+  - Authentik as identity provider for enrollment service
+  - Secure token exchange for device onboarding
 
 ### 4. Monitoring and Logging
 - **CloudWatch Logs**: Application and system logs

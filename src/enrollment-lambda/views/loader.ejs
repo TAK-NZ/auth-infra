@@ -1,0 +1,51 @@
+<%- include('partials/header') %>
+
+<style>
+    .custom-spinner {
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid #3498db;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px auto;
+        -webkit-animation: spin 1s linear infinite; /* Safari */
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    @-webkit-keyframes spin { /* Safari */
+        from { -webkit-transform: rotate(0deg); }
+        to { -webkit-transform: rotate(360deg); }
+    }
+</style>
+
+<div class="loading-container" style="height: auto; margin: 30px 0; text-align: center;">
+    <div class="custom-spinner"></div>
+    <p style="font-weight: bold;">Loading enrollment information...</p>
+</div>
+
+<form id="enrollmentForm" method="POST" action="?load=true" style="display:none;">
+    <input type="hidden" name="x-amzn-oidc-data" value="<%= oidcData %>">
+</form>
+
+<script>
+    // Submit the form after a short delay and then clean up the URL
+    setTimeout(function() {
+        // Submit the form
+        document.getElementById('enrollmentForm').submit();
+    }, 500);
+    
+    // Add event listener to clean up the URL after page loads
+    window.addEventListener('load', function() {
+        // Use history API to replace the URL without reloading
+        if (window.location.search && window.history && window.history.replaceState) {
+            window.history.replaceState(null, document.title, window.location.pathname);
+        }
+    });
+</script>
+
+<%- include('partials/footer') %>
