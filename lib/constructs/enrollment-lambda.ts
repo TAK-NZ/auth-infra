@@ -116,7 +116,10 @@ export class EnrollmentLambda extends Construct {
       bundling: {
         commandHooks: {
           beforeBundling(inputDir: string, outputDir: string): string[] {
-            return [`cd ${inputDir} && npm ci`];
+            // Only install dependencies if package.json exists and node_modules doesn't
+            return [
+              `if [ -f ${inputDir}/package.json ] && [ ! -d ${inputDir}/node_modules ]; then cd ${inputDir} && npm ci; fi`
+            ];
           },
           afterBundling(inputDir: string, outputDir: string): string[] {
             return [`cp -r ${enrollmentLambdaDir}/views ${outputDir}/`];
