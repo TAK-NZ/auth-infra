@@ -132,6 +132,13 @@ function escapeHtml(unsafe) {
     .replace(/'/g, "&#039;");
 }
 
+function getBrandingStrings(branding) {
+  return {
+    heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
+    footer: branding === 'tak-nz' ? 'TAK.NZ &bull; Team Awareness &bull; Te m&#333;hio o te r&#333;p&#363;' : 'TAK - Team Awareness Kit'
+  };
+}
+
 console.log('Loading enrollment function');
 
 /**
@@ -205,10 +212,10 @@ exports.handler = async (event, context) => {
             
             const errorPath = path.join(__dirname, 'views/error.ejs');
             
+            const brandingStrings = getBrandingStrings(branding);
             const errorData = {
                 title: 'Enrollment Error',
-                heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
-                footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
+                ...brandingStrings,
                 branding: branding,
                 errorMessage: errorMessage,
                 errorDetails: errorDetails
@@ -283,10 +290,10 @@ async function handleInitialRequest(oidcData) {
     // Escape the OIDC data to prevent XSS
     const escapedOidcData = escapeHtml(oidcData);
     
+    const brandingStrings = getBrandingStrings(branding);
     const loadingData = {
         title: 'Loading Enrollment',
-        heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
-        footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
+        ...brandingStrings,
         branding: branding,
         oidcData: escapedOidcData,
         customScripts: `
@@ -438,10 +445,10 @@ async function handleEnrollmentRequest(oidcData, headers) {
     ]);
 
     // Prepare template data
+    const brandingStrings = getBrandingStrings(branding);
     const data = {
         title: 'Device Enrollment',
-        heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
-        footer: branding === 'tak-nz' ? 'TAK.NZ • Team Awareness • Te mōhio o te rōpū' : 'TAK - Team Awareness Kit',
+        ...brandingStrings,
         branding: branding,
         server: takServer,
         user: user,
