@@ -54,6 +54,13 @@ export class EnrollOidcSetup extends Construct {
         target: 'node22',
         externalModules: ['aws-sdk'], // AWS SDK is available in the Lambda runtime
         forceDockerBundling: false, // Force local bundling
+        commandHooks: {
+          beforeBundling: () => [],
+          beforeInstall: () => [],
+          afterBundling: (inputDir: string, outputDir: string) => [
+            `cp ${inputDir}/TAK-Enroll.png ${outputDir}/TAK-Enroll.png`
+          ]
+        }
       },
       // Increase timeout to allow for potential API delays
       timeout: cdk.Duration.minutes(10),
