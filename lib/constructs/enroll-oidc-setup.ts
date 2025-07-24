@@ -52,13 +52,14 @@ export class EnrollOidcSetup extends Construct {
         minify: true,
         sourceMap: true,
         target: 'node22',
-        externalModules: ['aws-sdk'], // AWS SDK is available in the Lambda runtime
-        forceDockerBundling: false, // Force local bundling
+        externalModules: ['@aws-sdk/*'], // AWS SDK v3 is available in the Lambda runtime
+        nodeModules: ['axios', 'form-data'], // Include these dependencies
+        forceDockerBundling: false,
         commandHooks: {
           beforeBundling: () => [],
           beforeInstall: () => [],
           afterBundling: (inputDir: string, outputDir: string) => [
-            `cp ${inputDir}/TAK-Enroll.png ${outputDir}/TAK-Enroll.png`
+            `cp ${inputDir}/src/enroll-oidc-setup/TAK-Enroll.png ${outputDir}/TAK-Enroll.png`
           ]
         }
       },

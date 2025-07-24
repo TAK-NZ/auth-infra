@@ -42,8 +42,10 @@
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.0.0",
     "aws-cdk-lib": "^2.167.0",
+    "axios": "^1.6.0",
     "constructs": "^10.0.0",
     "dotenv": "^17.2.0",
+    "form-data": "^4.0.0",
     "node-fetch": "^3.3.2",
     "source-map-support": "^0.5.21"
   }

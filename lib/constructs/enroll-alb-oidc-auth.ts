@@ -106,8 +106,8 @@ export class EnrollAlbOidcAuth extends Construct {
         minify: true,
         sourceMap: true,
         target: 'node22',
-        externalModules: ['aws-sdk'], // AWS SDK is available in the Lambda runtime
-        forceDockerBundling: false, // Force local bundling
+        externalModules: ['@aws-sdk/*'], // AWS SDK v3 is available in the Lambda runtime
+        forceDockerBundling: false,
       },
       timeout: cdk.Duration.minutes(5),
     });
