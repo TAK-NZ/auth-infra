@@ -95,8 +95,7 @@ export class EnrollmentLambda extends Construct {
       resources: ['*']
     }));
     
-    // Create Lambda function using regular Lambda construct
-    // This avoids the bundling issues with NodejsFunction
+    // Create Lambda function with proper dependency installation
     const enrollmentLambdaDir = path.join(__dirname, '../../src/enrollment-lambda');
     
     this.function = new lambda.Function(this, 'EnrollmentFunction', {
@@ -104,8 +103,16 @@ export class EnrollmentLambda extends Construct {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset(enrollmentLambdaDir, {
-        // Exclude unnecessary files
-        exclude: ['*.ts', '*.map', 'node_modules/.bin/*']
+        bundling: {
+          image: lambda.Runtime.NODEJS_22_X.bundlingImage,
+          command: [
+            'bash', '-c', [
+              'cp -r /asset-input/* /asset-output/',
+              'cd /asset-output',
+              'npm ci --only=production'
+            ].join(' && ')
+          ]
+        }
       }),
       role: enrollmentLambdaRole,
       environment: {
