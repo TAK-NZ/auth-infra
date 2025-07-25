@@ -42,7 +42,6 @@ export function registerOutputs(params: OutputParams): void {
   // Internal-only outputs (no export)
   const internalOutputs = [
     { key: 'AuthentikSecretKeyArn', value: params.authentikSecretKeyArn, description: 'Authentik secret key ARN' },
-    { key: 'AuthentikAdminTokenArn', value: params.authentikAdminTokenArn, description: 'Authentik admin token ARN' },
     { key: 'AuthentikLdapTokenArn', value: params.authentikLdapTokenArn, description: 'Authentik LDAP token ARN' },
     { key: 'AuthentikAlbDns', value: params.authentikAlbDns, description: 'Authentik Application Load Balancer DNS name' },
     { key: 'DatabaseEndpoint', value: params.databaseEndpoint, description: 'RDS Aurora PostgreSQL cluster endpoint' },
@@ -58,6 +57,7 @@ export function registerOutputs(params: OutputParams): void {
 
   // Exported outputs (for cross-stack consumption)
   const exportedOutputs = [
+    { key: 'AuthentikAdminTokenArn', value: params.authentikAdminTokenArn, description: 'Authentik admin token ARN' },
     { key: 'AuthentikLdapServiceUserArn', value: params.authentikLdapServiceUserArn, description: 'Authentik LDAP service user ARN' },
     { key: 'AuthentikUrl', value: params.authentikUrl, description: 'Authentik application URL' },
     { key: 'LdapEndpoint', value: params.ldapEndpoint, description: 'LDAP endpoint URL' },
