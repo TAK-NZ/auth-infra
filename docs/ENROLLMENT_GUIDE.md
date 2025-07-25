@@ -115,6 +115,14 @@ npm run deploy:prod -- --context enrollmentEnabled=true
 - **Session Management**: Secure session handling via Authentik
 - **Access Control**: Only authenticated users can access enrollment
 
+### Session Security Enhancements
+
+- **Short Session Timeout**: OIDC sessions expire after 5 minutes to minimize stale session exposure
+- **JWT Token Validation**: Real-time validation of token expiration with automatic re-authentication
+- **Auto-Logout**: Sessions automatically invalidate after enrollment data is delivered (2-second delay)
+- **Cache Prevention**: No-cache headers prevent browsers from storing enrollment data
+- **Single-Use Sessions**: Each enrollment access requires fresh authentication, eliminating session persistence
+
 ### Network Security
 
 - **HTTPS Only**: All enrollment traffic encrypted in transit
@@ -181,6 +189,21 @@ Error: Invalid configuration
 - Check mobile device network connectivity
 - Update ATAK/iTAK app to latest version
 
+#### **Stale User Data After Re-login**
+```
+Error: Seeing previous user's enrollment data
+```
+**Possible Causes**:
+- Browser cached enrollment data
+- Session not properly invalidated
+- Token validation not working
+
+**Solutions**:
+- Clear browser cache and cookies
+- Wait for auto-logout (2 seconds) after page load
+- Refresh page to force new authentication
+- Check browser developer tools for failed logout requests
+
 ### Debug Commands
 
 ```bash
@@ -224,6 +247,7 @@ The enrollment feature adds minimal cost to your infrastructure:
 - **Clear Instructions**: Provide users with enrollment URL and instructions
 - **Support Documentation**: Maintain user guides for device enrollment
 - **Testing**: Regularly test enrollment process with different devices
+- **Session Awareness**: Inform users that sessions automatically expire for security
 
 ### Operational
 - **Monitoring**: Monitor enrollment Lambda function performance
