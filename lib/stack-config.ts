@@ -58,6 +58,7 @@ export interface ContextEnvironmentConfig {
     groupName?: string;
     description?: string;
     listenerPriority?: number;
+    signingKeyName?: string;
   };
   ecr: {
     imageRetentionCount: number;
