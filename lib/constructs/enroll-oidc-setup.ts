@@ -82,6 +82,7 @@ export class EnrollOidcSetup extends Construct {
         ...(enrollmentConfig.invalidationFlowName ? { INVALIDATION_FLOW_NAME: enrollmentConfig.invalidationFlowName } : {}),
         ...(enrollmentConfig.groupName ? { GROUP_NAME: enrollmentConfig.groupName } : {}),
         ...(enrollmentConfig.description ? { APPLICATION_DESCRIPTION: enrollmentConfig.description } : {}),
+        ...(enrollmentConfig.signingKeyName ? { SIGNING_KEY_NAME: enrollmentConfig.signingKeyName } : {}),
       },
     });
 
