@@ -124,12 +124,19 @@ export class EnrollOidcSetup extends Construct {
     }
 
     // Create custom resource that will invoke the Lambda
-    // Use a unique ID to force recreation
     const customResource = new cdk.CustomResource(this, 'OidcSetupResource', {
       serviceToken: provider.serviceToken,
       properties: {
-        // Add a timestamp to force the custom resource to update on each deployment
-        timestamp: new Date().toISOString(),
+        // Configuration properties that trigger updates when changed
+        providerName: enrollmentConfig.providerName,
+        applicationName: enrollmentConfig.applicationName,
+        applicationSlug: enrollmentConfig.applicationSlug || enrollmentConfig.applicationName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+        redirectUris: JSON.stringify([redirectUri]),
+        launchUrl: launchUrl,
+        groupName: enrollmentConfig.groupName || '',
+        // Add a timestamp to force updates on every deployment
+        UpdateTimestamp: Date.now().toString()
+
       },
     });
 

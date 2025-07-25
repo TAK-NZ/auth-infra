@@ -85,8 +85,7 @@ exports.handler = async (event, context) => {
     
     // Handle CloudFormation custom resource events
     if (event.RequestType === 'Delete') {
-      console.log('Handling DELETE request - cleaning up Authentik resources');
-      await handleDelete(api, event.ResourceProperties, event.PhysicalResourceId);
+      console.log('Handling DELETE request - no cleanup needed, preserving Authentik resources');
       return {
         PhysicalResourceId: event.PhysicalResourceId || 'authentik-oidc-setup',
         Status: 'SUCCESS',
@@ -161,7 +160,7 @@ exports.handler = async (event, context) => {
     // Assign group to application if specified
     if (groupName) {
       console.log(`Assigning group '${groupName}' to application`);
-      await assignGroupToApplication(api, application.pk, groupName);
+      await assignGroupToApplication(api, application.slug, groupName);
     }
     
     // Get OIDC configuration endpoints
