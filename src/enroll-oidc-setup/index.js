@@ -232,16 +232,18 @@ exports.handler = async (event, context) => {
         LogicalResourceId: event.LogicalResourceId,
         // Include Data at the top level for CloudFormation
         Data: {
-          ...response.Data,
-          // Ensure these are also at the top level of Data
           clientId: provider.client_id,
           clientSecret: provider.client_secret,
-          issuer: response.Data.issuer
-        },
-        // Also include at the top level for backward compatibility
-        clientId: provider.client_id,
-        clientSecret: provider.client_secret,
-        issuer: response.Data.issuer
+          providerName: providerName,
+          issuer: oidcConfig.issuer,
+          authorizeUrl: oidcConfig.authorizeUrl,
+          tokenUrl: oidcConfig.tokenUrl,
+          token_endpoint: oidcConfig.tokenUrl,
+          userInfoUrl: oidcConfig.userInfoUrl,
+          userinfo_endpoint: oidcConfig.userInfoUrl,
+          jwksUri: oidcConfig.jwksUri,
+          jwks_uri: oidcConfig.jwksUri
+        }
       };
       
       console.log('Returning CloudFormation response:', JSON.stringify(cfnResponse, (key, value) => {
