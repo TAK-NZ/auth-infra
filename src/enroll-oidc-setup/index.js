@@ -122,6 +122,13 @@ exports.handler = async (event, context) => {
       scopeMappings.push(mapping.pk);
     }
     
+    // Get signing key if specified
+    const signingKeyName = process.env.SIGNING_KEY_NAME;
+    let signingKey = null;
+    if (signingKeyName) {
+      signingKey = await getSigningKeyByName(api, signingKeyName);
+    }
+    
     const provider = await createOrUpdateProvider(api, {
       name: providerName,
       authorization_flow: authorizationFlow.pk,
@@ -133,7 +140,7 @@ exports.handler = async (event, context) => {
       access_code_validity: 'minutes=1',
       access_token_validity: 'minutes=5',
       refresh_token_validity: 'days=30',
-      signing_key: null, // Use default
+      signing_key: signingKey,
       property_mappings: scopeMappings, // Add the scope mappings
     });
     
@@ -494,6 +501,28 @@ async function uploadApplicationIcon(api, appSlug) {
       console.error('Error details:', JSON.stringify(error.response.data, null, 2));
     }
     // Don't throw error for icon upload failures
+    return null;
+  }
+}
+
+// Helper function to get signing key by name
+async function getSigningKeyByName(api, keyName) {
+  try {
+    console.log(`Looking for signing key: ${keyName}`);
+    const response = await api.get('/api/v3/crypto/certificatekeypairs/', {
+      params: { name: keyName }
+    });
+    
+    if (response.data.results && response.data.results.length > 0) {
+      const key = response.data.results[0];
+      console.log(`Found signing key: ${keyName}, pk: ${key.pk}`);
+      return key.pk;
+    }
+    
+    console.warn(`Signing key '${keyName}' not found, using default`);
+    return null;
+  } catch (error) {
+    console.error(`Error getting signing key '${keyName}':`, error.message);
     return null;
   }
 }
