@@ -132,6 +132,25 @@ function escapeHtml(unsafe) {
     .replace(/'/g, "&#039;");
 }
 
+function isTokenExpired(oidcData) {
+  try {
+    const decodedToken = JSON.parse(Buffer.from(oidcData.split('.')[1], 'base64').toString());
+    const now = Math.floor(Date.now() / 1000);
+    return decodedToken.exp < now;
+  } catch (error) {
+    console.error('Error validating token expiration:', error);
+    return true; // Treat invalid tokens as expired
+  }
+}
+
+function getCacheControlHeaders() {
+  return {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0"
+  };
+}
+
 function getBrandingStrings(branding) {
   return {
     heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
@@ -146,8 +165,7 @@ console.log('Loading enrollment function');
  */
 exports.handler = async (event, context) => {
     // Check if this is the initial request or the actual data request
-    const isDataRequest = (event.queryStringParameters && event.queryStringParameters.load === 'true' && event.httpMethod === 'POST') || 
-                         (event.body && event.body.includes('load=true') && event.httpMethod === 'POST');
+    const isDataRequest = event.queryStringParameters && event.queryStringParameters.load === 'true';
     try {
         // Extract and validate OIDC data
         const oidcData = extractOidcData(event);
@@ -155,7 +173,19 @@ exports.handler = async (event, context) => {
             return {
                 statusCode: 400,
                 body: 'Bad Request: Missing OIDC authentication data',
-                headers: { 'Content-Type': 'text/plain' }
+                headers: { 'Content-Type': 'text/plain', ...getCacheControlHeaders() }
+            };
+        }
+        
+        // Check if token is expired
+        if (isTokenExpired(oidcData)) {
+            console.log('OIDC token expired, forcing re-authentication');
+            return {
+                statusCode: 302,
+                headers: {
+                    'Location': '/oauth2/idpresponse',
+                    ...getCacheControlHeaders()
+                }
             };
         }
         
@@ -164,13 +194,13 @@ exports.handler = async (event, context) => {
             return {
                 statusCode: 404,
                 body: 'Not Found',
-                headers: { 'Content-Type': 'text/plain' }
+                headers: { 'Content-Type': 'text/plain', ...getCacheControlHeaders() }
             };
         }
         
         // If this is the initial request, return the loading page immediately
         if (!isDataRequest) {
-            return await handleInitialRequest(oidcData);
+            return await handleInitialRequest();
         }
         
         // For data requests, continue with the full processing
@@ -227,7 +257,8 @@ exports.handler = async (event, context) => {
                 statusCode: statusCode,
                 isBase64Encoded: false,
                 headers: {
-                    "Content-Type": "text/html"
+                    "Content-Type": "text/html",
+                    ...getCacheControlHeaders()
                 },
                 body: renderedHTML,
             };
@@ -237,7 +268,7 @@ exports.handler = async (event, context) => {
             return {
                 statusCode: 500,
                 body: 'Internal Server Error: ' + e.message,
-                headers: { 'Content-Type': 'text/plain' }
+                headers: { 'Content-Type': 'text/plain', ...getCacheControlHeaders() }
             };
         }
     }
@@ -247,26 +278,7 @@ exports.handler = async (event, context) => {
  * Extract OIDC data from the event
  */
 function extractOidcData(event) {
-    let oidcData = event.headers ? event.headers['x-amzn-oidc-data'] : null;
-    
-    // For POST requests, also check the body for OIDC data
-    if (!oidcData && event.httpMethod === 'POST' && event.body) {
-        try {
-            // Try to parse the body as form data
-            const formData = new URLSearchParams(event.body);
-            oidcData = formData.get('x-amzn-oidc-data');
-            
-            // If we found OIDC data in the body, add it to the headers for later use
-            if (oidcData) {
-                event.headers = event.headers || {};
-                event.headers['x-amzn-oidc-data'] = oidcData;
-            }
-        } catch (e) {
-            console.error('Error parsing form data');
-        }
-    }
-    
-    return oidcData;
+    return event.headers ? event.headers['x-amzn-oidc-data'] : null;
 }
 
 /**
@@ -279,7 +291,7 @@ function isValidPath(path) {
 /**
  * Handle the initial request by returning a loading page
  */
-async function handleInitialRequest(oidcData) {
+async function handleInitialRequest() {
     console.log('Initial request - returning loading page');
     
     // Get branding from environment variables
@@ -287,37 +299,11 @@ async function handleInitialRequest(oidcData) {
     
     const loaderPath = path.join(__dirname, 'views/loader.ejs');
     
-    // Escape the OIDC data to prevent XSS
-    const escapedOidcData = escapeHtml(oidcData);
-    
     const brandingStrings = getBrandingStrings(branding);
     const loadingData = {
         title: 'Loading Enrollment',
         ...brandingStrings,
-        branding: branding,
-        oidcData: escapedOidcData,
-        customScripts: `
-            // Immediately execute when DOM is ready
-            document.addEventListener('DOMContentLoaded', function() {
-                // Create a form to submit the OIDC data
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = window.location.href + '?load=true';
-                
-                // Add the OIDC data as a hidden field
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'x-amzn-oidc-data';
-                input.value = "${escapedOidcData}";
-                form.appendChild(input);
-                
-                // Add the form to the document and submit it
-                document.body.appendChild(form);
-                setTimeout(function() {
-                    form.submit();
-                }, ${CONFIG.FORM_SUBMIT_DELAY_MS});
-            });
-        `
+        branding: branding
     };
     
     try {
@@ -327,7 +313,8 @@ async function handleInitialRequest(oidcData) {
             statusCode: 200,
             isBase64Encoded: false,
             headers: {
-                "Content-Type": "text/html"
+                "Content-Type": "text/html",
+                ...getCacheControlHeaders()
             },
             body: renderedHTML,
         };
@@ -478,7 +465,8 @@ async function handleEnrollmentRequest(oidcData, headers) {
             statusCode: 200,
             isBase64Encoded: false,
             headers: {
-                "Content-Type": "text/html"
+                "Content-Type": "text/html",
+                ...getCacheControlHeaders()
             },
             body: renderedHTML,
         };

@@ -71,7 +71,7 @@ export const ENROLLMENT_CONSTANTS = {
   /** Session cookie name for enrollment application */
   SESSION_COOKIE_NAME: 'AWSELBAuthSessionCookie-Enrollment',
   /** Session timeout duration in days */
-  SESSION_TIMEOUT_DAYS: 1,
+  SESSION_TIMEOUT_DAYS: 5/1440, // 5 minutes
   /** OIDC scopes required for enrollment */
   OIDC_SCOPES: 'openid email profile'
 } as const;

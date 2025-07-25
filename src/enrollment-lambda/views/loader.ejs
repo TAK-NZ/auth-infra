@@ -28,24 +28,11 @@
     <p style="font-weight: bold;">Loading enrollment information...</p>
 </div>
 
-<form id="enrollmentForm" method="POST" action="?load=true" style="display:none;">
-    <input type="hidden" name="x-amzn-oidc-data" value="<%= oidcData %>">
-</form>
-
 <script>
-    // Submit the form after a short delay and then clean up the URL
+    // Redirect to load the enrollment data after a short delay
     setTimeout(function() {
-        // Submit the form
-        document.getElementById('enrollmentForm').submit();
+        window.location.href = window.location.pathname + '?load=true';
     }, 500);
-    
-    // Add event listener to clean up the URL after page loads
-    window.addEventListener('load', function() {
-        // Use history API to replace the URL without reloading
-        if (window.location.search && window.history && window.history.replaceState) {
-            window.history.replaceState(null, document.title, window.location.pathname);
-        }
-    });
 </script>
 
 <%- include('partials/footer') %>
