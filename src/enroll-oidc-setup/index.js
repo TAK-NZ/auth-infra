@@ -389,20 +389,12 @@ async function createOrUpdateProvider(api, providerData) {
 async function createOrUpdateApplication(api, applicationData) {
   try {
     // Check if application exists
-    const existingApps = await api.get('/api/v3/core/applications/', {
-      params: { slug: applicationData.slug }
-    });
+    const response = await api.get(`/api/v3/core/applications/${applicationData.slug}/`);
     
-    if (existingApps.data.results && existingApps.data.results.length > 0) {
-      // Update existing application
-      const existingApp = existingApps.data.results[0];
-      const response = await api.patch(`/api/v3/core/applications/${existingApp.slug}/`, applicationData);
-      return response.data;
-    } else {
-      // Create new application
-      const response = await api.post('/api/v3/core/applications/', applicationData);
-      return response.data;
-    }
+    // Update existing application
+    console.log(`Updating existing application: ${applicationData.slug}`);
+    const updateResponse = await api.patch(`/api/v3/core/applications/${applicationData.slug}/`, applicationData);
+    return updateResponse.data;
   } catch (error) {
     if (error.response && error.response.status === 404) {
       // If we get a 404, the application doesn't exist, so create it
@@ -428,20 +420,8 @@ async function assignGroupToApplication(api, appSlug, groupName) {
     
     console.log(`Assigning group '${groupName}' to application`);
     
-    // Get the application by slug to ensure we have the correct slug
-    const existingApps = await api.get('/api/v3/core/applications/', {
-      params: { slug: appSlug }
-    });
-    
-    if (!(existingApps.data.results && existingApps.data.results.length > 0)) {
-      throw new Error(`Application with slug '${appSlug}' not found`);
-    }
-    
-    const app = existingApps.data.results[0];
-    console.log(`Found application: ${app.name} (${app.slug})`);
-    
     // Update the application with the group name
-    const response = await api.patch(`/api/v3/core/applications/${app.slug}/`, {
+    const response = await api.patch(`/api/v3/core/applications/${appSlug}/`, {
       group: groupName
     });
     
