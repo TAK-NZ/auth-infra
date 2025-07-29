@@ -30,7 +30,7 @@ const safeRole = sanitize(takRole);
 %>
 
 <div class="form-group">
-    <label class="text-info">Enrollment data</label><br>
+    <label class="text-info">Enrolment data</label><br>
     <b>TAK Server:</b> <%= safeServer %></br>
     <b>User:</b> <%= safeUser %></br>
     <b>Callsign:</b> <%= safeCallsign %></br>
@@ -41,30 +41,30 @@ const safeRole = sanitize(takRole);
 </div>
 <hr>
 <div class="form-group">
-    <label class="text-info">Device Enrollment Requirements</label><br>
+    <label class="text-info">Device Enrolment Requirements</label><br>
     <ul>
-        <li><b>Device Registration:</b> This device will be linked to your account. Only enroll devices that you are authorized to use and are personally responsible for.</li>
-        <li><b>Enrollment Duration:</b> Your device enrollment is valid for 1 year. To maintain access, please renew your enrollment before: <i><%= reenroll %></i>.</li>
+        <li><b>Device Registration:</b> This device will be linked to your account. Only enrol devices that you are authorized to use and are personally responsible for.</li>
+        <li><b>Enrolment Duration:</b> Your device enrolment is valid for 1 year. To maintain access, please renew your enrollment before: <i><%= reenroll %></i>.</li>
     </ul>
 </div>
 <hr>
 <div <%= hide_enrollment_link %> class="form-group">
     <label class="text-info">Add This Device</label><br>
-    Already have ATAK installed on this Android device? You can directly enroll this device. 
+    Already have ATAK installed on this Android device? You can directly enrol this device. 
 </div>
 
 <div <%= hide_enrollment_link %> id="enroll_link" class="form-group" align="center">
     <% if (typeof link !== 'undefined' && link) { %>
-        <a id="enroll-button" class="enroll-button" href="<%= link %>" aria-label="Enroll this device now">Enroll now</a>
+        <a id="enroll-button" class="enroll-button" href="<%= link %>" aria-label="Enrol this device now">Enrol now</a>
     <% } else { %>
-        <span class="enroll-button disabled">Enrollment link unavailable</span>
+        <span class="enroll-button disabled">Enrolment link unavailable</span>
     <% } %>
 </div>
 <hr <%= hide_enrollment_link %>>
 
 <div class="form-group">
     <label class="text-info">Add Another Device</label><br>
-    Access this page from a desktop computer to enroll your mobile device.
+    Access this page from a desktop computer to enrol your mobile device.
 
 <div class="tab-container">
     <!-- Tab buttons -->
@@ -80,12 +80,12 @@ const safeRole = sanitize(takRole);
                 <li>ATAK must already be installed.</li>
                 <li>Open the camera app on your Android device.</li>
                 <li>Point the camera at the QR code below.</li>
-                <li>Follow the on-screen prompts to complete enrollment.</li>
+                <li>Follow the on-screen prompts to complete enrolment.</li>
             </ul>
         </div>
         <div class="qr-container">
             <% if (typeof atakQrcode !== 'undefined' && atakQrcode) { %>
-                <img src="<%= atakQrcode %>" alt="QR Code for Android ATAK enrollment" class="qr-code">
+                <img src="<%= atakQrcode %>" alt="QR Code for Android ATAK enrolment" class="qr-code">
             <% } else { %>
                 <div class="qr-error">QR code generation failed. Please try refreshing the page.</div>
             <% } %>  
@@ -111,7 +111,7 @@ const safeRole = sanitize(takRole);
         </div>
         <div class="qr-container">
             <% if (typeof itakQrcode !== 'undefined' && itakQrcode) { %>
-                <img src="<%= itakQrcode %>" alt="QR Code for iPhone iTAK enrollment" class="qr-code">
+                <img src="<%= itakQrcode %>" alt="QR Code for iPhone iTAK enrolment" class="qr-code">
             <% } else { %>
                 <div class="qr-error">QR code generation failed. Please try refreshing the page.</div>
             <% } %>

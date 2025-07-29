@@ -38,15 +38,19 @@ exports.handler = async (event) => {
       ListenerArn: listenerArn
     }));
     
-    // Find the rule that matches our hostname condition
+    // Find the rule that matches our priority (more reliable than hostname)
     let rule = describeRulesResponse.Rules.find(r => {
-      // Find the host header condition
-      const hostCondition = r.Conditions.find(c => c.Field === 'host-header');
-      if (!hostCondition || !hostCondition.Values) return false;
-      
-      // Check if the condition matches our hostname
-      return hostCondition.Values.some(v => v.includes(hostname));
+      return r.Priority === priority.toString();
     });
+    
+    // Fallback: also check for hostname match in case priority changed
+    if (!rule) {
+      rule = describeRulesResponse.Rules.find(r => {
+        const hostCondition = r.Conditions.find(c => c.Field === 'host-header');
+        if (!hostCondition || !hostCondition.Values) return false;
+        return hostCondition.Values.some(v => v.includes(hostname));
+      });
+    }
     
     // If a specific rule ARN was provided, try to use that instead
     if (event.ResourceProperties.ListenerRuleArn) {
@@ -148,9 +152,15 @@ exports.handler = async (event) => {
       console.log(`Adding OIDC authentication to rule ${rule.RuleArn}`);
     }
     
-    // Modify the existing rule to add or update OIDC authentication
+    // Modify the existing rule to add or update OIDC authentication and hostname condition
     await elbv2.send(new ModifyRuleCommand({
       RuleArn: rule.RuleArn,
+      Conditions: [
+        {
+          Field: 'host-header',
+          Values: [`${hostname}.*`]
+        }
+      ],
       Actions: [
         {
           Type: 'authenticate-oidc',
