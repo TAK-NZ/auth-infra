@@ -153,12 +153,12 @@ function getCacheControlHeaders() {
 
 function getBrandingStrings(branding) {
   return {
-    heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrollment' : 'Device Enrollment',
+    heading: branding === 'tak-nz' ? 'TAK.NZ Device Enrolment' : 'Device Enrolment',
     footer: branding === 'tak-nz' ? 'TAK.NZ &bull; Team Awareness &bull; Te m&#333;hio o te r&#333;p&#363;' : 'TAK - Team Awareness Kit'
   };
 }
 
-console.log('Loading enrollment function');
+console.log('Loading enrolment function');
 
 /**
  * Main Lambda handler function
@@ -204,7 +204,7 @@ exports.handler = async (event, context) => {
         }
         
         // For data requests, continue with the full processing
-        console.log('Data request - processing enrollment');
+        console.log('Data request - processing enrolment');
         
         // Process the enrollment request
         return await handleEnrollmentRequest(oidcData, event.headers);
@@ -212,7 +212,7 @@ exports.handler = async (event, context) => {
         console.error('Error in handler:', e);
         
         // Prepare error data for the template
-        let errorMessage = 'An error occurred during enrollment';
+        let errorMessage = 'An error occurred during enrolment';
         let errorDetails = 'Please try again later or contact support.';
         let statusCode = 500;
         
@@ -244,7 +244,7 @@ exports.handler = async (event, context) => {
             
             const brandingStrings = getBrandingStrings(branding);
             const errorData = {
-                title: 'Enrollment Error',
+                title: 'Enrolment Error',
                 ...brandingStrings,
                 branding: branding,
                 errorMessage: errorMessage,
@@ -301,7 +301,7 @@ async function handleInitialRequest() {
     
     const brandingStrings = getBrandingStrings(branding);
     const loadingData = {
-        title: 'Loading Enrollment',
+        title: 'Loading Enrolment',
         ...brandingStrings,
         branding: branding
     };
@@ -409,7 +409,7 @@ async function handleEnrollmentRequest(oidcData, headers) {
         identifier: tokenIdentifier,
         intent: 'app_password',
         user: userId,
-        description: 'ATAK enrollment token',
+        description: 'ATAK enrolment token',
         expires: tokenExpirationDate.toISOString(),
         expiring: true
     };
@@ -434,7 +434,7 @@ async function handleEnrollmentRequest(oidcData, headers) {
     // Prepare template data
     const brandingStrings = getBrandingStrings(branding);
     const data = {
-        title: 'Device Enrollment',
+        title: 'Device Enrolment',
         ...brandingStrings,
         branding: branding,
         server: takServer,
@@ -471,7 +471,7 @@ async function handleEnrollmentRequest(oidcData, headers) {
             body: renderedHTML,
         };
     } catch (error) {
-        console.error('Error rendering enrollment page');
+        console.error('Error rendering enrolment page');
         throw error;
     }
 }
@@ -516,7 +516,7 @@ function generateCountdownScript(expirationTime) {
             if (distance < 0) {
                 clearInterval(x);
                 document.getElementById("timer").innerHTML = "EXPIRED";
-                document.getElementById("enroll_link").innerHTML = "Enrollment link EXPIRED";
+                document.getElementById("enroll_link").innerHTML = "Enrolment link EXPIRED";
             }
         }, 1000);
     `;
