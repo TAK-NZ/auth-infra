@@ -6,7 +6,7 @@ const androidIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 51
 </svg>`;
 
 // Define Apple icon SVG
-const appleIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="20" height="24" style="vertical-align: middle; margin-right: 5px;">
+const appleIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="14" height="16" style="vertical-align: middle;">
 <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
 </svg>`;
 
@@ -30,7 +30,7 @@ const safeRole = sanitize(takRole);
 %>
 
 <div class="form-group">
-    <label class="text-info">Enrolment data</label><br>
+    <label class="text-info">Enrollment data</label><br>
     <b>TAK Server:</b> <%= safeServer %></br>
     <b>User:</b> <%= safeUser %></br>
     <b>Callsign:</b> <%= safeCallsign %></br>
@@ -41,51 +41,51 @@ const safeRole = sanitize(takRole);
 </div>
 <hr>
 <div class="form-group">
-    <label class="text-info">Device Enrolment Requirements</label><br>
+    <label class="text-info">Device Enrollment Requirements</label><br>
     <ul>
-        <li><b>Device Registration:</b> This device will be linked to your account. Only enrol devices that you are authorized to use and are personally responsible for.</li>
-        <li><b>Enrolment Duration:</b> Your device enrolment is valid for 1 year. To maintain access, please renew your enrolment before: <i><%= reenroll %></i>.</li>
+        <li><b>Device Registration:</b> This device will be linked to your account. Only enroll devices that you are authorized to use and are personally responsible for.</li>
+        <li><b>Enrollment Duration:</b> Your device enrollment is valid for 1 year. To maintain access, please renew your enrollment before: <i><%= reenroll %></i>.</li>
     </ul>
 </div>
 <hr>
 <div <%= hide_enrollment_link %> class="form-group">
     <label class="text-info">Add This Device</label><br>
-    Already have ATAK installed on this Android device? You can directly enrol this device. 
+    Already have ATAK installed on this Android device? You can directly enroll this device. 
 </div>
 
 <div <%= hide_enrollment_link %> id="enroll_link" class="form-group" align="center">
     <% if (typeof link !== 'undefined' && link) { %>
-        <a id="enroll-button" class="enroll-button" href="<%= link %>" aria-label="Enrol this device now">Enrol now</a>
+        <a id="enroll-button" class="enroll-button" href="<%= link %>" aria-label="Enroll this device now">Enroll now</a>
     <% } else { %>
-        <span class="enroll-button disabled">Enrolment link unavailable</span>
+        <span class="enroll-button disabled">Enrollment link unavailable</span>
     <% } %>
 </div>
 <hr <%= hide_enrollment_link %>>
 
 <div class="form-group">
     <label class="text-info">Add Another Device</label><br>
-    Access this page from a desktop computer to enrol your mobile device.
+    Access this page from a desktop computer to enroll your mobile device.
 
 <div class="tab-container">
     <!-- Tab buttons -->
     <div class="tab-buttons">
-        <button class="tab-button active" onclick="openTab('android-tab')"><%- androidIcon %> <b>Android (ATAK)</b></button>
-        <button class="tab-button" onclick="openTab('iphone-tab')"><%- appleIcon %> <b>iPhone (iTAK)</b></button>
+        <button class="tab-button active" onclick="openTab('android-tab')"><%- androidIcon %> <b>ATAK</b> / <%- appleIcon %> <b>TAK Aware</b></button>
+        <button class="tab-button" onclick="openTab('iphone-tab')"><%- appleIcon %> <b>iTAK</b></button>
     </div>
 
     <!-- Tab content -->
     <div id="android-tab" class="tab-content active">
         <div class="form-group">
             <ul>
-                <li>ATAK must already be installed.</li>
-                <li>Open the camera app on your Android device.</li>
-                <li>Point the camera at the QR code below.</li>
-                <li>Follow the on-screen prompts to complete enrolment.</li>
+                <li>ATAK or TAK Aware must already be installed.</li>
+                <li><b>For ATAK (Android):</b> Open your camera app, point at the QR code below, and tap the link that appears.</li>
+                <li><b>For TAK Aware (iPhone):</b> Open TAK Aware, select <i>"Connect to a TAK Server"</i>, then <i>"Scan Android QR code"</i>, and point the camera at the QR code below.</li>
             </ul>
+
         </div>
         <div class="qr-container">
             <% if (typeof atakQrcode !== 'undefined' && atakQrcode) { %>
-                <img src="<%= atakQrcode %>" alt="QR Code for Android ATAK enrolment" class="qr-code">
+                <img src="<%= atakQrcode %>" alt="QR Code for Android ATAK or TAK Aware enrollment" class="qr-code">
             <% } else { %>
                 <div class="qr-error">QR code generation failed. Please try refreshing the page.</div>
             <% } %>  
@@ -111,7 +111,7 @@ const safeRole = sanitize(takRole);
         </div>
         <div class="qr-container">
             <% if (typeof itakQrcode !== 'undefined' && itakQrcode) { %>
-                <img src="<%= itakQrcode %>" alt="QR Code for iPhone iTAK enrolment" class="qr-code">
+                <img src="<%= itakQrcode %>" alt="QR Code for iPhone iTAK enrollment" class="qr-code">
             <% } else { %>
                 <div class="qr-error">QR code generation failed. Please try refreshing the page.</div>
             <% } %>
