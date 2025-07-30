@@ -56,16 +56,16 @@
       },
       "enrollment": {
         "enrollmentEnabled": true,
-        "providerName": "TAK-Device-Enrolment",
-        "applicationName": "TAK Device Enrolment",
-        "applicationSlug": "tak-device-enrolment",
+        "providerName": "TAK-Device-Activation",
+        "applicationName": "TAK Device Enrollment",
+        "applicationSlug": "tak-device-activation",
         "enrollmentHostname": "device",
         "openInNewTab": true,
         "authenticationFlowName": "",
         "authorizationFlowName": "default-provider-authorization-implicit-consent",
         "invalidationFlowName": "default-provider-invalidation-flow",
         "groupName": "Team Awareness Kit",
-        "description": "Enrol a mobile device with ATAK/iTAK to the TAK server",
+        "description": "Enrol a mobile device with ATAK/iTAK/TAK Aware",
         "signingKeyName": "authentik Self-signed Certificate"
       },
       "ecr": {
@@ -117,16 +117,16 @@
       },
       "enrollment": {
         "enrollmentEnabled": true,
-        "providerName": "TAK-Device-Enrolment",
-        "applicationName": "TAK Device Enrolment",
-        "applicationSlug": "tak-device-enrolment",
+        "providerName": "TAK-Device-Activation",
+        "applicationName": "TAK Device Enrollment",
+        "applicationSlug": "tak-device-activation",
         "enrollmentHostname": "device",
         "openInNewTab": true,
         "authenticationFlowName": "",
         "authorizationFlowName": "default-provider-authorization-implicit-consent",
         "invalidationFlowName": "default-provider-invalidation-flow",
         "groupName": "Team Awareness Kit",
-        "description": "Enrol an Android device with ATAK to the TAK server",
+        "description": "Enrol a mobile device with ATAK/iTAK/TAK Aware",
         "signingKeyName": "authentik Self-signed Certificate"
       },
       "ecr": {

@@ -157,14 +157,33 @@ const appleBadge = `<?xml version="1.0" encoding="utf-8"?>
 
 <div class="form-group">
     <label class="text-info">TAK Mobile Apps</label><br>
-    Suggested improvement: "Don't have ATAK or iTAK installed? Download from your device's app store:
+    Don't have ATAK, iTAK or TAK Aware installed? Download from your device's app store:
 </div>
 
-<div class="store-links">
-    <a href='https://play.google.com/store/apps/details?id=com.atakmap.app.civ' target='_blank' rel="noopener" class='store-link store-badge-link'>
-        <%- googleBadge %>
-    </a>
-    <a href='https://apps.apple.com/us/app/itak/id1561656396' target='_blank' rel="noopener" class='store-link store-badge-link'>
-        <%- appleBadge %>
-    </a>
+<div class="app-downloads" style="display: grid; grid-template-columns: 1fr 1fr; row-gap: 20px; max-width: 600px; margin: 0 auto;">
+    <div class="app-item" style="text-align: center;">
+        <div class="app-name"><strong>ATAK</strong></div>
+        <a href='https://play.google.com/store/apps/details?id=com.atakmap.app.civ' target='_blank' rel="noopener" class='store-link store-badge-link'>
+            <%- googleBadge %>
+        </a>
+    </div>
+    
+    <div class="app-item" style="text-align: center;">
+        <div class="app-name"><strong>iTAK</strong></div>
+        <a href='https://apps.apple.com/us/app/itak/id1561656396' target='_blank' rel="noopener" class='store-link store-badge-link'>
+            <%- appleBadge %>
+        </a>
+    </div>
+    
+    <div></div>
+    
+    <div class="app-item" style="text-align: center;">
+        <div class="app-name"><strong>TAK Aware</strong></div>
+        <a href='https://apps.apple.com/in/app/tak-aware/id6738631659' target='_blank' rel="noopener" class='store-link store-badge-link'>
+            <%- appleBadge %>
+        </a>
+    </div>
 </div>
+
+
+
