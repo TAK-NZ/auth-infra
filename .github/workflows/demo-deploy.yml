@@ -155,4 +155,4 @@ jobs:
         run: npm run cdk synth -- --context envType=dev-test --context stackName=${{ vars.DEMO_STACK_NAME }} --context adminUserEmail=${{ vars.DEMO_AUTHENTIK_ADMIN_EMAIL }}
 
       - name: Revert Demo to Dev-Test Profile
-        run: npm run cdk deploy -- --context envType=dev-test --context stackName=${{ vars.DEMO_STACK_NAME }} --context adminUserEmail=${{ vars.DEMO_AUTHENTIK_ADMIN_EMAIL }} --context usePreBuiltImages=true --context authentikImageTag=${{ needs.deploy-and-test.outputs.authentik-tag }} --context ldapImageTag=${{ needs.deploy-and-test.outputs.ldap-tag }} --require-approval never
+        run: npm run cdk deploy -- --context envType=dev-test --context stackName=${{ vars.DEMO_STACK_NAME }} --context adminUserEmail=${{ vars.DEMO_AUTHENTIK_ADMIN_EMAIL }} --context useS3AuthentikConfigFile=true --context usePreBuiltImages=true --context authentikImageTag=${{ needs.deploy-and-test.outputs.authentik-tag }} --context ldapImageTag=${{ needs.deploy-and-test.outputs.ldap-tag }} --require-approval never
