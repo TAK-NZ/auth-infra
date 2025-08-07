@@ -51,7 +51,7 @@
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
         "authentikVersion": "2025.6.4",
-        "buildRevision": 1,
+        "buildRevision": 2,
         "outboundEmailServerPort": 587
       },
       "enrollment": {
@@ -112,7 +112,7 @@
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
         "authentikVersion": "2025.6.4",
-        "buildRevision": 1,
+        "buildRevision": 2,
         "outboundEmailServerPort": 587
       },
       "enrollment": {
