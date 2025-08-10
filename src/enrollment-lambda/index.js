@@ -424,7 +424,18 @@ async function handleEnrollmentRequest(oidcData, headers) {
 
     // Generate QR codes in parallel
     const ATAKqrCodeData = `tak://com.atakmap.app/enroll?host=${takServer}&username=${user}&token=${tokenKey}`;
-    const iTAKqrCodeData = `${takServer},${takServer},8089,ssl`;
+    const iTAKqrCodeData = JSON.stringify({
+        "passphrase": "false",
+        "type": "registration",
+        "serverCredentials": {
+            "connectionString": `${takServer}:8089:ssl`
+        },
+        "userCredentials": {
+            "username": user,
+            "password": tokenKey,
+            "registrationId": crypto.randomUUID()
+        }
+    });
     
     const [ATAKbase64QRCode, iTAKbase64QRCode] = await Promise.all([
         generateBase64QRCode(ATAKqrCodeData),
@@ -509,14 +520,20 @@ function generateCountdownScript(expirationTime) {
             var minutes = String(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
             var seconds = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
             
-            // Output the result in an element with id="timer"
-            document.getElementById("timer").innerHTML = minutes + " : " + seconds;
+            // Update both timer elements
+            var timerAndroid = document.getElementById("timer-android");
+            var timerItak = document.getElementById("timer-itak");
+            var enrollLink = document.getElementById("enroll_link");
+            
+            if (timerAndroid) timerAndroid.innerHTML = minutes + " : " + seconds;
+            if (timerItak) timerItak.innerHTML = minutes + " : " + seconds;
             
             // If the count down is over, write some text 
             if (distance < 0) {
                 clearInterval(x);
-                document.getElementById("timer").innerHTML = "EXPIRED";
-                document.getElementById("enroll_link").innerHTML = "Enrollment link EXPIRED";
+                if (timerAndroid) timerAndroid.innerHTML = "EXPIRED";
+                if (timerItak) timerItak.innerHTML = "EXPIRED";
+                if (enrollLink) enrollLink.innerHTML = "Enrollment link EXPIRED";
             }
         }, 1000);
     `;
