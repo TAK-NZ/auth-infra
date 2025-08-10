@@ -91,17 +91,18 @@ const safeRole = sanitize(takRole);
             <% } %>  
         </div>
         <div class="timer-container">
-            <p>The QR-Code will expire in:<br><span id="timer" class="timer"></span></p>
+            <p>The QR-Code will expire in:<br><span id="timer-android" class="timer"></span></p>
             <% if (typeof expire_utc !== 'undefined' && expire_utc) { %>
-                <span id="expire-utc" data-time="<%= expire_utc %>" hidden></span>
+                <span id="expire-utc-android" data-time="<%= expire_utc %>" hidden></span>
             <% } else { %>
-                <script>document.getElementById('timer').innerHTML = 'Unknown';</script>
+                <script>document.getElementById('timer-android').innerHTML = 'Unknown';</script>
             <% } %>
         </div>
     </div>
 
     <div id="iphone-tab" class="tab-content">
         <div class="form-group">
+        <b>Note:</b> QR code enrollment requires iTAK version 2.12.3 or later. Update your app if needed.
             <ul>
                 <li>Within iTAK tap <i>"Network"</i>, then <i>"Servers".</i></li>
                 <li>Select the plus icon <i>(+)</i> in the bottom right.</li>
@@ -116,7 +117,14 @@ const safeRole = sanitize(takRole);
                 <div class="qr-error">QR code generation failed. Please try refreshing the page.</div>
             <% } %>
         </div>
-        <div style="text-align: center; line-height: 0.9;"><small>Name: <%= safeServer %><br>Address: <%= safeServer %><br>Port: 8089<br>Protocol: SSL</small>
+        <div class="timer-container">
+            <p>The QR-Code will expire in:<br><span id="timer-itak" class="timer"></span></p>
+            <% if (typeof expire_utc !== 'undefined' && expire_utc) { %>
+                <span id="expire-utc-itak" data-time="<%= expire_utc %>" hidden></span>
+            <% } else { %>
+                <script>document.getElementById('timer-itak').innerHTML = 'Unknown';</script>
+            <% } %>
+        </div>
     </div>
 </div>
 </div>
@@ -124,15 +132,5 @@ const safeRole = sanitize(takRole);
 
 <%- include('partials/store_badges') %>
 
-<!-- JavaScript moved to scripts.ejs -->
-<script>
-    // Auto-logout after page loads to invalidate session
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            fetch('/oauth2/idpresponse/logout', { method: 'POST' })
-                .catch(err => console.log('Auto-logout failed, session will expire naturally'));
-        }, 2000); // 2 second delay to allow user to see content
-    });
-</script>
 
 <%- include('partials/footer') %>
