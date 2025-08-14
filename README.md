@@ -237,3 +237,7 @@ npm run deploy:prod -- --context enrollmentEnabled=true
 - **Authentik Documentation** - https://goauthentik.io/docs/
 - **TAK-NZ Project** - https://github.com/TAK-NZ/
 - **Issue Tracking** - Use GitHub Issues for bug reports and feature requests
+
+## License
+
+TAK.NZ is distributed under [AGPL-3.0-only](LICENSE)
