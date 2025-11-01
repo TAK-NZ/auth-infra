@@ -31,10 +31,7 @@
         "deleteProtection": false,
         "enableCloudWatchLogs": false
       },
-      "redis": {
-        "nodeType": "cache.t3.micro",
-        "numCacheNodes": 1
-      },
+
       "ecs": {
         "taskCpu": 512,
         "taskMemory": 1024,
@@ -50,7 +47,7 @@
         "useS3AuthentikConfigFile": false,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.8.4",
+        "authentikVersion": "2025.10.0",
         "buildRevision": 1,
         "outboundEmailServerPort": 587
       },
@@ -92,10 +89,7 @@
         "deleteProtection": true,
         "enableCloudWatchLogs": false
       },
-      "redis": {
-        "nodeType": "cache.t3.small",
-        "numCacheNodes": 2
-      },
+
       "ecs": {
         "taskCpu": 1024,
         "taskMemory": 2048,
@@ -111,7 +105,7 @@
         "useS3AuthentikConfigFile": true,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.8.4",
+        "authentikVersion": "2025.10.0",
         "buildRevision": 1,
         "outboundEmailServerPort": 587
       },

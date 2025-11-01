@@ -47,7 +47,7 @@ export interface AuthentikWorkerProps {
   infrastructure: InfrastructureConfig;
 
   /**
-   * Secrets configuration (database, Redis, Authentik secrets)
+   * Secrets configuration (database, Authentik secrets)
    */
   secrets: SecretsConfig;
 
@@ -119,7 +119,7 @@ export class AuthentikWorker extends Construct {
 
     // Add permissions to access secrets
     props.secrets.database.grantRead(executionRole);
-    props.secrets.redisAuthToken.grantRead(executionRole);
+
     props.secrets.authentik.secretKey.grantRead(executionRole);
     if (props.secrets.authentik.ldapServiceUser) {
       props.secrets.authentik.ldapServiceUser.grantRead(executionRole);
@@ -272,14 +272,13 @@ export class AuthentikWorker extends Construct {
       command: ['worker'], // Worker command
       environment: {
         AUTHENTIK_POSTGRESQL__HOST: props.application.database.hostname,
+        AUTHENTIK_POSTGRESQL__SSLMODE: 'require',
         ...(props.application.database.readReplicaHostname && {
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST: props.application.database.readReplicaHostname,
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: 'authentik',
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT: '5432',
         }),
-        AUTHENTIK_REDIS__HOST: props.application.redis.hostname,
-        AUTHENTIK_REDIS__TLS: 'True',
-        AUTHENTIK_REDIS__TLS_REQS: 'required',
+        AUTHENTIK_DISABLE_STARTUP_ANALYTICS: 'true',
         // Add essential bootstrap configuration for worker
         AUTHENTIK_BOOTSTRAP_EMAIL: props.application.adminUserEmail,
         AUTHENTIK_BOOTSTRAP_LDAP_BASEDN: props.application.ldapBaseDn,
@@ -293,7 +292,7 @@ export class AuthentikWorker extends Construct {
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.database, 'password'),
         }),
-        AUTHENTIK_REDIS__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.redisAuthToken),
+
         AUTHENTIK_SECRET_KEY: ecs.Secret.fromSecretsManager(props.secrets.authentik.secretKey),
         ...(props.secrets.authentik.ldapServiceUser ? {
           AUTHENTIK_BOOTSTRAP_LDAPSERVICE_USERNAME: ecs.Secret.fromSecretsManager(props.secrets.authentik.ldapServiceUser, 'username'),

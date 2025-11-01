@@ -4,7 +4,7 @@ export class ConfigValidator {
   static validateEnvironmentConfig(config: ContextEnvironmentConfig, environment: string): void {
     this.validateRequired(config);
     this.validateDatabase(config.database);
-    this.validateRedis(config.redis);
+
     this.validateEcs(config.ecs);
     this.validateAuthentik(config.authentik);
     this.validateEnvironmentConstraints(config, environment);
@@ -33,16 +33,7 @@ export class ConfigValidator {
     }
   }
 
-  private static validateRedis(redisConfig: any): void {
-    const validNodeTypes = ['cache.t3.micro', 'cache.t3.small', 'cache.t3.medium', 'cache.t3.large', 'cache.t4g.micro', 'cache.t4g.small', 'cache.t4g.medium', 'cache.t4g.large'];
-    if (!validNodeTypes.includes(redisConfig.nodeType)) {
-      throw new Error(`Invalid Redis node type: ${redisConfig.nodeType}`);
-    }
-    
-    if (redisConfig.numCacheNodes < 1 || redisConfig.numCacheNodes > 6) {
-      throw new Error(`Redis cache node count must be between 1 and 6, got: ${redisConfig.numCacheNodes}`);
-    }
-  }
+
 
   private static validateEcs(ecsConfig: any): void {
     const validCpuMemoryCombinations = [
@@ -79,9 +70,7 @@ export class ConfigValidator {
       if (config.database.instanceCount < 2) {
         console.warn('Production environment recommended to have at least 2 database instances for high availability');
       }
-      if (config.redis.numCacheNodes < 2) {
-        console.warn('Production environment recommended to have at least 2 Redis nodes for high availability');
-      }
+
     }
   }
 

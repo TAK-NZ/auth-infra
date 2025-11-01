@@ -86,7 +86,7 @@ npm run deploy:prod
 
 ### Database & Storage
 - **RDS Aurora PostgreSQL** - Encrypted cluster with backup retention
-- **ElastiCache Redis** - Session management and caching
+
 - **EFS File System** - Persistent Authentik data and certificates
 - **S3 Bucket** - Configuration storage with KMS encryption
 

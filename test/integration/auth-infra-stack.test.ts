@@ -39,7 +39,7 @@ describe('AuthInfraStack Integration', () => {
     test('dev-test configuration has development settings', () => {
       const config = MOCK_CONFIGS.DEV_TEST;
       expect(config.database.instanceCount).toBe(1);
-      expect(config.redis.numCacheNodes).toBe(1);
+
       expect(config.ecs.desiredCount).toBe(1);
       expect(config.general.removalPolicy).toBe('DESTROY');
     });
@@ -47,7 +47,7 @@ describe('AuthInfraStack Integration', () => {
     test('prod configuration has production settings', () => {
       const config = MOCK_CONFIGS.PROD;
       expect(config.database.instanceCount).toBe(2);
-      expect(config.redis.numCacheNodes).toBe(2);
+
       expect(config.ecs.desiredCount).toBe(2);
       expect(config.general.removalPolicy).toBe('RETAIN');
     });
@@ -60,7 +60,7 @@ describe('AuthInfraStack Integration', () => {
       configs.forEach(config => {
         expect(config.stackName).toBeDefined();
         expect(config.database).toBeDefined();
-        expect(config.redis).toBeDefined();
+
         expect(config.ecs).toBeDefined();
         expect(config.authentik).toBeDefined();
         expect(config.ecr).toBeDefined();

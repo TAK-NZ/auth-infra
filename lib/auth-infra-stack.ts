@@ -13,7 +13,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 
 // Construct imports
 import { Database } from './constructs/database';
-import { Redis } from './constructs/redis';
+
 import { Efs } from './constructs/efs';
 import { SecretsManager } from './constructs/secrets-manager';
 import { SecurityGroups } from './constructs/security-groups';
@@ -239,14 +239,7 @@ export class AuthInfraStack extends cdk.Stack {
       securityGroups: [securityGroups.database]
     });
 
-    // Redis
-    const redis = new Redis(this, 'Redis', {
-      environment: props.environment,
-      stackName: resolvedStackName,
-      contextConfig: envConfig,
-      infrastructure: authentikServerInfrastructureConfig,
-      securityGroups: [securityGroups.redis]
-    });
+
 
     // EFS
     const efs = new Efs(this, 'EFS', {
@@ -263,7 +256,6 @@ export class AuthInfraStack extends cdk.Stack {
     // Build shared config objects
     const secretsConfig: SecretsConfig = {
       database: database.masterSecret,
-      redisAuthToken: redis.authToken,
       authentik: {
         secretKey: secretsManager.secretKey,
         adminUserPassword: secretsManager.adminUserPassword,
@@ -297,9 +289,6 @@ export class AuthInfraStack extends cdk.Stack {
       database: {
         hostname: database.hostname,
         readReplicaHostname: enablePostgresReadReplicas ? database.readerEndpoint : undefined
-      },
-      redis: {
-        hostname: redis.hostname
       },
       authentikHost: `https://${hostnameAuthentik}.${hostedZoneName}`
     };
@@ -630,8 +619,7 @@ export class AuthInfraStack extends cdk.Stack {
       stackName: stackName,
       databaseEndpoint: database.hostname,
       databaseSecretArn: database.masterSecret.secretArn,
-      redisEndpoint: redis.hostname,
-      redisAuthTokenArn: redis.authToken.secretArn,
+
       efsId: efs.fileSystem.fileSystemId,
       efsMediaAccessPointId: efs.mediaAccessPoint.accessPointId,
       efsTemplatesAccessPointId: efs.customTemplatesAccessPoint.accessPointId,

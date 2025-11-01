@@ -8,8 +8,7 @@ export interface OutputParams {
   stackName: string;
   databaseEndpoint: string;
   databaseSecretArn: string;
-  redisEndpoint: string;
-  redisAuthTokenArn: string;
+
   efsId: string;
   efsMediaAccessPointId: string;
   efsTemplatesAccessPointId: string;
@@ -46,8 +45,7 @@ export function registerOutputs(params: OutputParams): void {
     { key: 'AuthentikAlbDns', value: params.authentikAlbDns, description: 'Authentik Application Load Balancer DNS name' },
     { key: 'DatabaseEndpoint', value: params.databaseEndpoint, description: 'RDS Aurora PostgreSQL cluster endpoint' },
     { key: 'DatabaseSecretArn', value: params.databaseSecretArn, description: 'RDS Aurora PostgreSQL master secret ARN' },
-    { key: 'RedisEndpoint', value: params.redisEndpoint, description: 'ElastiCache Redis cluster endpoint' },
-    { key: 'RedisAuthTokenArn', value: params.redisAuthTokenArn, description: 'ElastiCache Redis auth token secret ARN' },
+
     { key: 'EfsId', value: params.efsId, description: 'EFS file system ID' },
     { key: 'EfsMediaAccessPoint', value: params.efsMediaAccessPointId, description: 'EFS media access point ID' },
     { key: 'EfsTemplatesAccessPoint', value: params.efsTemplatesAccessPointId, description: 'EFS templates access point ID' },

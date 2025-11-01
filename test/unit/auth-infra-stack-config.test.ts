@@ -30,7 +30,7 @@ describe('AuthInfraStack Configuration Validation', () => {
       const config = MOCK_CONFIGS.DEV_TEST;
       expect(config.stackName).toBe('DevTest');
       expect(config.database.instanceClass).toBe('db.t3.micro');
-      expect(config.redis.nodeType).toBe('cache.t3.micro');
+
       expect(config.ecs.taskCpu).toBe(512);
     });
 
@@ -38,7 +38,7 @@ describe('AuthInfraStack Configuration Validation', () => {
       const config = MOCK_CONFIGS.PROD;
       expect(config.stackName).toBe('Prod');
       expect(config.database.instanceClass).toBe('db.t3.small');
-      expect(config.redis.nodeType).toBe('cache.t3.small');
+
       expect(config.ecs.taskCpu).toBe(1024);
     });
   });

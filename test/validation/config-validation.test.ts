@@ -29,7 +29,6 @@ describe('Configuration Files', () => {
       const devTest = cdkJson.context['dev-test'];
       expect(devTest.stackName).toBeDefined();
       expect(devTest.database).toBeDefined();
-      expect(devTest.redis).toBeDefined();
       expect(devTest.ecs).toBeDefined();
       expect(devTest.authentik).toBeDefined();
       expect(devTest.ecr).toBeDefined();
@@ -39,7 +38,6 @@ describe('Configuration Files', () => {
       const prod = cdkJson.context['prod'];
       expect(prod.stackName).toBeDefined();
       expect(prod.database).toBeDefined();
-      expect(prod.redis).toBeDefined();
       expect(prod.ecs).toBeDefined();
       expect(prod.authentik).toBeDefined();
       expect(prod.ecr).toBeDefined();
@@ -64,7 +62,7 @@ describe('Configuration Files', () => {
         expect(config.database.instanceCount).toBeGreaterThan(0);
         expect(config.database.allocatedStorage).toBeGreaterThan(0);
         expect(config.database.backupRetentionDays).toBeGreaterThanOrEqual(0);
-        expect(config.redis.numCacheNodes).toBeGreaterThan(0);
+
         expect(config.ecs.taskCpu).toBeGreaterThan(0);
         expect(config.ecs.taskMemory).toBeGreaterThan(0);
         expect(config.ecs.desiredCount).toBeGreaterThan(0);

@@ -122,7 +122,7 @@ export class AuthentikServer extends Construct {
 
     // Add permissions to access secrets
     props.secrets.database.grantRead(executionRole);
-    props.secrets.redisAuthToken.grantRead(executionRole);
+
     props.secrets.authentik.secretKey.grantRead(executionRole);
     props.secrets.authentik.adminUserPassword.grantRead(executionRole);
     props.secrets.authentik.adminUserToken.grantRead(executionRole);
@@ -274,14 +274,13 @@ export class AuthentikServer extends Construct {
       command: ['server'], // Server command
       environment: {
         AUTHENTIK_POSTGRESQL__HOST: props.application.database.hostname,
+        AUTHENTIK_POSTGRESQL__SSLMODE: 'require',
         ...(props.application.database.readReplicaHostname && {
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST: props.application.database.readReplicaHostname,
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: 'authentik',
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT: '5432',
         }),
-        AUTHENTIK_REDIS__HOST: props.application.redis.hostname,
-        AUTHENTIK_REDIS__TLS: 'True',
-        AUTHENTIK_REDIS__TLS_REQS: 'required',
+        AUTHENTIK_DISABLE_STARTUP_ANALYTICS: 'true',
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),
@@ -290,7 +289,7 @@ export class AuthentikServer extends Construct {
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.database, 'password'),
         }),
-        AUTHENTIK_REDIS__PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.redisAuthToken),
+
         AUTHENTIK_SECRET_KEY: ecs.Secret.fromSecretsManager(props.secrets.authentik.secretKey),
       },
       healthCheck: {

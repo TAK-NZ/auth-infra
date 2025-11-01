@@ -37,7 +37,6 @@ describe('LDAP Token Retriever Construct', () => {
           adminUserEmail: 'admin@test.com',
           ldapBaseDn: 'dc=test,dc=com',
           database: { hostname: 'db.test.com' },
-          redis: { hostname: 'redis.test.com' },
           authentikHost: 'https://auth.test.com'
         }
       });
@@ -63,7 +62,6 @@ describe('LDAP Token Retriever Construct', () => {
           adminUserEmail: 'admin@test.com',
           ldapBaseDn: 'dc=test,dc=com',
           database: { hostname: 'db.test.com' },
-          redis: { hostname: 'redis.test.com' },
           authentikHost: 'https://auth.test.com'
         }
       });
@@ -97,7 +95,6 @@ describe('LDAP Token Retriever Construct', () => {
           adminUserEmail: 'admin@prod.com',
           ldapBaseDn: 'dc=prod,dc=com',
           database: { hostname: 'db.prod.com' },
-          redis: { hostname: 'redis.prod.com' },
           authentikHost: 'https://auth.prod.com'
         }
       });
