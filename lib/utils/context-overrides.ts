@@ -39,11 +39,7 @@ export function applyContextOverrides(
       deleteProtection: contextBoolean(app, 'deleteProtection', baseConfig.database.deleteProtection),
       enableCloudWatchLogs: contextBoolean(app, 'enableCloudWatchLogs', baseConfig.database.enableCloudWatchLogs),
     },
-    redis: {
-      ...baseConfig.redis,
-      nodeType: app.node.tryGetContext('nodeType') ?? baseConfig.redis.nodeType,
-      numCacheNodes: Number(app.node.tryGetContext('numCacheNodes')) || baseConfig.redis.numCacheNodes,
-    },
+
     ecs: {
       ...baseConfig.ecs,
       taskCpu: Number(app.node.tryGetContext('taskCpu')) || baseConfig.ecs.taskCpu,

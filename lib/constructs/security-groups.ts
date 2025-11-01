@@ -7,7 +7,7 @@ import {
   Fn
 } from 'aws-cdk-lib';
 import { createBaseImportValue, BASE_EXPORT_NAMES } from '../cloudformation-imports';
-import { DATABASE_CONSTANTS, REDIS_CONSTANTS, AUTHENTIK_CONSTANTS, EFS_CONSTANTS } from '../utils/constants';
+import { DATABASE_CONSTANTS, AUTHENTIK_CONSTANTS, EFS_CONSTANTS } from '../utils/constants';
 
 /**
  * Properties for the SecurityGroups construct
@@ -63,10 +63,7 @@ export class SecurityGroups extends Construct {
    */
   public readonly database: ec2.SecurityGroup;
 
-  /**
-   * Security group for Redis access
-   */
-  public readonly redis: ec2.SecurityGroup;
+
 
   constructor(scope: Construct, id: string, props: SecurityGroupsProps) {
     super(scope, id);
@@ -198,24 +195,7 @@ export class SecurityGroups extends Construct {
       'Allow PostgreSQL access from Authentik Worker'
     );
 
-    // Create Redis security group
-    this.redis = new ec2.SecurityGroup(this, 'Redis', {
-      vpc: props.vpc,
-      description: 'Security group for Redis',
-      allowAllOutbound: false
-    });
 
-    // Redis inbound rules
-    this.redis.addIngressRule(
-      ec2.Peer.securityGroupId(this.authentikServer.securityGroupId),
-      ec2.Port.tcp(REDIS_CONSTANTS.PORT),
-      'Allow Redis access from Authentik Server'
-    );
-    this.redis.addIngressRule(
-      ec2.Peer.securityGroupId(this.authentikWorker.securityGroupId),
-      ec2.Port.tcp(REDIS_CONSTANTS.PORT),
-      'Allow Redis access from Authentik Worker'
-    );
   }
 
   /**
@@ -232,16 +212,7 @@ export class SecurityGroups extends Construct {
       ec2.Port.tcp(DATABASE_CONSTANTS.PORT),
       'Allow PostgreSQL access IPv6'
     );
-    securityGroup.addEgressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(REDIS_CONSTANTS.PORT),
-      'Allow Redis access'
-    );
-    securityGroup.addEgressRule(
-      ec2.Peer.anyIpv6(),
-      ec2.Port.tcp(REDIS_CONSTANTS.PORT),
-      'Allow Redis access IPv6'
-    );
+
     securityGroup.addEgressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(EFS_CONSTANTS.PORT),

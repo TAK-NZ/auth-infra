@@ -49,13 +49,13 @@ describe('Authentik Constructs', () => {
         adminUserEmail: 'admin@example.com',
         ldapBaseDn: 'DC=example,DC=com',
         database: { hostname: 'test-db.example.com' },
-        redis: { hostname: 'test-redis.example.com' }
+
       };
 
       expect(appConfig.adminUserEmail).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
       expect(appConfig.ldapBaseDn).toMatch(/^(DC|dc)=/i);
       expect(appConfig.database.hostname).toBeDefined();
-      expect(appConfig.redis.hostname).toBeDefined();
+
     });
 
     test('validates storage configuration structure', () => {
@@ -105,7 +105,7 @@ describe('Authentik Constructs', () => {
     test('validates required secrets structure', () => {
       const secretsConfig = {
         database: 'db-secret-arn',
-        redisAuthToken: 'redis-secret-arn',
+
         authentik: {
           secretKey: 'secret-key-arn',
           adminUserPassword: 'admin-password-arn',
@@ -115,7 +115,7 @@ describe('Authentik Constructs', () => {
       };
 
       expect(secretsConfig.database).toBeDefined();
-      expect(secretsConfig.redisAuthToken).toBeDefined();
+
       expect(secretsConfig.authentik.secretKey).toBeDefined();
       expect(secretsConfig.authentik.adminUserPassword).toBeDefined();
       expect(secretsConfig.authentik.adminUserToken).toBeDefined();

@@ -16,10 +16,7 @@ export const MOCK_CONFIGS = {
       backupRetentionDays: 7,
       deleteProtection: false
     },
-    redis: {
-      nodeType: 'cache.t3.micro',
-      numCacheNodes: 1
-    },
+
     ecs: {
       taskCpu: 512,
       taskMemory: 1024,
@@ -70,10 +67,7 @@ export const MOCK_CONFIGS = {
       backupRetentionDays: 30,
       deleteProtection: true
     },
-    redis: {
-      nodeType: 'cache.t3.small',
-      numCacheNodes: 2
-    },
+
     ecs: {
       taskCpu: 1024,
       taskMemory: 2048,
@@ -124,10 +118,7 @@ export const MOCK_CONFIGS = {
       backupRetentionDays: 1,
       deleteProtection: false
     },
-    redis: {
-      nodeType: 'cache.t4g.micro',
-      numCacheNodes: 1
-    },
+
     ecs: {
       taskCpu: 512,
       taskMemory: 1024,

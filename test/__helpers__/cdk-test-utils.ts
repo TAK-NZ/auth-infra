@@ -49,10 +49,7 @@ export class CDKTestHelper {
         stack, 'DbSecret', 
         'arn:aws:secretsmanager:us-west-2:123456789012:secret:db-secret-AbCdEf'
       ),
-      redisSecret: secretsmanager.Secret.fromSecretCompleteArn(
-        stack, 'RedisSecret', 
-        'arn:aws:secretsmanager:us-west-2:123456789012:secret:redis-secret-AbCdEf'
-      ),
+
       secretKey: secretsmanager.Secret.fromSecretCompleteArn(
         stack, 'SecretKey', 
         'arn:aws:secretsmanager:us-west-2:123456789012:secret:secret-key-AbCdEf'

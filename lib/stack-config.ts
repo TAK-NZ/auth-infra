@@ -21,10 +21,7 @@ export interface ContextEnvironmentConfig {
     deleteProtection: boolean;
     enableCloudWatchLogs?: boolean;
   };
-  redis: {
-    nodeType: string;
-    numCacheNodes: number;
-  };
+
   ecs: {
     taskCpu: number;
     taskMemory: number;

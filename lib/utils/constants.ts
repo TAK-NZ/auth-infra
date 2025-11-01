@@ -29,20 +29,7 @@ export const DATABASE_CONSTANTS = {
   USERNAME: 'authentik'
 } as const;
 
-/**
- * Redis/Valkey configuration constants
- * Cache and session storage settings for Authentik
- */
-export const REDIS_CONSTANTS = {
-  /** Standard Redis port */
-  PORT: 6379,
-  /** Generated password length for security */
-  PASSWORD_LENGTH: 64,
-  /** Redis-compatible engine (AWS ElastiCache) */
-  ENGINE: 'valkey',
-  /** Engine version for compatibility and features */
-  ENGINE_VERSION: '7.2'
-} as const;
+
 
 /**
  * Authentik service port configuration

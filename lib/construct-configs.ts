@@ -42,11 +42,6 @@ export interface SecretsConfig {
   database: secretsmanager.ISecret;
 
   /**
-   * Redis auth token
-   */
-  redisAuthToken: secretsmanager.ISecret;
-
-  /**
    * Authentik-specific secrets
    */
   authentik: {
@@ -164,16 +159,6 @@ export interface AuthentikApplicationConfig {
      * Database read replica hostname (optional)
      */
     readReplicaHostname?: string;
-  };
-
-  /**
-   * Redis configuration
-   */
-  redis: {
-    /**
-     * Redis hostname
-     */
-    hostname: string;
   };
 
   /**

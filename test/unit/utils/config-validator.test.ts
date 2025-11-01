@@ -98,49 +98,7 @@ describe('ConfigValidator', () => {
     });
   });
 
-  describe('Redis validation', () => {
-    test('throws error for invalid Redis node type', () => {
-      const invalidConfig = { 
-        ...MOCK_CONFIGS.DEV_TEST,
-        redis: { 
-          ...MOCK_CONFIGS.DEV_TEST.redis,
-          nodeType: 'cache.invalid'
-        }
-      };
-      
-      expect(() => {
-        ConfigValidator.validateEnvironmentConfig(invalidConfig, 'dev-test');
-      }).toThrow('Invalid Redis node type: cache.invalid');
-    });
 
-    test('throws error for invalid cache node count', () => {
-      const invalidConfig = { 
-        ...MOCK_CONFIGS.DEV_TEST,
-        redis: { 
-          ...MOCK_CONFIGS.DEV_TEST.redis,
-          numCacheNodes: 0
-        }
-      };
-      
-      expect(() => {
-        ConfigValidator.validateEnvironmentConfig(invalidConfig, 'dev-test');
-      }).toThrow('Redis cache node count must be between 1 and 6, got: 0');
-    });
-
-    test('throws error for cache node count > 6', () => {
-      const invalidConfig = { 
-        ...MOCK_CONFIGS.DEV_TEST,
-        redis: { 
-          ...MOCK_CONFIGS.DEV_TEST.redis,
-          numCacheNodes: 7
-        }
-      };
-      
-      expect(() => {
-        ConfigValidator.validateEnvironmentConfig(invalidConfig, 'dev-test');
-      }).toThrow('Redis cache node count must be between 1 and 6, got: 7');
-    });
-  });
 
   describe('ECS validation', () => {
     test('throws error for invalid CPU/Memory combination', () => {
@@ -248,24 +206,6 @@ describe('ConfigValidator', () => {
       consoleSpy.mockRestore();
     });
 
-    test('logs warning for prod with single Redis node', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-      
-      const config = { 
-        ...MOCK_CONFIGS.PROD,
-        redis: { 
-          ...MOCK_CONFIGS.PROD.redis,
-          numCacheNodes: 1
-        }
-      };
-      
-      ConfigValidator.validateEnvironmentConfig(config, 'prod');
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Production environment recommended to have at least 2 Redis nodes for high availability'
-      );
-      
-      consoleSpy.mockRestore();
-    });
+
   });
 });

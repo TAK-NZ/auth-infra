@@ -38,7 +38,7 @@ describe('Route53 Constructs', () => {
 
     const route53Ldap = new Route53(stack, 'TestRoute53LDAP', {
       environment: 'dev-test',
-      contextConfig: { stackName: 'Test', database: {}, redis: {}, ecs: {}, authentik: {}, ecr: {}, general: {} } as any,
+      contextConfig: { stackName: 'Test', database: {}, ecs: {}, authentik: {}, ecr: {}, general: {} } as any,
       network: {
         hostedZoneId: 'Z123456789',
         hostedZoneName: 'test.com',
@@ -66,7 +66,7 @@ describe('Route53 Constructs', () => {
 
     const route53Ldap = new Route53(stack, 'TestRoute53LDAP2', {
       environment: 'dev-test',
-      contextConfig: { stackName: 'Test', database: {}, redis: {}, ecs: {}, authentik: {}, ecr: {}, general: {} } as any,
+      contextConfig: { stackName: 'Test', database: {}, ecs: {}, authentik: {}, ecr: {}, general: {} } as any,
       network: {
         hostedZoneId: 'Z123456789',
         hostedZoneName: 'test.com',
