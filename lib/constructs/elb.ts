@@ -106,6 +106,18 @@ export class Elb extends Construct {
       })
     });
 
+    // Block DyePack scanner
+    this.httpsListener.addAction('BlockScanner', {
+      priority: 1,
+      conditions: [
+        elbv2.ListenerCondition.httpHeader('User-Agent', ['*DynamicScanningFramework*', '*AmazonAutoTester-DyePack*'])
+      ],
+      action: elbv2.ListenerAction.fixedResponse(403, {
+        contentType: 'text/plain',
+        messageBody: 'Forbidden'
+      })
+    });
+
     // Store the DNS name
     this.dnsName = this.loadBalancer.loadBalancerDnsName;
   }
