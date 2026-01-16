@@ -12,4 +12,9 @@ COPY authentik/branding/icons/tak-nz-brand-wide.svg /web/dist/assets/icons/brand
 COPY authentik/branding/icons/tak-nz-logo.svg /web/dist/assets/icons/icon.svg
 COPY authentik/branding/icons/tak-nz-brand-wide.svg /web/dist/assets/icons/icon_left_brand.svg
 COPY authentik/branding/icons/tak-nz-brand-tall.svg /web/dist/assets/icons/icon_top_brand.svg
+COPY authentik/branding/icons/tak-background.svg /web/dist/assets/icons/tak-background.svg
 COPY authentik/temp_fixes/authentik/ /authentik/
+# Hide locale selector by removing multi-line element
+USER root
+RUN sed -i ':a;N;$!ba;s/<ak-locale-select[^>]*\n[^>]*>[^<]*<\/ak-locale-select>//g' /web/dist/flow/FlowInterface-*.js
+USER authentik

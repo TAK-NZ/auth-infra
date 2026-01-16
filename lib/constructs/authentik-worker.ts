@@ -327,7 +327,7 @@ export class AuthentikWorker extends Construct {
 
     // Add mount points for EFS volumes
     container.addMountPoints({
-      containerPath: '/media',
+      containerPath: '/data/media',
       sourceVolume: 'media',
       readOnly: false
     });
