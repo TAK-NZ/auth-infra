@@ -454,7 +454,6 @@ async function uploadApplicationIcon(api, appSlug) {
       return null;
     }
     
-    // Use file upload instead of URL
     const iconPath = path.join(__dirname, 'TAK-Enroll.png');
     console.log(`Uploading icon from: ${iconPath}`);
     
@@ -463,17 +462,27 @@ async function uploadApplicationIcon(api, appSlug) {
       return null;
     }
     
+    // Step 1: Upload file to Authentik media storage
     const form = new FormData();
-    form.append('file', fs.createReadStream(iconPath));
+    form.append('file', fs.createReadStream(iconPath), 'icon-name.png');
     
-    const response = await api.post(`/api/v3/core/applications/${appSlug}/set_icon/`, form, {
+    // Use axios directly to avoid header conflicts
+    const uploadResponse = await axios.post(`${api.defaults.baseURL}/api/v3/admin/file/`, form, {
       headers: {
+        'Authorization': api.defaults.headers['Authorization'],
         ...form.getHeaders(),
-        'Content-Type': 'multipart/form-data',
       },
     });
     
-    console.log('Icon uploaded successfully');
+    const uploadedFilePath = uploadResponse.data.url;
+    console.log(`File uploaded successfully: ${uploadedFilePath}`);
+    
+    // Step 2: Update application with the uploaded file path
+    const response = await api.patch(`/api/v3/core/applications/${appSlug}/`, {
+      meta_icon: uploadedFilePath
+    });
+    
+    console.log('Icon uploaded and assigned successfully');
     return response.data;
   } catch (error) {
     console.error('Error uploading application icon:', error.message);
