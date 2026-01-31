@@ -5,5 +5,8 @@
   "main": "index.js",
   "dependencies": {
     "@aws-sdk/client-elastic-load-balancing-v2": "^3.515.0"
+  },
+  "overrides": {
+    "fast-xml-parser": ">=5.3.4"
   }
 }
