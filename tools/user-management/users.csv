@@ -1,0 +1,4 @@
+username,name,takRole,takColor,takCallsign,takColorLabel,password,static_groups
+user1@example.com,Example User 1,Team Member,Blue,EXAMPLE-USER1,Example Organization,<password>,"tak_Teams - Example Organization,tak_Teams - Example Team"
+user2@example.com,Example User 2,Team Leader,Red,EXAMPLE-USER2,Example Organization,<password>,"tak_Teams - Example Organization,tak_Teams - Example Team"
+user3@example.com,Example User 3,Team Member,Green,EXAMPLE-USER3,Example Organization,<password>,"tak_Teams - Example Organization,tak_Teams - Example Team"
