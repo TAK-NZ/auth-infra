@@ -33,8 +33,8 @@
       },
 
       "ecs": {
-        "taskCpu": 512,
-        "taskMemory": 1024,
+        "taskCpu": 1024,
+        "taskMemory": 2048,
         "desiredCount": 1,
         "enableDetailedLogging": true,
         "enableEcsExec": true
@@ -47,7 +47,7 @@
         "useS3AuthentikConfigFile": false,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.12.4",
+        "authentikVersion": "2026.2.0",
         "buildRevision": 1,
         "outboundEmailServerPort": 587
       },
@@ -105,7 +105,7 @@
         "useS3AuthentikConfigFile": true,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.12.4",
+        "authentikVersion": "2026.2.0",
         "buildRevision": 1,
         "outboundEmailServerPort": 587
       },
