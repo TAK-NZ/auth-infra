@@ -106,13 +106,15 @@ def main():
             # Update existing user
             success, response = update_user(args.base_url, headers, existing_user['pk'], user_data)
             if success:
-                # Set password
-                if set_user_password(args.base_url, headers, existing_user['pk'], user_data['password']):
-                    print(f"✓ Updated user: {username}")
-                    updated += 1
+                # Set password only if provided
+                if user_data['password'].strip():
+                    if set_user_password(args.base_url, headers, existing_user['pk'], user_data['password']):
+                        print(f"✓ Updated user with password: {username}")
+                    else:
+                        print(f"✓ Updated user but failed to set password: {username}")
                 else:
-                    print(f"✓ Updated user but failed to set password: {username}")
-                    updated += 1
+                    print(f"✓ Updated user (password unchanged): {username}")
+                updated += 1
             else:
                 print(f"✗ Failed to update user: {username} - {response.text}")
                 errors += 1
@@ -121,13 +123,15 @@ def main():
             success, response = create_user(args.base_url, headers, user_data)
             if success:
                 user_pk = response.json()['pk']
-                # Set password
-                if set_user_password(args.base_url, headers, user_pk, user_data['password']):
-                    print(f"✓ Created user: {username}")
-                    created += 1
+                # Set password only if provided
+                if user_data['password'].strip():
+                    if set_user_password(args.base_url, headers, user_pk, user_data['password']):
+                        print(f"✓ Created user with password: {username}")
+                    else:
+                        print(f"✓ Created user but failed to set password: {username}")
                 else:
-                    print(f"✓ Created user but failed to set password: {username}")
-                    created += 1
+                    print(f"✓ Created user (no password set): {username}")
+                created += 1
             else:
                 print(f"✗ Failed to create user: {username} - {response.text}")
                 errors += 1
