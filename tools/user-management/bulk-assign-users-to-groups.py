@@ -31,7 +31,7 @@ def load_users_from_csv(csv_file):
         reader = csv.DictReader(f)
         for row in reader:
             username = row['username']
-            static_groups = [g.strip() for g in row['static_groups'].split(',') if g.strip()]
+            static_groups = [g.strip() for g in (row['static_groups'] or '').split(',') if g.strip()]
             users[username] = static_groups
     return users
 
