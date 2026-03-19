@@ -64,9 +64,10 @@ jobs:
           echo "ldap-tag=$LDAP_TAG" >> $GITHUB_OUTPUT
 
       - name: Validate Production Change Set
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # Check if override is requested
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
           if [[ "$COMMIT_MSG" == *"[force-deploy]"* ]]; then
             echo "🚨 Force deploy detected - skipping change set validation"
           else
