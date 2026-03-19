@@ -11,7 +11,7 @@ import argparse
 def load_users_from_csv(csv_file):
     """Load users from CSV file"""
     users = []
-    with open(csv_file, 'r') as f:
+    with open(csv_file, 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             users.append(row)

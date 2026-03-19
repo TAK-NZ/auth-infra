@@ -27,7 +27,7 @@ def get_groups_with_pattern(base_url, headers, prefix, suffix=None):
 def load_users_from_csv(csv_file):
     """Load users and their static groups from CSV file"""
     users = {}
-    with open(csv_file, 'r') as f:
+    with open(csv_file, 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             username = row['username']
@@ -62,6 +62,11 @@ def add_user_to_group(base_url, headers, user_pk, group_pk):
         headers=headers
     )
     return response.status_code == 204
+
+# Additional groups that every user should be assigned to
+ADDITIONAL_STATIC_GROUPS = [
+    "tak_Bots - All Users",
+]
 
 def main():
     parser = argparse.ArgumentParser(description='Bulk assign users to groups in Authentik')
@@ -102,7 +107,7 @@ def main():
         print(f"✓ Found user: {username}")
         
         # Combine user's static groups with dynamic groups
-        all_groups = static_groups + bch_groups + region_groups + utl_groups
+        all_groups = static_groups + bch_groups + region_groups + utl_groups + ADDITIONAL_STATIC_GROUPS
         total_assignments += len(all_groups)
         
         # Assign user to all groups
