@@ -54,9 +54,10 @@ jobs:
         run: npm run cdk synth -- --context envType=prod --context stackName=${{ vars.DEMO_STACK_NAME }} --context adminUserEmail=${{ vars.DEMO_AUTHENTIK_ADMIN_EMAIL }}
 
       - name: Validate Change Set
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # Check if override is requested
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
           if [[ "$COMMIT_MSG" == *"[force-deploy]"* ]]; then
             echo "🚨 Force deploy detected - skipping change set validation"
           else
@@ -104,8 +105,9 @@ jobs:
 
       - name: Configure Database Context
         id: db-config
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
           if [[ "$COMMIT_MSG" != *"[use-prod-db]"* ]]; then
             echo "🔄 Using dev-test database settings for faster deployment"
             echo "db-context=--context instanceClass=db.serverless --context instanceCount=1 --context enablePerformanceInsights=false --context monitoringInterval=0 --context backupRetentionDays=7 --context deleteProtection=false --context nodeType=cache.t3.micro --context numCacheNodes=1" >> $GITHUB_OUTPUT
