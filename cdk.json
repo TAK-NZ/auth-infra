@@ -42,8 +42,8 @@
           "taskMemory": 2048
         },
         "ldap": {
-          "taskCpu": 1024,
-          "taskMemory": 2048
+          "taskCpu": 512,
+          "taskMemory": 1024
         },
         "desiredCount": 1,
         "enableDetailedLogging": true,
@@ -110,8 +110,8 @@
           "taskMemory": 2048
         },
         "ldap": {
-          "taskCpu": 1024,
-          "taskMemory": 2048
+          "taskCpu": 512,
+          "taskMemory": 1024
         },
         "desiredCount": 2,
         "enableDetailedLogging": false,
