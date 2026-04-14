@@ -14,6 +14,7 @@
     "qrcode": "^1.5.3"
   },
   "overrides": {
-    "fast-xml-parser": ">=5.5.7"
+    "fast-xml-parser": ">=5.5.7",
+    "brace-expansion": ">=2.0.2"
   }
 }
