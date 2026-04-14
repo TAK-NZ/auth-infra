@@ -101,19 +101,18 @@ describe('ConfigValidator', () => {
 
 
   describe('ECS validation', () => {
-    test('throws error for invalid CPU/Memory combination', () => {
+    test('throws error for invalid server CPU/Memory combination', () => {
       const invalidConfig = { 
         ...MOCK_CONFIGS.DEV_TEST,
         ecs: { 
           ...MOCK_CONFIGS.DEV_TEST.ecs,
-          taskCpu: 256,
-          taskMemory: 4096  // Invalid combination
+          server: { taskCpu: 256, taskMemory: 4096 }  // Invalid combination
         }
       };
       
       expect(() => {
         ConfigValidator.validateEnvironmentConfig(invalidConfig, 'dev-test');
-      }).toThrow('Invalid ECS CPU/Memory combination: 256/4096');
+      }).toThrow('Invalid ECS CPU/Memory combination for server: 256/4096');
     });
 
     test('accepts valid CPU/Memory combinations', () => {
@@ -129,8 +128,9 @@ describe('ConfigValidator', () => {
           ...MOCK_CONFIGS.DEV_TEST,
           ecs: { 
             ...MOCK_CONFIGS.DEV_TEST.ecs,
-            taskCpu: cpu,
-            taskMemory: memory
+            server: { taskCpu: cpu, taskMemory: memory },
+            worker: { taskCpu: cpu, taskMemory: memory },
+            ldap: { taskCpu: cpu, taskMemory: memory }
           }
         };
         

@@ -190,8 +190,8 @@ export class AuthentikServer extends Construct {
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
       family: 'TAK-Demo-AuthInfra-AuthentikServer',
-      cpu: props.contextConfig.ecs.taskCpu,
-      memoryLimitMiB: props.contextConfig.ecs.taskMemory,
+      cpu: props.contextConfig.ecs.server.taskCpu,
+      memoryLimitMiB: props.contextConfig.ecs.server.taskMemory,
       executionRole,
       taskRole
     });

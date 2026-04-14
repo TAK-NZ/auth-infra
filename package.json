@@ -30,19 +30,20 @@
     "cdk:bootstrap": "cdk bootstrap"
   },
   "devDependencies": {
+    "@swc/core": "^1.11.24",
+    "@swc/jest": "^0.2.37",
     "@types/jest": "^29.5.14",
-    "@types/node": "22.7.9",
-    "aws-cdk": "^2.167.0",
+    "@types/node": "^22.10.2",
+    "aws-cdk": "^2.1118.0",
     "esbuild": "^0.25.0",
-    "jest": "^30.2.0",
-    "ts-jest": "^29.4.6",
+    "jest": "^29.7.0",
     "ts-node": "^10.9.2",
-    "typescript": "~5.6.3"
+    "typescript": "~5.7.2"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.0.0",
-    "aws-cdk-lib": "^2.167.0",
-    "axios": "^1.13.5",
+    "aws-cdk-lib": "^2.249.0",
+    "axios": "^1.15.0",
     "constructs": "^10.0.0",
     "dotenv": "^17.2.0",
     "form-data": "^4.0.0",
@@ -52,6 +53,12 @@
   },
   "overrides": {
     "fast-xml-parser": ">=5.5.7",
-    "ajv": ">=8.18.0"
+    "ajv": ">=8.18.0",
+    "axios": {
+      "follow-redirects": ">=1.16.0"
+    },
+    "follow-redirects": ">=1.16.0",
+    "brace-expansion": ">=2.0.2",
+    "picomatch": ">=2.3.2"
   }
 }

@@ -1,6 +1,4 @@
 {
-  "preset": "ts-jest/presets/default-esm",
-  "extensionsToTreatAsEsm": [".ts"],
   "testEnvironment": "node",
   "roots": ["<rootDir>/test"],
   "testMatch": ["**/*.test.ts"],
@@ -10,25 +8,12 @@
     "/test/__helpers__/"
   ],
   "transform": {
-    "^.+\\.ts$": ["ts-jest", {
-      "useESM": true
-    }]
-  },
-  "moduleNameMapper": {
-    "^(\\.{1,2}/.*)\\.js$": "$1"
+    "^.+\\.ts$": ["@swc/jest"]
   },
   "coverageReporters": ["text"],
   "collectCoverageFrom": [
     "lib/**/*.ts",
     "!lib/**/*.d.ts"
   ],
-  "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"],
-  "transformIgnorePatterns": [
-    "node_modules/(?!(aws-cdk-lib|@aws-cdk)/)"
-  ],
-  "globals": {
-    "esbuild": {
-      "mockBuild": true
-    }
-  }
+  "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"]
 }

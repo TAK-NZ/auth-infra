@@ -31,7 +31,7 @@ describe('AuthInfraStack Configuration Validation', () => {
       expect(config.stackName).toBe('DevTest');
       expect(config.database.instanceClass).toBe('db.t3.micro');
 
-      expect(config.ecs.taskCpu).toBe(512);
+      expect(config.ecs.server.taskCpu).toBe(512);
     });
 
     test('prod has expected properties', () => {
@@ -39,7 +39,7 @@ describe('AuthInfraStack Configuration Validation', () => {
       expect(config.stackName).toBe('Prod');
       expect(config.database.instanceClass).toBe('db.t3.small');
 
-      expect(config.ecs.taskCpu).toBe(1024);
+      expect(config.ecs.server.taskCpu).toBe(1024);
     });
   });
 });

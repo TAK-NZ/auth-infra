@@ -63,8 +63,10 @@ describe('Configuration Files', () => {
         expect(config.database.allocatedStorage).toBeGreaterThan(0);
         expect(config.database.backupRetentionDays).toBeGreaterThanOrEqual(0);
 
-        expect(config.ecs.taskCpu).toBeGreaterThan(0);
-        expect(config.ecs.taskMemory).toBeGreaterThan(0);
+        expect(config.ecs.server.taskCpu).toBeGreaterThan(0);
+        expect(config.ecs.server.taskMemory).toBeGreaterThan(0);
+        expect(config.ecs.worker.taskCpu).toBeGreaterThan(0);
+        expect(config.ecs.worker.taskMemory).toBeGreaterThan(0);
         expect(config.ecs.desiredCount).toBeGreaterThan(0);
         expect(config.ecr.imageRetentionCount).toBeGreaterThan(0);
       });
