@@ -10,6 +10,10 @@
   },
   "overrides": {
     "fast-xml-parser": ">=5.5.7",
-    "brace-expansion": ">=2.0.2"
+    "brace-expansion": ">=2.0.2",
+    "axios": {
+      "follow-redirects": ">=1.16.0"
+    },
+    "follow-redirects": ">=1.16.0"
   }
 }
