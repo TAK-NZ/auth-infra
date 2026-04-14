@@ -20,6 +20,7 @@ export const MOCK_CONFIGS = {
     ecs: {
       server: { taskCpu: 512, taskMemory: 1024 },
       worker: { taskCpu: 256, taskMemory: 512 },
+      ldap: { taskCpu: 256, taskMemory: 512 },
       desiredCount: 1,
       enableDetailedLogging: true
     },
@@ -71,6 +72,7 @@ export const MOCK_CONFIGS = {
     ecs: {
       server: { taskCpu: 1024, taskMemory: 2048 },
       worker: { taskCpu: 512, taskMemory: 1024 },
+      ldap: { taskCpu: 512, taskMemory: 1024 },
       desiredCount: 2,
       enableDetailedLogging: false
     },
@@ -122,6 +124,7 @@ export const MOCK_CONFIGS = {
     ecs: {
       server: { taskCpu: 512, taskMemory: 1024 },
       worker: { taskCpu: 256, taskMemory: 512 },
+      ldap: { taskCpu: 256, taskMemory: 512 },
       desiredCount: 1,
       enableDetailedLogging: true
     },

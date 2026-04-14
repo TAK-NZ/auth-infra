@@ -31,6 +31,10 @@ export interface ContextEnvironmentConfig {
       taskCpu: number;
       taskMemory: number;
     };
+    ldap: {
+      taskCpu: number;
+      taskMemory: number;
+    };
     desiredCount: number;
     enableDetailedLogging: boolean;
     enableEcsExec?: boolean;

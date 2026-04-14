@@ -129,7 +129,8 @@ describe('ConfigValidator', () => {
           ecs: { 
             ...MOCK_CONFIGS.DEV_TEST.ecs,
             server: { taskCpu: cpu, taskMemory: memory },
-            worker: { taskCpu: cpu, taskMemory: memory }
+            worker: { taskCpu: cpu, taskMemory: memory },
+            ldap: { taskCpu: cpu, taskMemory: memory }
           }
         };
         

@@ -198,8 +198,8 @@ export class Ldap extends Construct {
     // Create task definition
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
       family: 'TAK-Demo-AuthInfra-LDAPService',
-      cpu: props.contextConfig.ecs.server.taskCpu,
-      memoryLimitMiB: props.contextConfig.ecs.server.taskMemory,
+      cpu: props.contextConfig.ecs.ldap.taskCpu,
+      memoryLimitMiB: props.contextConfig.ecs.ldap.taskMemory,
       executionRole,
       taskRole
     });

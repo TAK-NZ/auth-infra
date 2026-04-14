@@ -50,6 +50,10 @@ export function applyContextOverrides(
         taskCpu: Number(app.node.tryGetContext('workerTaskCpu')) || baseConfig.ecs.worker.taskCpu,
         taskMemory: Number(app.node.tryGetContext('workerTaskMemory')) || baseConfig.ecs.worker.taskMemory,
       },
+      ldap: {
+        taskCpu: Number(app.node.tryGetContext('ldapTaskCpu')) || baseConfig.ecs.ldap.taskCpu,
+        taskMemory: Number(app.node.tryGetContext('ldapTaskMemory')) || baseConfig.ecs.ldap.taskMemory,
+      },
       desiredCount: Number(app.node.tryGetContext('desiredCount')) || baseConfig.ecs.desiredCount,
       enableDetailedLogging: contextBoolean(app, 'enableDetailedLogging', baseConfig.ecs.enableDetailedLogging),
       enableEcsExec: contextBoolean(app, 'enableEcsExec', baseConfig.ecs.enableEcsExec),

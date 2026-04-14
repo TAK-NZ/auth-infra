@@ -54,6 +54,10 @@ export class ConfigValidator {
     if (!isValidCombo(ecsConfig.worker.taskCpu, ecsConfig.worker.taskMemory)) {
       throw new Error(`Invalid ECS CPU/Memory combination for worker: ${ecsConfig.worker.taskCpu}/${ecsConfig.worker.taskMemory}`);
     }
+
+    if (!isValidCombo(ecsConfig.ldap.taskCpu, ecsConfig.ldap.taskMemory)) {
+      throw new Error(`Invalid ECS CPU/Memory combination for ldap: ${ecsConfig.ldap.taskCpu}/${ecsConfig.ldap.taskMemory}`);
+    }
   }
 
   private static validateAuthentik(authentikConfig: any): void {

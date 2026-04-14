@@ -41,6 +41,10 @@
           "taskCpu": 1024,
           "taskMemory": 2048
         },
+        "ldap": {
+          "taskCpu": 1024,
+          "taskMemory": 2048
+        },
         "desiredCount": 1,
         "enableDetailedLogging": true,
         "enableEcsExec": true
@@ -102,6 +106,10 @@
           "taskMemory": 4096
         },
         "worker": {
+          "taskCpu": 1024,
+          "taskMemory": 2048
+        },
+        "ldap": {
           "taskCpu": 1024,
           "taskMemory": 2048
         },
