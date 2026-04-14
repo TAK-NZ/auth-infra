@@ -42,8 +42,14 @@ export function applyContextOverrides(
 
     ecs: {
       ...baseConfig.ecs,
-      taskCpu: Number(app.node.tryGetContext('taskCpu')) || baseConfig.ecs.taskCpu,
-      taskMemory: Number(app.node.tryGetContext('taskMemory')) || baseConfig.ecs.taskMemory,
+      server: {
+        taskCpu: Number(app.node.tryGetContext('serverTaskCpu')) || baseConfig.ecs.server.taskCpu,
+        taskMemory: Number(app.node.tryGetContext('serverTaskMemory')) || baseConfig.ecs.server.taskMemory,
+      },
+      worker: {
+        taskCpu: Number(app.node.tryGetContext('workerTaskCpu')) || baseConfig.ecs.worker.taskCpu,
+        taskMemory: Number(app.node.tryGetContext('workerTaskMemory')) || baseConfig.ecs.worker.taskMemory,
+      },
       desiredCount: Number(app.node.tryGetContext('desiredCount')) || baseConfig.ecs.desiredCount,
       enableDetailedLogging: contextBoolean(app, 'enableDetailedLogging', baseConfig.ecs.enableDetailedLogging),
       enableEcsExec: contextBoolean(app, 'enableEcsExec', baseConfig.ecs.enableEcsExec),

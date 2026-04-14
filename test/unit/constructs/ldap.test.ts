@@ -13,7 +13,7 @@ import type { ContextEnvironmentConfig } from '../../../lib/stack-config';
 const TEST_CONFIG: ContextEnvironmentConfig = {
   stackName: 'Test',
   database: { instanceClass: 'db.t3.micro', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
-  ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
+  ecs: { server: { taskCpu: 512, taskMemory: 1024 }, worker: { taskCpu: 256, taskMemory: 512 }, desiredCount: 1, enableDetailedLogging: true },
   authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
   ecr: { imageRetentionCount: 5, scanOnPush: false },
   general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }

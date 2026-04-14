@@ -33,8 +33,14 @@
       },
 
       "ecs": {
-        "taskCpu": 2048,
-        "taskMemory": 4096,
+        "server": {
+          "taskCpu": 2048,
+          "taskMemory": 4096
+        },
+        "worker": {
+          "taskCpu": 1024,
+          "taskMemory": 2048
+        },
         "desiredCount": 1,
         "enableDetailedLogging": true,
         "enableEcsExec": true
@@ -91,8 +97,14 @@
       },
 
       "ecs": {
-        "taskCpu": 2048,
-        "taskMemory": 4096,
+        "server": {
+          "taskCpu": 2048,
+          "taskMemory": 4096
+        },
+        "worker": {
+          "taskCpu": 1024,
+          "taskMemory": 2048
+        },
         "desiredCount": 2,
         "enableDetailedLogging": false,
         "enableEcsExec": false

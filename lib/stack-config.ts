@@ -23,8 +23,14 @@ export interface ContextEnvironmentConfig {
   };
 
   ecs: {
-    taskCpu: number;
-    taskMemory: number;
+    server: {
+      taskCpu: number;
+      taskMemory: number;
+    };
+    worker: {
+      taskCpu: number;
+      taskMemory: number;
+    };
     desiredCount: number;
     enableDetailedLogging: boolean;
     enableEcsExec?: boolean;

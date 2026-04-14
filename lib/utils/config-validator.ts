@@ -44,12 +44,15 @@ export class ConfigValidator {
       { cpu: 4096, memory: [8192, 9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 17408, 18432, 19456, 20480, 21504, 22528, 23552, 24576, 25600, 26624, 27648, 28672, 29696, 30720] }
     ];
 
-    const validCombination = validCpuMemoryCombinations.find(combo => 
-      combo.cpu === ecsConfig.taskCpu && combo.memory.includes(ecsConfig.taskMemory)
-    );
+    const isValidCombo = (cpu: number, memory: number) =>
+      validCpuMemoryCombinations.some(combo => combo.cpu === cpu && combo.memory.includes(memory));
 
-    if (!validCombination) {
-      throw new Error(`Invalid ECS CPU/Memory combination: ${ecsConfig.taskCpu}/${ecsConfig.taskMemory}`);
+    if (!isValidCombo(ecsConfig.server.taskCpu, ecsConfig.server.taskMemory)) {
+      throw new Error(`Invalid ECS CPU/Memory combination for server: ${ecsConfig.server.taskCpu}/${ecsConfig.server.taskMemory}`);
+    }
+
+    if (!isValidCombo(ecsConfig.worker.taskCpu, ecsConfig.worker.taskMemory)) {
+      throw new Error(`Invalid ECS CPU/Memory combination for worker: ${ecsConfig.worker.taskCpu}/${ecsConfig.worker.taskMemory}`);
     }
   }
 

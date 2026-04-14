@@ -26,7 +26,7 @@ describe('Database Construct', () => {
   test('should throw error when database config is missing', () => {
     const configWithoutDb = {
       stackName: 'Test',
-      ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
+      ecs: { server: { taskCpu: 512, taskMemory: 1024 }, worker: { taskCpu: 256, taskMemory: 512 }, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
@@ -47,7 +47,7 @@ describe('Database Construct', () => {
     const serverlessConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.serverless', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
-      ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
+      ecs: { server: { taskCpu: 512, taskMemory: 1024 }, worker: { taskCpu: 256, taskMemory: 512 }, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
@@ -92,7 +92,7 @@ describe('Database Construct', () => {
     const provisionedConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.t3.medium', instanceCount: 2, allocatedStorage: 100, maxAllocatedStorage: 1000, enablePerformanceInsights: true, monitoringInterval: 60, backupRetentionDays: 30, deleteProtection: true },
-      ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
+      ecs: { server: { taskCpu: 512, taskMemory: 1024 }, worker: { taskCpu: 256, taskMemory: 512 }, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'RETAIN', enableDetailedLogging: false, enableContainerInsights: true }
@@ -135,7 +135,7 @@ describe('Database Construct', () => {
     const largeInstanceConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.t3.large', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
-      ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
+      ecs: { server: { taskCpu: 512, taskMemory: 1024 }, worker: { taskCpu: 256, taskMemory: 512 }, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
@@ -163,7 +163,7 @@ describe('Database Construct', () => {
     const mediumInstanceConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.t3.medium', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false },
-      ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
+      ecs: { server: { taskCpu: 512, taskMemory: 1024 }, worker: { taskCpu: 256, taskMemory: 512 }, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
@@ -184,7 +184,7 @@ describe('Database Construct', () => {
     const customEngineConfig: ContextEnvironmentConfig = {
       stackName: 'Test',
       database: { instanceClass: 'db.t3.medium', instanceCount: 1, allocatedStorage: 20, maxAllocatedStorage: 100, enablePerformanceInsights: false, monitoringInterval: 0, backupRetentionDays: 7, deleteProtection: false, engineVersion: '16.4' },
-      ecs: { taskCpu: 512, taskMemory: 1024, desiredCount: 1, enableDetailedLogging: true },
+      ecs: { server: { taskCpu: 512, taskMemory: 1024 }, worker: { taskCpu: 256, taskMemory: 512 }, desiredCount: 1, enableDetailedLogging: true },
       authentik: { hostname: 'auth', adminUserEmail: 'admin@test.com', ldapHostname: 'ldap', ldapBaseDn: 'dc=test,dc=com', branding: 'tak-nz', authentikVersion: '2025.6.2', buildRevision: 1 },
       ecr: { imageRetentionCount: 5, scanOnPush: false },
       general: { removalPolicy: 'DESTROY', enableDetailedLogging: true, enableContainerInsights: false }
