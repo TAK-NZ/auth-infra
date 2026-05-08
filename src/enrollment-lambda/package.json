@@ -9,12 +9,12 @@
   "author": "TAK.NZ",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.1004.0",
+    "@aws-sdk/client-secrets-manager": "^3.1045.0",
     "ejs": "^3.1.9",
     "qrcode": "^1.5.3"
   },
   "overrides": {
-    "fast-xml-parser": ">=5.5.7",
+    "fast-xml-parser": ">=5.7.0",
     "brace-expansion": ">=2.0.3"
   }
 }

@@ -4,9 +4,9 @@
   "description": "Lambda function to configure OIDC authentication for ALB listener rules",
   "main": "index.js",
   "dependencies": {
-    "@aws-sdk/client-elastic-load-balancing-v2": "^3.1004.0"
+    "@aws-sdk/client-elastic-load-balancing-v2": "^3.1045.0"
   },
   "overrides": {
-    "fast-xml-parser": ">=5.5.7"
+    "fast-xml-parser": ">=5.7.0"
   }
 }
