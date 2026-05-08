@@ -4,12 +4,12 @@
   "description": "Enrollment OIDC setup Lambda function",
   "main": "index.js",
   "dependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.1004.0",
-    "axios": "^1.15.0",
+    "@aws-sdk/client-secrets-manager": "^3.1045.0",
+    "axios": "^1.16.0",
     "form-data": "^4.0.4"
   },
   "overrides": {
-    "fast-xml-parser": ">=5.5.7",
+    "fast-xml-parser": ">=5.7.0",
     "brace-expansion": ">=2.0.3",
     "axios": {
       "follow-redirects": ">=1.16.0"
