@@ -147,7 +147,7 @@ export class Database extends Construct {
         credentials: rds.Credentials.fromSecret(this.masterSecret),
         defaultDatabaseName: DATABASE_CONSTANTS.DEFAULT_DATABASE_NAME,
         port: DATABASE_CONSTANTS.PORT,
-        serverlessV2MinCapacity: 0.5,
+        serverlessV2MinCapacity: 2,
         serverlessV2MaxCapacity: 4,
         writer: rds.ClusterInstance.serverlessV2('writer'),
         readers: dbConfig.instanceCount > 1 ? 
