@@ -77,7 +77,7 @@ entries:
       geoip_binding: bind_continent
       network_binding: bind_asn
       remember_me_offset: seconds=0
-      session_duration: seconds=0
+      session_duration: minutes=5
     identifiers:
         name: ldap-authentication-login
     model: authentik_stages_user_login.userloginstage
@@ -115,7 +115,7 @@ entries:
     attrs:
       authorization_flow: !KeyOf ldap-authentication-flow
       base_dn: !Context basedn
-      bind_mode: cached
+      bind_mode: direct
       gid_start_number: 4000
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
       mfa_support: true
