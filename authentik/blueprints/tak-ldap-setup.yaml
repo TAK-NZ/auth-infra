@@ -115,7 +115,7 @@ entries:
     attrs:
       authorization_flow: !KeyOf ldap-authentication-flow
       base_dn: !Context basedn
-      bind_mode: cached
+      bind_mode: direct
       gid_start_number: 4000
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
       mfa_support: true
