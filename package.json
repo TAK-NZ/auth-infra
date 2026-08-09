@@ -58,10 +58,7 @@
       "follow-redirects": ">=1.16.0"
     },
     "follow-redirects": ">=1.16.0",
-    "brace-expansion": ">=5.0.6",
-    "aws-cdk-lib": {
-      "brace-expansion": ">=5.0.6"
-    },
+    "brace-expansion": ">=5.0.9",
     "picomatch": ">=2.3.2"
   }
 }
