@@ -273,6 +273,10 @@ export class AuthentikWorker extends Construct {
       environment: {
         AUTHENTIK_POSTGRESQL__HOST: props.application.database.hostname,
         AUTHENTIK_POSTGRESQL__SSLMODE: 'require',
+        // Enable persistent DB connections to avoid a full connect/TLS handshake per request.
+        // See https://docs.goauthentik.io/install-config/configuration/#connection-management
+        AUTHENTIK_POSTGRESQL__CONN_MAX_AGE: '300',
+        AUTHENTIK_POSTGRESQL__CONN_HEALTH_CHECKS: 'true',
         ...(props.application.database.readReplicaHostname && {
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__HOST: props.application.database.readReplicaHostname,
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__NAME: 'authentik',
