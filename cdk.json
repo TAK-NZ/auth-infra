@@ -34,8 +34,8 @@
 
       "ecs": {
         "server": {
-          "taskCpu": 2048,
-          "taskMemory": 4096
+          "taskCpu": 1024,
+          "taskMemory": 2048
         },
         "worker": {
           "taskCpu": 1024,
@@ -88,7 +88,7 @@
     "prod": {
       "stackName": "Prod",
       "database": {
-        "instanceClass": "db.t4g.large",
+        "instanceClass": "db.r7g.large",
         "instanceCount": 2,
         "engineVersion": "17.4",
         "allocatedStorage": 100,
@@ -106,8 +106,8 @@
           "taskMemory": 4096
         },
         "worker": {
-          "taskCpu": 1024,
-          "taskMemory": 2048
+          "taskCpu": 2048,
+          "taskMemory": 4096
         },
         "ldap": {
           "taskCpu": 512,
