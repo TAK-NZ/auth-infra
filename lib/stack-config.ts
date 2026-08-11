@@ -45,6 +45,12 @@ export interface ContextEnvironmentConfig {
     ldapHostname: string;
     ldapBaseDn?: string;
     useS3AuthentikConfigFile?: boolean;
+    /**
+     * Enable routing Authentik read queries to the Aurora reader instance/endpoint.
+     * Defaults to false: read replica support is currently broken in Authentik and
+     * requires manual intervention to work correctly.
+     * See https://github.com/goauthentik/authentik/issues/15191
+     */
     enablePostgresReadReplicas?: boolean;
     branding: string;
     authentikVersion: string;
