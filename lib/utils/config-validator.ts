@@ -23,8 +23,12 @@ export class ConfigValidator {
   }
 
   private static validateDatabase(dbConfig: any): void {
-    const validInstanceClasses = ['db.serverless', 'db.t3.micro', 'db.t3.small', 'db.t4g.micro', 'db.t4g.small', 'db.t4g.medium', 'db.t4g.large'];
-    if (!validInstanceClasses.includes(dbConfig.instanceClass)) {
+    // Matches "db.serverless" or any standard RDS/Aurora instance class naming
+    // pattern, e.g. db.t4g.large, db.r6g.xlarge, db.r7g.2xlarge, db.r8gd.large.
+    // A fixed allow-list would need code changes every time a new instance
+    // family/generation is adopted, so we validate the shape instead.
+    const instanceClassPattern = /^db\.(serverless|[a-z]+\d[a-z]*\.(nano|micro|small|medium|large|\d{1,2}xlarge))$/;
+    if (!instanceClassPattern.test(dbConfig.instanceClass)) {
       throw new Error(`Invalid database instance class: ${dbConfig.instanceClass}`);
     }
     

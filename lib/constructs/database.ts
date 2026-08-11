@@ -177,11 +177,10 @@ export class Database extends Construct {
       });
     } else {
       // Provisioned instances configuration
-      const instanceType = ec2.InstanceType.of(
-        ec2.InstanceClass.T4G,
-        dbConfig.instanceClass.includes('large') ? ec2.InstanceSize.LARGE :
-        ec2.InstanceSize.MEDIUM
-      );
+      // Parse the instance class directly from context (e.g. "db.r7g.large" -> "r7g.large")
+      // rather than hardcoding a single instance family/size combination, so any
+      // provisioned class configured in cdk.json (t4g, r6g, r7g, etc.) is honored correctly.
+      const instanceType = new ec2.InstanceType(dbConfig.instanceClass.replace(/^db\./, ''));
 
       this.cluster = new rds.DatabaseCluster(this, 'DBCluster', {
         engine: rds.DatabaseClusterEngine.auroraPostgres({
