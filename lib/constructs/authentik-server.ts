@@ -327,8 +327,17 @@ export class AuthentikServer extends Construct {
     });
 
     // Add mount points for EFS volumes
+    //
+    // IMPORTANT: mount at '/data', not '/data/media'.
+    // Authentik >= 2025.12 roots local file storage at '/data' (AUTHENTIK_STORAGE__FILE__PATH)
+    // and stores media under '/data/media'. In the upstream image '/data/media' is a *symlink*
+    // to the legacy '/media' directory, so mounting there makes ECS resolve the symlink and
+    // attach the volume to '/media' instead. Authentik's FileBackend.manageable check requires
+    // '/data' (or a real '/data/media' directory) to be a mount point, and os.path.ismount()
+    // is always false for a symlink - which disables all file uploads/management in the
+    // admin UI. See https://docs.goauthentik.io/troubleshooting/image_upload
     container.addMountPoints({
-      containerPath: '/data/media',
+      containerPath: '/data',
       sourceVolume: 'media',
       readOnly: false
     });

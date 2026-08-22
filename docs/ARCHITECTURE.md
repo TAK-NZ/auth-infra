@@ -76,10 +76,16 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 - **Encryption**: In-transit and at-rest encryption
 
 #### 3. EFS File System
-- **Purpose**: Shared storage for Authentik media and certificates
-- **Mount Points**: `/media` and `/certs` in Authentik containers
+- **Purpose**: Shared storage for Authentik uploaded files and custom templates
+- **Mount Points**: `/data` (Authentik local file storage root, backed by the `/media` access
+  point) and `/templates` (backed by the `/custom-templates` access point) in the Authentik
+  server and worker containers
+- **Layout**: Authentik creates `/data/media/<schema>/` for uploaded media. The mount must be
+  at `/data` and not `/data/media`, because `/data/media` is a symlink to the legacy `/media`
+  path in the upstream image and Authentik refuses to manage files unless the storage root is
+  a real mount point
 - **Backup**: AWS Backup service integration
-- **Encryption**: Encrypted at rest
+- **Encryption**: Encrypted at rest, and in transit via TLS to the mount targets
 
 ### Network Architecture
 
