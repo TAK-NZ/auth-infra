@@ -21,6 +21,9 @@ node_modules
 !src/enrollment-lambda/template.html
 !src/enroll-alb-oidc-auth/index.js
 !src/enroll-alb-oidc-auth/package.json
+# Keep local developer tooling (source), but not its generated output
+!tools/preview/render-preview.js
+tools/preview/*.html
 
 # Exclude node_modules
 src/enroll-oidc-setup/node_modules/

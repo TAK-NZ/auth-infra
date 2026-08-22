@@ -27,7 +27,8 @@
     "synth:prod": "npm run build && cdk synth --context envType=prod",
     "cdk:diff:dev": "npm run build && cdk diff --context envType=dev-test",
     "cdk:diff:prod": "npm run build && cdk diff --context envType=prod",
-    "cdk:bootstrap": "cdk bootstrap"
+    "cdk:bootstrap": "cdk bootstrap",
+    "preview:enrollment": "node tools/preview/render-preview.js"
   },
   "devDependencies": {
     "@swc/core": "^1.15.33",

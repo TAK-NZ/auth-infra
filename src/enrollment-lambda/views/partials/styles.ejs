@@ -118,6 +118,26 @@
     width: auto;
 }
 
+/* "Recommended option" marker shown next to the preferred install route.
+   Deliberately outside .store-link so the 40px badge sizing above does not apply.
+
+   Alignment: raised like a superscript footnote marker, which reads as an annotation on
+   the app name rather than part of it. `line-height: 0` keeps the box height equal to the
+   icon height so the raise is not thrown off by inherited leading, and the block-level
+   svg stops the icon sitting on an inline baseline of its own.
+   Verified in tools/preview/render-preview.js (npm run preview:enrollment). */
+.recommended-marker {
+    display: inline-block;
+    line-height: 0;
+    color: #f0ad4e;
+    vertical-align: super;
+    cursor: help;
+}
+
+.recommended-marker svg {
+    display: block;
+}
+
 /* Enrollment button */
 .enroll-button {
     display: inline-block;
