@@ -462,27 +462,46 @@ async function uploadApplicationIcon(api, appSlug) {
       return null;
     }
     
+    // Stable relative media path. This is used both as the storage name on upload and
+    // as the meta_icon value, so the two cannot drift apart.
+    const mediaName = 'application-icons/TAK-Enroll.png';
+    
     // Step 1: Upload file to Authentik media storage
     const form = new FormData();
-    form.append('file', fs.createReadStream(iconPath), 'icon-name.png');
+    form.append('file', fs.createReadStream(iconPath), path.basename(mediaName));
+    form.append('name', mediaName);
     
-    // Use axios directly to avoid header conflicts
-    const uploadResponse = await axios.post(`${api.defaults.baseURL}/api/v3/admin/file/`, form, {
-      headers: {
-        'Authorization': api.defaults.headers['Authorization'],
-        ...form.getHeaders(),
-      },
-    });
+    try {
+      // Use axios directly to avoid header conflicts
+      await axios.post(`${api.defaults.baseURL}/api/v3/admin/file/`, form, {
+        headers: {
+          'Authorization': api.defaults.headers['Authorization'],
+          ...form.getHeaders(),
+        },
+      });
+      console.log(`File uploaded to media storage as: ${mediaName}`);
+    } catch (uploadError) {
+      // POST /api/v3/admin/file/ is not idempotent: uploading a name that already
+      // exists returns 400 {"name": ["A file with this name already exists."]}.
+      // For our purposes that is a success - the icon we need is already in storage.
+      const status = uploadError.response && uploadError.response.status;
+      const detail = JSON.stringify((uploadError.response && uploadError.response.data) || '');
+      if (status === 400 && detail.includes('already exists')) {
+        console.log(`File ${mediaName} already present in media storage, reusing it`);
+      } else {
+        throw uploadError;
+      }
+    }
     
-    const uploadedFilePath = uploadResponse.data.url;
-    console.log(`File uploaded successfully: ${uploadedFilePath}`);
-    
-    // Step 2: Update application with the uploaded file path
+    // Step 2: Point the application at the uploaded file.
+    // Authentik >= 2025.12 returns HTTP 200 with an EMPTY body from the upload endpoint
+    // (OpenAPI: responses={200: None}), so there is no URL to read back. meta_icon takes
+    // the relative media path directly, which is the name we uploaded under.
     const response = await api.patch(`/api/v3/core/applications/${appSlug}/`, {
-      meta_icon: uploadedFilePath
+      meta_icon: mediaName
     });
     
-    console.log('Icon uploaded and assigned successfully');
+    console.log(`Icon assigned to application ${appSlug}: ${mediaName}`);
     return response.data;
   } catch (error) {
     console.error('Error uploading application icon:', error.message);

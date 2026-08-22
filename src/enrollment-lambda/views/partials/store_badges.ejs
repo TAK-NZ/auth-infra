@@ -152,38 +152,75 @@ const appleBadge = `<?xml version="1.0" encoding="utf-8"?>
 	</g>
 </g>
 </svg>`;
+// Define TAK.gov direct-download badge SVG. This inline copy is the source of truth.
+// Unlike the two official badges above, TAK.gov publishes no download badge, so this
+// one is built in the same visual idiom.
+// Kept at 135x40 to match the aspect ratio of the official badges: the page CSS forces
+// `.store-link svg { height: 40px }`, so a different ratio renders a different width
+// and breaks the grid alignment.
+// The label is outlined vector paths rather than <text>, so it renders identically
+// regardless of which fonts the client has. Editing the wording therefore means
+// re-outlining the glyphs, not just changing a string.
+const takGovBadge = `<svg xmlns="http://www.w3.org/2000/svg" width="135" height="40" viewBox="0 0 135 40" role="img" aria-label="Get it from TAK.gov">
+  <title>Get it from TAK.gov</title>
+  <rect x=".5" y=".5" width="134" height="39" rx="5.5" fill="#100f0d" stroke="#a6a6a1"/>
+  <g transform="translate(4.90 0)">
+    <g transform="translate(14 8)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+      <path d="M7 11l5 5 5-5"/>
+      <path d="M12 4v12"/>
+    </g>
+    <path fill="#fff" d="M51.32 14.11H49.04V14.73H50.70V14.88C50.70 15.85 49.98 16.56 48.98 16.56C48.43 16.56 47.93 16.36 47.60 16.00C47.24 15.61 47.03 14.96 47.03 14.29C47.03 12.94 47.79 12.06 48.95 12.06C49.78 12.06 50.38 12.48 50.53 13.19H51.24C51.05 12.08 50.21 11.44 48.95 11.44C48.29 11.44 47.75 11.62 47.32 11.97C46.68 12.49 46.33 13.34 46.33 14.32C46.33 16.00 47.36 17.17 48.84 17.17C49.58 17.17 50.16 16.89 50.70 16.30L50.88 17.03H51.32Z M53.71 14.51H56.69V13.89H53.71V12.15H56.80V11.53H53.01V17.00H56.93V16.39H53.71Z M60.49 12.15H62.28V11.53H57.99V12.15H59.80V17.00H60.49Z M66.96 11.53H66.25V17.00H66.96Z M70.74 12.15H72.54V11.53H68.25V12.15H70.05V17.00H70.74Z M77.13 14.51H79.74V13.89H77.13V12.15H80.10V11.53H76.43V17.00H77.13Z M82.23 14.64H84.03C84.66 14.64 84.93 14.95 84.93 15.62L84.93 16.11C84.93 16.45 84.99 16.77 85.08 17.00H85.93V16.83C85.67 16.65 85.62 16.45 85.60 15.72C85.59 14.82 85.45 14.55 84.86 14.30C85.47 13.99 85.72 13.62 85.72 13.00C85.72 12.05 85.14 11.53 84.06 11.53H81.54V17.00H82.23ZM82.23 14.03V12.15H83.92C84.31 12.15 84.54 12.21 84.71 12.36C84.90 12.52 84.99 12.76 84.99 13.09C84.99 13.74 84.66 14.03 83.92 14.03Z M89.67 11.44C88.10 11.44 87.04 12.60 87.04 14.31C87.04 16.02 88.10 17.17 89.68 17.17C90.35 17.17 90.93 16.97 91.37 16.59C91.97 16.09 92.32 15.25 92.32 14.35C92.32 12.59 91.28 11.44 89.67 11.44ZM89.67 12.06C90.86 12.06 91.62 12.95 91.62 14.34C91.62 15.66 90.83 16.56 89.68 16.56C88.51 16.56 87.74 15.66 87.74 14.31C87.74 12.96 88.51 12.06 89.67 12.06Z M96.60 17.00 98.14 12.42V17.00H98.80V11.53H97.83L96.24 16.30L94.62 11.53H93.65V17.00H94.31V12.42L95.86 17.00Z"/>
+    <path fill="#fff" d="M52.02 21.50H56.08V20.11H46.36V21.50H50.44V32.50H52.02Z M64.44 28.78 65.72 32.50H67.49L63.14 20.11H61.10L56.68 32.50H58.36L59.67 28.78ZM64.00 27.45H60.06L62.10 21.81Z M70.65 28.16 72.67 26.14 77.04 32.50H78.91L73.81 25.16L78.86 20.11H76.82L70.65 26.38V20.11H69.07V32.50H70.65Z M82.31 30.73H80.54V32.50H82.31Z M90.66 23.59V24.88C89.94 23.81 89.16 23.34 88.04 23.34C85.88 23.34 84.39 25.34 84.39 28.20C84.39 29.70 84.74 30.78 85.51 31.68C86.17 32.47 87.02 32.89 87.94 32.89C89.01 32.89 89.77 32.41 90.52 31.29V31.75C90.52 34.13 89.86 35.02 88.09 35.02C86.88 35.02 86.26 34.54 86.12 33.52H84.67C84.81 35.17 86.12 36.21 88.06 36.21C89.37 36.21 90.45 35.78 91.03 35.07C91.71 34.23 91.97 33.13 91.97 31.04V23.59ZM88.18 24.65C89.67 24.65 90.52 25.90 90.52 28.16C90.52 30.32 89.66 31.58 88.18 31.58C86.72 31.58 85.86 30.31 85.86 28.11C85.86 25.94 86.72 24.65 88.18 24.65Z M97.87 23.34C95.35 23.34 93.85 25.12 93.85 28.11C93.85 31.12 95.35 32.89 97.88 32.89C100.40 32.89 101.91 31.11 101.91 28.18C101.91 25.09 100.45 23.34 97.87 23.34ZM97.88 24.65C99.48 24.65 100.43 25.95 100.43 28.16C100.43 30.27 99.45 31.58 97.88 31.58C96.30 31.58 95.33 30.27 95.33 28.11C95.33 25.95 96.30 24.65 97.88 24.65Z M107.54 32.50 110.96 23.59H109.36L106.84 30.82L104.46 23.59H102.86L105.99 32.50Z"/>
+  </g>
+</svg>`;
+
+// Small "Recommended option" marker (Tabler star-filled), shown next to the
+// preferred install route for each platform.
+const recommendedIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.243 7.34l-6.38 .925l-.113 .023a1 1 0 0 0 -.44 1.684l4.622 4.499l-1.09 6.355l-.013 .11a1 1 0 0 0 1.464 .944l5.706 -3l5.693 3l.1 .046a1 1 0 0 0 1.352 -1.1l-1.091 -6.355l4.624 -4.5l.078 -.085a1 1 0 0 0 -.633 -1.62l-6.38 -.926l-2.85 -5.78a1 1 0 0 0 -1.794 0l-2.853 5.78z"/></svg>`;
 %> 
 
 
 <div class="form-group">
     <label class="text-info">TAK Mobile Apps</label><br>
-    Don't have ATAK, iTAK or TAK Aware installed? Download from your device's app store:
+    Don't have ATAK, iTAK or TAK Aware installed? Download from your device's app store,
+    or directly from TAK.gov:
 </div>
 
 <div class="app-downloads" style="display: grid; grid-template-columns: 1fr 1fr; row-gap: 20px; max-width: 600px; margin: 0 auto;">
+    <!-- Row 1: recommended install route per platform -->
+    <div class="app-item" style="text-align: center;">
+        <div class="app-name">
+            <%# no whitespace before the marker: a newline here would collapse to a space %>
+            <strong>ATAK</strong><span class="recommended-marker" title="Recommended option" role="img" aria-label="Recommended option"><%- recommendedIcon %></span>
+        </div>
+        <a href='https://tak.gov/products/atak-civ' target='_blank' rel="noopener" class='store-link store-badge-link' title="Recommended option">
+            <%- takGovBadge %>
+        </a>
+    </div>
+
+    <div class="app-item" style="text-align: center;">
+        <div class="app-name">
+            <%# no whitespace before the marker: a newline here would collapse to a space %>
+            <strong>TAK Aware</strong><span class="recommended-marker" title="Recommended option" role="img" aria-label="Recommended option"><%- recommendedIcon %></span>
+        </div>
+        <a href='https://apps.apple.com/in/app/tak-aware/id6738631659' target='_blank' rel="noopener" class='store-link store-badge-link' title="Recommended option">
+            <%- appleBadge %>
+        </a>
+    </div>
+
+    <!-- Row 2: alternative install routes -->
     <div class="app-item" style="text-align: center;">
         <div class="app-name"><strong>ATAK</strong></div>
         <a href='https://play.google.com/store/apps/details?id=com.atakmap.app.civ' target='_blank' rel="noopener" class='store-link store-badge-link'>
             <%- googleBadge %>
         </a>
     </div>
-    
+
     <div class="app-item" style="text-align: center;">
         <div class="app-name"><strong>iTAK</strong></div>
         <a href='https://apps.apple.com/us/app/itak/id1561656396' target='_blank' rel="noopener" class='store-link store-badge-link'>
             <%- appleBadge %>
         </a>
     </div>
-    
-    <div></div>
-    
-    <div class="app-item" style="text-align: center;">
-        <div class="app-name"><strong>TAK Aware</strong></div>
-        <a href='https://apps.apple.com/in/app/tak-aware/id6738631659' target='_blank' rel="noopener" class='store-link store-badge-link'>
-            <%- appleBadge %>
-        </a>
-    </div>
 </div>
-
-
-

@@ -57,7 +57,7 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
         "useS3AuthentikConfigFile": false,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.6.2",
+        "authentikVersion": "2026.8.0",
         "outboundEmailServerPort": 587
       },
       "ecr": {
@@ -104,7 +104,7 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
         "useS3AuthentikConfigFile": true,
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
-        "authentikVersion": "2025.6.2",
+        "authentikVersion": "2026.8.0",
         "outboundEmailServerPort": 587
       },
       "ecr": {
@@ -195,7 +195,7 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 | `useS3AuthentikConfigFile` | Use S3 configuration file | `false` | `true` |
 | `enablePostgresReadReplicas` | Enable read replicas (currently disabled - read replica support is broken in Authentik, see [goauthentik/authentik#15191](https://github.com/goauthentik/authentik/issues/15191); only enable after the manual workaround from that issue has been applied) | `false` | `false` |
 | `branding` | Docker image branding variant | `tak-nz` | `tak-nz` |
-| `authentikVersion` | Authentik version | `2025.6.3` | `2025.6.3` |
+| `authentikVersion` | Authentik version | `2026.8.0` | `2026.8.0` |
 | `outboundEmailServerPort` | Email server port for outbound connections | `587` | `587` |
 
 ### **ECR Configuration**
@@ -320,7 +320,7 @@ npm run deploy:dev -- --context useS3AuthentikConfigFile=true
 # Custom branding and version
 npm run deploy:prod -- \
   --context branding=generic \
-  --context authentikVersion=2025.7.1
+  --context authentikVersion=2026.8.0
 
 # Disable enrollment feature
 npm run deploy:dev -- --context enrollmentEnabled=false

@@ -121,7 +121,14 @@ export class Efs extends Construct {
     // Create the EFS file system
     this.fileSystem = new efs.FileSystem(this, 'EFS', efsConfig);
 
-    // Create access point for media files
+    // Create access point for Authentik's local file storage root.
+    //
+    // This access point is mounted at '/data' inside the Authentik containers, which is
+    // where Authentik roots local file storage. Authentik lays out its own subdirectories
+    // underneath it ('/data/media/<schema>/...' for uploaded media, '/data/reports/...').
+    //
+    // The EFS-side path is kept at '/media' for backwards compatibility: changing it would
+    // replace the access point and orphan any files already uploaded by operators.
     this.mediaAccessPoint = new efs.AccessPoint(this, 'EFSAccessPointMedia', {
       fileSystem: this.fileSystem,
       posixUser: {

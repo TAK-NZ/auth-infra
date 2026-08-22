@@ -285,6 +285,14 @@ export class AuthentikServer extends Construct {
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT: '5432',
         }),
         AUTHENTIK_DISABLE_STARTUP_ANALYTICS: 'true',
+        // External URL of this instance, scheme and host only (no path, no trailing slash).
+        // Bootstrap-only: Authentik copies this into the 'Base URL' system setting on first
+        // start if that setting is still empty, and never overwrites an operator-set value.
+        // Unused by Authentik 2026.8 but becomes required in 2026.11, so set it now.
+        // See https://docs.goauthentik.io/install-config/configuration/#authentik_web__base_url
+        ...(props.application.authentikHost && {
+          AUTHENTIK_WEB__BASE_URL: props.application.authentikHost,
+        }),
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),
@@ -327,8 +335,17 @@ export class AuthentikServer extends Construct {
     });
 
     // Add mount points for EFS volumes
+    //
+    // IMPORTANT: mount at '/data', not '/data/media'.
+    // Authentik >= 2025.12 roots local file storage at '/data' (AUTHENTIK_STORAGE__FILE__PATH)
+    // and stores media under '/data/media'. In the upstream image '/data/media' is a *symlink*
+    // to the legacy '/media' directory, so mounting there makes ECS resolve the symlink and
+    // attach the volume to '/media' instead. Authentik's FileBackend.manageable check requires
+    // '/data' (or a real '/data/media' directory) to be a mount point, and os.path.ismount()
+    // is always false for a symlink - which disables all file uploads/management in the
+    // admin UI. See https://docs.goauthentik.io/troubleshooting/image_upload
     container.addMountPoints({
-      containerPath: '/data/media',
+      containerPath: '/data',
       sourceVolume: 'media',
       readOnly: false
     });
