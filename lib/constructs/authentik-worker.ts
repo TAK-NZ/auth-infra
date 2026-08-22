@@ -288,6 +288,14 @@ export class AuthentikWorker extends Construct {
         AUTHENTIK_BOOTSTRAP_LDAP_BASEDN: props.application.ldapBaseDn,
         // Authentik service host URL for API communications from LDAP Outpost
         AUTHENTIK_BOOTSTRAP_LDAP_AUTHENTIK_HOST: props.application.authentikHost || '',
+        // External URL of this instance, scheme and host only (no path, no trailing slash).
+        // Bootstrap-only: Authentik copies this into the 'Base URL' system setting on first
+        // start if that setting is still empty, and never overwrites an operator-set value.
+        // Unused by Authentik 2026.8 but becomes required in 2026.11, so set it now.
+        // See https://docs.goauthentik.io/install-config/configuration/#authentik_web__base_url
+        ...(props.application.authentikHost && {
+          AUTHENTIK_WEB__BASE_URL: props.application.authentikHost,
+        }),
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),

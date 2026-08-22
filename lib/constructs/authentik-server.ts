@@ -285,6 +285,14 @@ export class AuthentikServer extends Construct {
           AUTHENTIK_POSTGRESQL__READ_REPLICAS__0__PORT: '5432',
         }),
         AUTHENTIK_DISABLE_STARTUP_ANALYTICS: 'true',
+        // External URL of this instance, scheme and host only (no path, no trailing slash).
+        // Bootstrap-only: Authentik copies this into the 'Base URL' system setting on first
+        // start if that setting is still empty, and never overwrites an operator-set value.
+        // Unused by Authentik 2026.8 but becomes required in 2026.11, so set it now.
+        // See https://docs.goauthentik.io/install-config/configuration/#authentik_web__base_url
+        ...(props.application.authentikHost && {
+          AUTHENTIK_WEB__BASE_URL: props.application.authentikHost,
+        }),
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),
