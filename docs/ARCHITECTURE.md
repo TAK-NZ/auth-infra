@@ -110,7 +110,7 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 ### 1. Environment Types
 
 #### **dev-test** (Default)
-- **Focus**: Cost optimization and development efficiency (~$106 USD/month)
+- **Focus**: Development efficiency and resource-minimal deployment
 - **Database**: Aurora Serverless v2 (single instance, auto-scaling)
 - **Redis**: Single node, basic encryption (KMS at-rest only)
 - **ECS**: Minimal CPU/memory allocation (512/1024)
@@ -121,7 +121,7 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 - **Resource Removal**: DESTROY policy (allows cleanup)
 
 #### **prod**
-- **Focus**: High availability, security, and production readiness (~$367 USD/month)
+- **Focus**: High availability, security, and production readiness
 - **Database**: Aurora PostgreSQL (2 instances, multi-AZ)
 - **Redis**: Multi-node cluster with full encryption (transit + at-rest)
 - **ECS**: Higher resource allocation (1024/2048)
@@ -222,23 +222,22 @@ The infrastructure implements a layered security model with dedicated security g
 - **Development**: Single AZ, minimal redundancy
 - **Production**: Multi-AZ, full redundancy and backups
 
-## Cost Optimization
+## Resource Optimization
 
 ### 1. Environment-Based Scaling
 - **Development**: Minimal redundancy, single AZ where possible
 - **Production**: Full redundancy and high availability
-- **Staging**: Production-like with cost optimizations
+- **Staging**: Production-like configuration with reduced resource allocation
 
-### 2. Resource Optimization
+### 2. Resource Efficiency
 - **NAT Gateway**: Single vs. redundant based on environment
-- **VPC Endpoints**: Gateway endpoints preferred for cost efficiency
-- **ECS Capacity**: FARGATE_SPOT integration for cost savings
+- **VPC Endpoints**: Gateway endpoints preferred for efficiency
+- **ECS Capacity**: FARGATE_SPOT integration where applicable
 - **Storage**: Lifecycle policies and intelligent tiering
 
 ### 3. Monitoring and Alerts
-- **Cost Tracking**: Resource tagging for cost allocation
+- **Resource Tracking**: Resource tagging for allocation and ownership
 - **Usage Monitoring**: CloudWatch metrics for resource utilization
-- **Budget Integration**: Compatible with AWS Budgets and Cost Explorer
 
 ## Disaster Recovery and High Availability
 

@@ -123,12 +123,10 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
 
 ### **Environment Comparison**
 
-| Environment | Stack Name | Description | Monthly Cost* |
-|-------------|------------|-------------|---------------|
-| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | ~$106 USD |
-| `prod` | `TAK-Prod-AuthInfra` | High-availability production | ~$367 USD |
-
-*Estimated AWS costs in USD for ap-southeast-2 region, excluding data transfer and storage usage
+| Environment | Stack Name | Description |
+|-------------|------------|-------------|
+| `dev-test` | `TAK-Dev-AuthInfra` | Development and testing |
+| `prod` | `TAK-Prod-AuthInfra` | High-availability production |
 
 ### **Key Configuration Differences**
 
@@ -241,14 +239,14 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 
 ---
 
-## **Cost Optimization**
+## **Resource Scaling**
 
 ### **Development Environment Optimizations**
-- **Aurora Serverless v2**: Pay-per-use database scaling (~$235 USD/month savings vs prod)
-- **Single Redis Node**: Eliminates multi-AZ costs (~$15 USD/month savings vs prod)
+- **Aurora Serverless v2**: Pay-per-use database scaling
+- **Single Redis Node**: Simplified single-node configuration
 - **Basic Encryption**: KMS storage encryption only (vs full transit + at-rest)
-- **Smaller ECS Tasks**: Minimal CPU/memory allocation (~$25 USD/month savings vs prod)
-- **Container Insights Disabled**: Reduces CloudWatch costs (~$15 USD/month savings vs prod)
+- **Smaller ECS Tasks**: Minimal CPU/memory allocation
+- **Container Insights Disabled**: Reduced CloudWatch overhead
 
 ### **Production Environment Features**
 - **High Availability**: Multi-AZ database and Redis deployment
@@ -465,7 +463,7 @@ npm run deploy:dev -- \
   --context enableAtRest=true \
   --context deleteProtection=true
 
-# Production with cost optimization
+# Production with reduced resource allocation
 npm run deploy:prod -- \
   --context instanceCount=1 \
   --context numCacheNodes=1

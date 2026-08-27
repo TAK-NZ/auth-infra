@@ -109,12 +109,10 @@ npm run deploy:local:prod   # Builds images locally
 
 ## Available Environments
 
-| Environment | Stack Name | Description | Domain | Monthly Cost* |
-|-------------|------------|-------------|--------|---------------|
-| `dev-test` | `TAK-Dev-AuthInfra` | Cost-optimized development | `auth.dev.tak.nz` | ~$106 USD |
-| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `auth.tak.nz` | ~$367 USD |
-
-*Estimated AWS costs in USD for ap-southeast-2 region, excluding data transfer and storage usage
+| Environment | Stack Name | Description | Domain |
+|-------------|------------|-------------|--------|
+| `dev-test` | `TAK-Dev-AuthInfra` | Development and testing | `auth.dev.tak.nz` |
+| `prod` | `TAK-Prod-AuthInfra` | High-availability production | `auth.tak.nz` |
 
 ## Development Workflow
 

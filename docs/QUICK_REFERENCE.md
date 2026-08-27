@@ -4,7 +4,7 @@
 
 ### Using Enhanced NPM Scripts (Recommended)
 ```bash
-# Development environment (cost-optimized)
+# Development environment
 npm run deploy:dev
 
 # Production environment (high availability)
@@ -23,7 +23,6 @@ npx cdk deploy --context env=prod --profile your-aws-profile
 ## Environment Comparison
 
 ### Development Environment (`dev-test`)
-- ✅ **Cost optimized** (~$106 USD/month)
 - ✅ **Same core functionality** as production
 - ✅ **Perfect for development** and testing
 - ✅ **Aurora Serverless v2** (pay-per-use scaling)
@@ -37,7 +36,6 @@ npx cdk deploy --context env=prod --profile your-aws-profile
 - ✅ **Enhanced monitoring** (Performance Insights, Container Insights)
 - ✅ **Production-grade database** (dedicated instances)
 - ✅ **Data protection** (retention policies)
-- ❌ **Higher cost** (~$367 USD/month)
 
 ## Configuration Override Examples
 
@@ -62,7 +60,7 @@ npm run deploy:dev -- \
 
 | Resource | Dev-Test | Production | Notes |
 |----------|----------|------------|-------|
-| **Aurora PostgreSQL** | **Serverless v2** | **Dedicated (Multi-AZ)** | Major cost/performance difference |
+| **Aurora PostgreSQL** | **Serverless v2** | **Dedicated (Multi-AZ)** | Major performance difference |
 | **ElastiCache Redis** | **1 node** | **2 nodes** | Single vs clustered |
 | **ECS Tasks** | 1 × 512/1024 | 2 × 1024/2048 | CPU/Memory allocation |
 | **Application Load Balancer** | 1 | 1 | HTTPS termination |
@@ -72,22 +70,6 @@ npm run deploy:dev -- \
 | **Secrets Manager** | 3 secrets | 3 secrets | Admin, DB, Redis credentials |
 | **ECR Repositories** | 2 | 2 | Authentik server + LDAP |
 | **CloudWatch Logs** | Basic | Enhanced | Retention and insights |
-
-## Cost Breakdown (Estimated USD for ap-southeast-2)
-
-### Development Environment (~$106 USD/month)
-- **Aurora Serverless v2**: ~$45/month (0.5 ACU average)
-- **ElastiCache**: ~$15/month (cache.t3.micro)
-- **ECS Fargate**: ~$25/month (1 task × 512 CPU/1024 MB)
-- **Load Balancers**: ~$18/month (ALB + NLB)
-- **Storage & Other**: ~$3/month (EFS, logs, secrets)
-
-### Production Environment (~$367 USD/month)
-- **Aurora Multi-AZ**: ~$280/month (2 × db.t4g.large)
-- **ElastiCache**: ~$30/month (2 × cache.t3.small)
-- **ECS Fargate**: ~$50/month (2 tasks × 1024 CPU/2048 MB)
-- **Load Balancers**: ~$18/month (ALB + NLB)
-- **Enhanced Features**: ~$15/month (monitoring, insights)
 
 ## Development Workflow
 
@@ -110,7 +92,6 @@ npm run cdk:bootstrap       # Bootstrap CDK
 ## Decision Matrix
 
 ### Choose Development Environment if:
-- 💰 **Cost is primary concern**
 - 🧪 **Development/testing workloads**
 - 📚 **Learning Authentik/LDAP integration**
 - ⏰ **Occasional downtime acceptable**

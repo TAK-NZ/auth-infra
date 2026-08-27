@@ -179,7 +179,7 @@ Tag v* → Tests → Production (prod profile) [requires approval]
 ```
 
 **Benefits:**
-- Cost optimization: Demo runs dev-test profile between deployments
+- Resource efficiency: Demo runs dev-test profile between deployments
 - Risk mitigation: Both profiles tested in demo before production
 - Separation: Independent workflows for demo testing vs production deployment
 

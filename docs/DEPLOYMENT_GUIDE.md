@@ -26,12 +26,10 @@ npm run deploy:prod
 
 ## **📋 Environment Configurations**
 
-| Environment | Stack Name | Domain | Enrollment | Cost/Month* | Features |
-|-------------|------------|--------|------------|-------------|----------|
-| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | `enroll.dev.tak.nz` | ~$106 USD | Cost-optimized, Aurora Serverless v2 |
-| **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | `enroll.tak.nz` | ~$367 USD | High availability, multi-AZ deployment |
-
-*Estimated AWS costs in USD for ap-southeast-2 region, excluding data transfer and storage usage
+| Environment | Stack Name | Domain | Enrollment | Features |
+|-------------|------------|--------|------------|----------|
+| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | `enroll.dev.tak.nz` | Aurora Serverless v2, minimal resource allocation |
+| **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | `enroll.tak.nz` | High availability, multi-AZ deployment |
 
 ---
 
@@ -146,7 +144,7 @@ npm run deploy:dev -- --context stackName=Demo --context r53ZoneName=demo.tak.nz
 ```
 
 This creates a stack named `TAK-Demo-AuthInfra` with:
-- **Aurora Serverless v2** (cost-optimized)
+- **Aurora Serverless v2** (minimal resource allocation)
 - **Single AZ deployment** (basic availability)
 - **Development-grade settings** for logging and monitoring
 - **Minimal Redis configuration**
@@ -167,7 +165,7 @@ This **upgrades the existing** `TAK-Demo-AuthInfra` stack to:
 - **Resource retention policies** (data protection)
 
 ### **Environment Downgrade (prod → dev-test)**
-You can also downgrade for cost optimization during development phases:
+You can also downgrade to a lighter-weight configuration during development phases:
 
 ```bash
 # Scale back to development configuration
@@ -180,14 +178,13 @@ npm run deploy:dev -- --context stackName=Demo --context r53ZoneName=demo.tak.nz
 
 2. **Removal Policies**: When downgrading from prod to dev-test, resources with `RETAIN` policies will switch to `DESTROY` policies, but existing resources retain their original policy until replaced.
 
-3. **Cost Impact**: Upgrading to prod configuration will significantly increase costs due to dedicated database instances, multi-AZ deployment, and enhanced monitoring.
+3. **Resource Impact**: Upgrading to prod configuration will provision dedicated database instances, multi-AZ deployment, and enhanced monitoring.
 
 4. **Incremental Updates**: CDK intelligently updates only the resources that need to change, minimizing disruption to running applications.
 
 ### **Best Practices**
 - **Test transformations** in a non-critical environment first
 - **Plan for brief downtime** during database configuration changes
-- **Monitor costs** when upgrading to production configurations
 - **Use consistent domain names** across transformations to avoid certificate recreation
 - **Backup data** before major configuration changes
 
