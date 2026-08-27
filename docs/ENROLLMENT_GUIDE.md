@@ -228,14 +228,6 @@ The enrollment service generates configuration for connecting to your TAK server
 - **Authentication Settings**: LDAP connection parameters
 - **Protocol Configuration**: TAK protocol settings
 
-## Cost Impact
-
-The enrollment feature adds minimal cost to your infrastructure:
-
-- **Lambda Function**: Pay-per-request pricing (~$0.01 per 1000 requests)
-- **ALB Listener Rules**: No additional cost for OIDC authentication
-- **Route53 Records**: Minimal DNS query costs
-
 ## Best Practices
 
 ### Security
