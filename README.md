@@ -10,52 +10,12 @@ This repository deploys the authentication layer infrastructure for a complete T
 
 It is specifically targeted at the deployment of [TAK.NZ](https://tak.nz) via a CI/CD pipeline. Nevertheless others interested in deploying a similar infrastructure can do so by adapting the configuration items.
 
-This authentication infrastructure requires the base infrastructure and is the foundation of additional higher level layers. Layers can be deployed in multiple independent environments. As an example:
+This authentication infrastructure requires the base infrastructure and is the foundation of
+additional higher level layers, each deployed as a separate stack from its own repository.
 
-```
-        PRODUCTION ENVIRONMENT                DEMO/TESTING ENVIRONMENT              DEVELOPMENT ENVIRONMENT
-        Domain: tak.nz                        Domain: demo.tak.nz                   Domain: dev.tak.nz
-        Deployed via CI/CD                    Deployed via CI/CD                    Deployed manually
-
-┌─────────────────────────────────┐    ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│         MediaInfra              │    │         MediaInfra              │    │         MediaInfra              │
-│    CloudFormation Stack         │    │    CloudFormation Stack         │    │    CloudFormation Stack         │
-└─────────────────────────────────┘    └─────────────────────────────────┘    └─────────────────────────────────┘
-                │                                        │                                     │
-                ▼                                        ▼                                     ▼
-┌─────────────────────────────────┐    ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│         CloudTAK                │    │         CloudTAK                │    │         CloudTAK                │
-│    CloudFormation Stack         │    │    CloudFormation Stack         │    │    CloudFormation Stack         │
-└─────────────────────────────────┘    └─────────────────────────────────┘    └─────────────────────────────────┘
-                │                                        │                                     │
-                ▼                                        ▼                                     ▼
-┌─────────────────────────────────┐    ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│         TakInfra                │    │         TakInfra                │    │         TakInfra                │
-│    CloudFormation Stack         │    │    CloudFormation Stack         │    │    CloudFormation Stack         │
-└─────────────────────────────────┘    └─────────────────────────────────┘    └─────────────────────────────────┘
-                │                                        │                                     │
-                ▼                                        ▼                                     ▼
-┌─────────────────────────────────┐    ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│        AuthInfra                │    │        AuthInfra                │    │        AuthInfra                │
-│    CloudFormation Stack         │    │    CloudFormation Stack         │    │    CloudFormation Stack         │
-└─────────────────────────────────┘    └─────────────────────────────────┘    └─────────────────────────────────┘
-                │                                        │                                     │
-                ▼                                        ▼                                     ▼
-┌─────────────────────────────────┐    ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│        BaseInfra                │    │        BaseInfra                │    │        BaseInfra                │
-│    CloudFormation Stack         │    │    CloudFormation Stack         │    │    CloudFormation Stack         │
-└─────────────────────────────────┘    └─────────────────────────────────┘    └─────────────────────────────────┘
-```
-
-| Layer | Repository | Description |
-|-------|------------|-------------|
-| **BaseInfra** | [`base-infra`](https://github.com/TAK-NZ/base-infra)  | Foundation: VPC, ECS, S3, KMS, ACM |
-| **AuthInfra** | `auth-infra` (this repo) | SSO via Authentik, LDAP |
-| **VideoInfra** | [`video-infra`](https://github.com/TAK-NZ/video-infra) | Video Server based on Mediamtx |
-| **CloudTAK** | [`CloudTAK`](https://github.com/TAK-NZ/CloudTAK) | CloudTAK web interface, ETL, and media services |
-| **MediaInfra** [`media-infra`](https://github.com/TAK-NZ/media-infra) | Media Streaming |
-
-**Deployment Order**: BaseInfra must be deployed first, followed by AuthInfra, TakInfra, CloudTAK, and finally MediaInfra. Each layer imports outputs from layers below via CloudFormation exports.
+For the full layer diagram and deployment order across all TAK.NZ repositories, see the
+[TAK.NZ organization overview](https://github.com/TAK-NZ). That diagram is maintained in one place
+so it stays current as layers are added.
 
 ## Quick Start
 
@@ -241,4 +201,4 @@ npm run deploy:prod -- --context enrollmentEnabled=true
 ## License
 
 TAK.NZ is distributed under [AGPL-3.0-only](LICENSE)
-Copyright (C) 2025 - Christian Elsen, Team Awareness Kit New Zealand (TAK.NZ)
+Copyright (C) 2026 - Christian Elsen, Team Awareness Kit New Zealand (TAK.NZ)
