@@ -1,0 +1,12 @@
+name: Add issue to roadmap project
+on:
+  issues:
+    types: [opened]
+jobs:
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v2.0.0
+        with:
+          project-url: https://github.com/orgs/TAK-NZ/projects/2
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
