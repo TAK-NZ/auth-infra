@@ -69,6 +69,16 @@ export interface SecretsConfig {
      * LDAP service user credentials
      */
     ldapServiceUser?: secretsmanager.ISecret;
+
+    /**
+     * TAKTeamManager scoped API token (least-privilege service account)
+     */
+    teamManagerApiToken: secretsmanager.ISecret;
+
+    /**
+     * CloudTAK scoped API token (least-privilege service account)
+     */
+    cloudTakApiToken: secretsmanager.ISecret;
   };
 }
 

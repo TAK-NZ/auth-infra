@@ -169,6 +169,7 @@ npm run deploy:prod -- --context enrollmentEnabled=true
 - **[⚡ Quick Reference](docs/QUICK_REFERENCE.md)** - Fast deployment commands and environment comparison
 - **[⚙️ Configuration Guide](docs/PARAMETERS.md)** - Complete configuration management reference
 - **[📱 Device Enrollment Guide](docs/ENROLLMENT_GUIDE.md)** - ATAK/iTAK device enrollment and OIDC authentication
+- **[🔑 Scoped Service Accounts](docs/SCOPED_SERVICE_ACCOUNTS.md)** - Least-privilege Authentik service accounts for consumer apps (TAKTeamManager, CloudTAK)
 - **[🐳 Docker Image Strategy](docs/DOCKER_IMAGE_STRATEGY.md)** - Hybrid image strategy for fast CI/CD and flexible development
 - **[🧪 Test Organization](test/TEST_ORGANIZATION.md)** - Test structure and coverage information
 

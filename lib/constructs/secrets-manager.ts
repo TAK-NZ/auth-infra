@@ -59,6 +59,16 @@ export class SecretsManager extends Construct {
    */
   public readonly ldapToken: secretsmanager.Secret;
 
+  /**
+   * The TAKTeamManager scoped API token secret (least-privilege service account)
+   */
+  public readonly teamManagerApiToken: secretsmanager.Secret;
+
+  /**
+   * The CloudTAK scoped API token secret (least-privilege service account)
+   */
+  public readonly cloudTakApiToken: secretsmanager.Secret;
+
   constructor(scope: Construct, id: string, props: SecretsManagerProps) {
     super(scope, id);
 
@@ -116,6 +126,31 @@ export class SecretsManager extends Construct {
       secretName: `${props.stackName}/Authentik/LDAP-Token`,
       encryptionKey: props.infrastructure.kmsKey,
       secretStringValue: SecretValue.unsafePlainText('replace-me') // Will be updated manually later
+    });
+
+    // Create TAKTeamManager scoped API token. The value is generated here (not
+    // by Authentik) and handed to the tak-teammanager-setup.yaml blueprint via
+    // AUTHENTIK_BOOTSTRAP_TEAMMANAGER_TOKEN, which sets it as the token's `key`
+    // (blueprints can set a token's key directly; the standard API cannot).
+    this.teamManagerApiToken = new secretsmanager.Secret(this, 'AuthentikTeamManagerApiToken', {
+      description: `Authentik: TAKTeamManager scoped API Token (least-privilege service account)`,
+      secretName: `${props.stackName}/Authentik/TeamManager-API-Token`,
+      encryptionKey: props.infrastructure.kmsKey,
+      generateSecretString: {
+        excludePunctuation: true,
+        passwordLength: 64
+      }
+    });
+
+    // Create CloudTAK scoped API token, same mechanism as above.
+    this.cloudTakApiToken = new secretsmanager.Secret(this, 'AuthentikCloudTakApiToken', {
+      description: `Authentik: CloudTAK scoped API Token (least-privilege service account)`,
+      secretName: `${props.stackName}/Authentik/CloudTAK-API-Token`,
+      encryptionKey: props.infrastructure.kmsKey,
+      generateSecretString: {
+        excludePunctuation: true,
+        passwordLength: 64
+      }
     });
   }
 }

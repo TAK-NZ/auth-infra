@@ -1,6 +1,6 @@
 version: 1
 metadata:
-  name: TAK branding change
+  name: TAK - Branding change
   labels:
     blueprints.goauthentik.io/description: |
       This blueprint updates the default brand.

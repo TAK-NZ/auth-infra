@@ -261,7 +261,9 @@ export class AuthInfraStack extends cdk.Stack {
         adminUserPassword: secretsManager.adminUserPassword,
         adminUserToken: secretsManager.adminUserToken,
         ldapToken: secretsManager.ldapToken,
-        ldapServiceUser: secretsManager.ldapServiceUser
+        ldapServiceUser: secretsManager.ldapServiceUser,
+        teamManagerApiToken: secretsManager.teamManagerApiToken,
+        cloudTakApiToken: secretsManager.cloudTakApiToken
       }
     };
 
@@ -627,6 +629,8 @@ export class AuthInfraStack extends cdk.Stack {
       authentikAdminTokenArn: secretsManager.adminUserToken.secretArn,
       authentikLdapTokenArn: secretsManager.ldapToken.secretArn,
       authentikLdapServiceUserArn: secretsManager.ldapServiceUser.secretArn,
+      authentikTeamManagerTokenArn: secretsManager.teamManagerApiToken.secretArn,
+      authentikCloudTakTokenArn: secretsManager.cloudTakApiToken.secretArn,
       authentikAlbDns: authentikELB.loadBalancer.loadBalancerDnsName,
       authentikUrl: `https://${authentikCustomDomain}`,
       ldapNlbDns: ldap.loadBalancer.loadBalancerDnsName,
