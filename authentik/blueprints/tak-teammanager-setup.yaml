@@ -5,9 +5,11 @@ metadata:
     blueprints.goauthentik.io/description: |
       Creates a dedicated, least-privilege service account and API token for
       TAKTeamManager. Scoped to exactly the object types TAKTeamManager's code
-      calls: Users, Groups, and Tokens (for its device-enrollment app-password
-      feature). No access to Applications, Providers, Outposts, Flows, Stages,
-      Policies, or Blueprints is granted.
+      calls: Users (including password resets for human and BCH
+      service-account users, via reset_user_password), Groups, and Tokens
+      (for its device-enrollment app-password feature). No access to
+      Applications, Providers, Outposts, Flows, Stages, Policies, or
+      Blueprints is granted.
 
       NOTE: Authentik forces any token created via POST /core/tokens/ by a
       non-superuser to be owned by the caller itself (see
@@ -30,6 +32,7 @@ entries:
         - authentik_core.add_user
         - authentik_core.change_user
         - authentik_core.delete_user
+        - authentik_core.reset_user_password
         - authentik_core.view_group
         - authentik_core.add_group
         - authentik_core.change_group
