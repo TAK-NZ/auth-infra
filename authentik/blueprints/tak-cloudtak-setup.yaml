@@ -6,9 +6,13 @@ metadata:
       Creates a dedicated, least-privilege service account and API token for
       CloudTAK. Scoped to exactly the object types CloudTAK's runtime code
       calls: Users (including password resets for machine users) and Groups.
-      No access to Applications, Providers, Outposts, Flows, Stages,
-      Policies, Tokens, or Blueprints is granted -- CloudTAK's deploy-time
-      OIDC provider/application setup uses a separate, already-existing
+      add_token is included solely because POST /core/users/service_account/
+      (CloudTAK's createMachineUser) requires it alongside add_user in the
+      same request, even though the created token always belongs to the
+      newly-created machine user, never to an arbitrary existing one. No
+      access to Applications, Providers, Outposts, Flows, Stages, Policies,
+      or Blueprints is granted -- CloudTAK's deploy-time OIDC
+      provider/application setup uses a separate, already-existing
       credential (cloudtak-oidc-setup Lambda) and is out of scope here.
 context:
   token: !Env [AUTHENTIK_BOOTSTRAP_CLOUDTAK_TOKEN, null]
@@ -22,6 +26,7 @@ entries:
       permissions:
         - authentik_core.view_user
         - authentik_core.add_user
+        - authentik_core.add_token
         - authentik_core.delete_user
         - authentik_core.reset_user_password
         - authentik_core.view_group
