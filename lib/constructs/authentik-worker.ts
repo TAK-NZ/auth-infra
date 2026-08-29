@@ -311,7 +311,13 @@ export class AuthentikWorker extends Construct {
           AUTHENTIK_BOOTSTRAP_LDAPSERVICE_PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.authentik.ldapServiceUser, 'password'),
         } : {}),
         AUTHENTIK_BOOTSTRAP_PASSWORD: ecs.Secret.fromSecretsManager(props.secrets.authentik.adminUserPassword, 'password'),
-        AUTHENTIK_BOOTSTRAP_TOKEN: ecs.Secret.fromSecretsManager(props.secrets.authentik.adminUserToken)
+        AUTHENTIK_BOOTSTRAP_TOKEN: ecs.Secret.fromSecretsManager(props.secrets.authentik.adminUserToken),
+        // Consumed by authentik/blueprints/tak-teammanager-setup.yaml and
+        // tak-cloudtak-setup.yaml via !Env context vars, to set each scoped
+        // service account's API token to the value already generated in
+        // Secrets Manager (blueprints can set a token's `key` directly).
+        AUTHENTIK_BOOTSTRAP_TEAMMANAGER_TOKEN: ecs.Secret.fromSecretsManager(props.secrets.authentik.teamManagerApiToken),
+        AUTHENTIK_BOOTSTRAP_CLOUDTAK_TOKEN: ecs.Secret.fromSecretsManager(props.secrets.authentik.cloudTakApiToken)
       },
       // Add basic health check for worker (workers don't expose HTTP endpoints)
       healthCheck: {

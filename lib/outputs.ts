@@ -16,6 +16,8 @@ export interface OutputParams {
   authentikAdminTokenArn: string;
   authentikLdapTokenArn: string;
   authentikLdapServiceUserArn: string;
+  authentikTeamManagerTokenArn: string;
+  authentikCloudTakTokenArn: string;
   authentikAlbDns: string;
   authentikUrl: string;
   ldapNlbDns: string;
@@ -57,6 +59,8 @@ export function registerOutputs(params: OutputParams): void {
   const exportedOutputs = [
     { key: 'AuthentikAdminTokenArn', value: params.authentikAdminTokenArn, description: 'Authentik admin token ARN' },
     { key: 'AuthentikLdapServiceUserArn', value: params.authentikLdapServiceUserArn, description: 'Authentik LDAP service user ARN' },
+    { key: 'AuthentikTeamManagerTokenArn', value: params.authentikTeamManagerTokenArn, description: 'Authentik scoped API token ARN for TAKTeamManager (least-privilege service account)' },
+    { key: 'AuthentikCloudTakTokenArn', value: params.authentikCloudTakTokenArn, description: 'Authentik scoped API token ARN for CloudTAK (least-privilege service account)' },
     { key: 'AuthentikUrl', value: params.authentikUrl, description: 'Authentik application URL' },
     { key: 'LdapEndpoint', value: params.ldapEndpoint, description: 'LDAP endpoint URL' },
     { key: 'LdapsEndpoint', value: params.ldapsEndpoint, description: 'LDAPS endpoint URL' },

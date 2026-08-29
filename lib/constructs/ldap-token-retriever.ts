@@ -558,7 +558,7 @@ async function applyLdapBlueprint(authentikHost, adminToken) {
     
     try {
         const blueprints = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/\`, { method: 'GET', headers });
-        const takLdapBlueprint = blueprints.results.find(bp => bp.name === 'LDAP Setup for TAK');
+        const takLdapBlueprint = blueprints.results.find(bp => bp.path === 'tak/tak-ldap-setup.yaml');
         
         if (takLdapBlueprint) {
             logWithTimestamp('info', \`Found TAK LDAP blueprint, applying\`, { uuid: takLdapBlueprint.pk });
@@ -617,7 +617,7 @@ async function triggerLdapBlueprint(authentikHost, adminToken) {
             if (!blueprintInstanceUuid) {
                 try {
                     const blueprints = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/\`, { method: 'GET', headers });
-                    const takLdapBlueprint = blueprints.results.find(bp => bp.name === 'LDAP Setup for TAK');
+                    const takLdapBlueprint = blueprints.results.find(bp => bp.path === 'tak/tak-ldap-setup.yaml');
                     if (takLdapBlueprint) {
                         blueprintInstanceUuid = takLdapBlueprint.pk;
                         logWithTimestamp('info', \`Found TAK LDAP blueprint with UUID: \${blueprintInstanceUuid}\`);

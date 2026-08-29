@@ -1,6 +1,6 @@
 version: 1
 metadata:
-  name: LDAP Setup for TAK
+  name: TAK - LDAP Setup
   labels:
     blueprints.goauthentik.io/description: |
       This blueprint configures the default LDAP service account.
@@ -123,7 +123,7 @@ entries:
       search_mode: cached
       uid_start_number: 2000
     permissions:
-      - permission: search_full_directory
+      - permission: authentik_providers_ldap.search_full_directory
         user: !KeyOf ldap-service-account
   - model: authentik_core.application
     id: app

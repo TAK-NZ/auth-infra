@@ -1,0 +1,61 @@
+version: 1
+metadata:
+  name: TAK - TAKTeamManager Service Account Setup
+  labels:
+    blueprints.goauthentik.io/description: |
+      Creates a dedicated, least-privilege service account and API token for
+      TAKTeamManager. Scoped to exactly the object types TAKTeamManager's code
+      calls: Users, Groups, and Tokens (for its device-enrollment app-password
+      feature). No access to Applications, Providers, Outposts, Flows, Stages,
+      Policies, or Blueprints is granted.
+
+      NOTE: Authentik forces any token created via POST /core/tokens/ by a
+      non-superuser to be owned by the caller itself (see
+      authentik/core/api/tokens.py TokenViewSet.perform_create). This means
+      this scoped account CANNOT create an "app password" token on behalf of
+      a different (device-enrollment) user -- that specific call still
+      requires the superuser admin token. See auth-infra's write-up for
+      TAKTeamManager for the recommended handling of that one call site.
+context:
+  token: !Env [AUTHENTIK_BOOTSTRAP_TEAMMANAGER_TOKEN, null]
+entries:
+  - model: authentik_rbac.role
+    id: teammanager-role
+    state: present
+    identifiers:
+      name: TAKTeamManager Service Role
+    attrs:
+      permissions:
+        - authentik_core.view_user
+        - authentik_core.add_user
+        - authentik_core.change_user
+        - authentik_core.delete_user
+        - authentik_core.view_group
+        - authentik_core.add_group
+        - authentik_core.change_group
+        - authentik_core.delete_group
+        - authentik_core.add_user_to_group
+        - authentik_core.remove_user_from_group
+        - authentik_core.view_token
+        - authentik_core.add_token
+        - authentik_core.delete_token
+        - authentik_core.view_token_key
+  - model: authentik_core.user
+    state: created
+    id: teammanager-service-account
+    identifiers:
+      username: tak-teammanager-service
+    attrs:
+      name: TAK Team Manager Service Account
+      type: service_account
+      roles:
+        - !KeyOf teammanager-role
+  - model: authentik_core.token
+    state: present
+    identifiers:
+      identifier: tak-teammanager-api-token
+    attrs:
+      key: !Context token
+      user: !KeyOf teammanager-service-account
+      intent: api
+      expiring: false
