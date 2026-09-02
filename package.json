@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.1045.0",
-    "aws-cdk-lib": "^2.266.0",
+    "aws-cdk-lib": "^2.268.0",
     "axios": "^1.18.0",
     "constructs": "^10.8.1",
     "dotenv": "^17.4.2",
