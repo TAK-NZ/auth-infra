@@ -265,7 +265,14 @@ export class Ldap extends Construct {
       // Configure deployment to maintain availability
       minHealthyPercent: isHighAvailability ? 100 : 50,
       maxHealthyPercent: 200,
-      circuitBreaker: { rollback: true }
+      circuitBreaker: { rollback: true },
+      // The LDAP provider runs in "cached" search/bind mode, which requires the
+      // outpost to fully sync every user and group from Authentik into memory
+      // before it starts listening on 3389/6636. With a large directory this can
+      // take several minutes. Without a grace period, the NLB target health
+      // checks fail immediately (nothing is listening yet), and ECS kills the
+      // task before the cache finishes building, causing continuous churn.
+      healthCheckGracePeriod: Duration.minutes(10)
     });
 
     // Create target groups for LDAP and LDAPS
