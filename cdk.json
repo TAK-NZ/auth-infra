@@ -106,12 +106,12 @@
           "taskMemory": 4096
         },
         "worker": {
-          "taskCpu": 2048,
-          "taskMemory": 4096
+          "taskCpu": 1024,
+          "taskMemory": 2048
         },
         "ldap": {
-          "taskCpu": 512,
-          "taskMemory": 1024
+          "taskCpu": 4096,
+          "taskMemory": 8192
         },
         "desiredCount": 2,
         "enableDetailedLogging": false,
