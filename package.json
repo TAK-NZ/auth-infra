@@ -17,7 +17,7 @@
     "test:coverage": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest --coverage",
     "test:coverage:unit": "unset CDK_DEFAULT_ACCOUNT && unset CDK_DEFAULT_REGION && jest test/unit --coverage",
     "cdk": "cdk",
-    "clean": "rm -f bin/*.js bin/*.d.ts lib/*.js lib/*.d.ts lib/constructs/*.js lib/constructs/*.d.ts test/*.js test/*.d.ts; rm -rf cdk.out/*",
+    "clean": "find bin lib test -type f \\( -name '*.js' -o -name '*.d.ts' -o -name '*.js.map' \\) -not -path '*/node_modules/*' -delete 2>/dev/null; rm -rf cdk.out/*",
     "dev": "npm run build && npm run test",
     "deploy:dev": "npm run build && cdk deploy --context envType=dev-test --no-warnings",
     "deploy:prod": "npm run build && cdk deploy --context envType=prod --no-warnings",
