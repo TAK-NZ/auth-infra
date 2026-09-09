@@ -102,7 +102,7 @@ npm run deploy:local:prod   # Builds images locally
 
 ```json
 "authentik": {
-  "authentikVersion": "2026.8.0",
+  "authentikVersion": "2026.8.2",
   "branding": "tak-nz"
 }
 ```
@@ -150,7 +150,7 @@ The project uses **AWS CDK context-based configuration** for consistent deployme
 npm run deploy:dev -- --context adminUserEmail=admin@custom.tak.nz
 
 # Deploy with different Authentik version
-npm run deploy:prod -- --context authentikVersion=2026.8.0
+npm run deploy:prod -- --context authentikVersion=2026.8.2
 
 # Use different branding
 npm run deploy:dev -- --context branding=generic
