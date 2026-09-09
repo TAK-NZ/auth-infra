@@ -25,21 +25,9 @@ describe('AuthInfraStack Configuration Validation', () => {
     });
   });
 
-  describe('Configuration Properties', () => {
-    test('dev-test has expected properties', () => {
-      const config = MOCK_CONFIGS.DEV_TEST;
-      expect(config.stackName).toBe('DevTest');
-      expect(config.database.instanceClass).toBe('db.t3.micro');
-
-      expect(config.ecs.server.taskCpu).toBe(512);
-    });
-
-    test('prod has expected properties', () => {
-      const config = MOCK_CONFIGS.PROD;
-      expect(config.stackName).toBe('Prod');
-      expect(config.database.instanceClass).toBe('db.t3.small');
-
-      expect(config.ecs.server.taskCpu).toBe(1024);
-    });
-  });
+  // NOTE: The former "Configuration Properties" block was removed. It asserted
+  // that the mock fixture contained the literals the fixture defines
+  // (e.g. stackName === 'DevTest', instanceClass === 'db.t3.micro') — a
+  // tautology that passes because the value was typed twice and fails on any
+  // legitimate config change. See CDK_TEST_CLEANUP_GUIDE (DELETE #2).
 });

@@ -2,12 +2,40 @@
  * CDK testing utilities and helpers
  */
 import { App, Stack } from 'aws-cdk-lib';
+import { Template } from 'aws-cdk-lib/assertions';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import type { InfrastructureConfig, NetworkConfig } from '../../lib/construct-configs';
+import { AuthInfraStack } from '../../lib/auth-infra-stack';
+import { applyContextOverrides } from '../../lib/utils/context-overrides';
+import type { ContextEnvironmentConfig } from '../../lib/stack-config';
+
+/**
+ * Synthesize the full AuthInfraStack for a given environment config, mirroring
+ * how bin/cdk.ts wires it up (context overrides + explicit env so
+ * stack.availabilityZones resolves real AZs instead of agnostic dummies).
+ *
+ * Returns both the synthesized Template and the stack. Constructing the
+ * Template performs the synth, so a stack that no longer synthesizes throws
+ * here — which is the point of the synth-smoke tests.
+ */
+export function synthStack(
+  environment: 'prod' | 'dev-test',
+  envConfig: ContextEnvironmentConfig,
+  extraContext: Record<string, unknown> = {}
+): { template: Template; stack: AuthInfraStack } {
+  const app = new App({ context: extraContext });
+  const finalEnvConfig = applyContextOverrides(app, envConfig);
+  const stack = new AuthInfraStack(app, `TAK-${finalEnvConfig.stackName}-AuthInfra`, {
+    environment,
+    envConfig: finalEnvConfig,
+    env: { account: '123456789012', region: 'us-east-1' }
+  });
+  return { template: Template.fromStack(stack), stack };
+}
 
 export class CDKTestHelper {
   /**
