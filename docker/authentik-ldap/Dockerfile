@@ -1,4 +1,4 @@
-ARG AUTHENTIK_VERSION=2026.8.0
+ARG AUTHENTIK_VERSION=2026.8.2
 FROM ghcr.io/goauthentik/ldap:${AUTHENTIK_VERSION}
 LABEL org.opencontainers.image.source=https://github.com/tak-nz/auth-infra-ldap
 LABEL org.opencontainers.image.description="Authentik LDAP outpost for TAK server auth via LDAP"
