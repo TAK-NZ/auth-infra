@@ -62,7 +62,7 @@
         "outboundEmailServerPort": 587
       },
       "enrollment": {
-        "enrollmentEnabled": true,
+        "enrollmentEnabled": false,
         "providerName": "TAK-Device-Activation",
         "applicationName": "TAK Device Enrollment",
         "applicationSlug": "tak-device-activation",
@@ -130,7 +130,7 @@
         "outboundEmailServerPort": 587
       },
       "enrollment": {
-        "enrollmentEnabled": true,
+        "enrollmentEnabled": false,
         "providerName": "TAK-Device-Activation",
         "applicationName": "TAK Device Enrollment",
         "applicationSlug": "tak-device-activation",
