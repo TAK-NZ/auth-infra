@@ -31,6 +31,7 @@ entries:
         - authentik_core.reset_user_password
         - authentik_core.view_group
         - authentik_core.add_user_to_group
+        - authentik_core.remove_user_from_group
   - model: authentik_core.user
     state: created
     id: cloudtak-service-account
