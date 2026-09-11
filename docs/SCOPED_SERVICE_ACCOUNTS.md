@@ -106,6 +106,7 @@ the user and its token atomically and isn't subject to this restriction).
 | `authentik_core.reset_user_password` | Set/rotate machine-user passwords; temp-password cert-enrollment fallback |
 | `authentik_core.view_group` | List agencies and channels (both modeled as groups) |
 | `authentik_core.add_user_to_group` | Attach a machine user to a channel group |
+| `authentik_core.remove_user_from_group` | Detach a machine user from a channel group — needed to change a machine user's channel access after creation (e.g. Duplex → Read means removing it from the base/old group variant before adding the new one) and to cleanly detach without deleting the account. Direct counterpart to `add_user_to_group`. |
 
 No permissions on Applications, Providers, Outposts, Flows, Stages,
 Policies, Tokens (beyond `add_token`, see below), or Blueprints are granted.
