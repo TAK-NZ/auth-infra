@@ -22,7 +22,7 @@
       "database": {
         "instanceClass": "db.serverless",
         "instanceCount": 1,
-        "engineVersion": "17.10",
+        "engineVersion": "18.4",
         "allocatedStorage": 20,
         "maxAllocatedStorage": 100,
         "enablePerformanceInsights": false,
@@ -90,7 +90,7 @@
       "database": {
         "instanceClass": "db.r7g.large",
         "instanceCount": 2,
-        "engineVersion": "17.10",
+        "engineVersion": "18.4",
         "allocatedStorage": 100,
         "maxAllocatedStorage": 1000,
         "enablePerformanceInsights": true,
