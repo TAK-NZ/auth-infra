@@ -123,6 +123,14 @@ export class Database extends Construct {
     const engineVersionString = dbConfig.engineVersion || '17.4';
     const majorVersion = engineVersionString.split('.')[0];
     const engineVersion = rds.AuroraPostgresEngineVersion.of(engineVersionString, majorVersion);
+
+    // In PostgreSQL 18 log_connections changed from a boolean to an enum of
+    // connection-setup stages (receipt, authentication, authorization,
+    // setup_durations, all); the old boolean value '1' is rejected. Use 'all'
+    // on 18+ to preserve the previous "log everything" behaviour, and keep the
+    // boolean '1' on earlier majors where 'all' is not a valid boolean.
+    // log_disconnections remains a boolean in 18, so it is left unchanged.
+    const logConnectionsValue = Number(majorVersion) >= 18 ? 'all' : '1';
     const parameterGroup = new rds.ParameterGroup(this, 'DBParameterGroup', {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
         version: engineVersion
@@ -132,7 +140,7 @@ export class Database extends Construct {
         'shared_preload_libraries': 'pg_stat_statements',
         'log_statement': 'all',
         'log_min_duration_statement': '1000',
-        'log_connections': '1',
+        'log_connections': logConnectionsValue,
         'log_disconnections': '1'
       }
     });
