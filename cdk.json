@@ -38,8 +38,8 @@
           "taskMemory": 2048
         },
         "worker": {
-          "taskCpu": 1024,
-          "taskMemory": 2048
+          "taskCpu": 2048,
+          "taskMemory": 4096
         },
         "ldap": {
           "taskCpu": 512,
