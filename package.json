@@ -1,6 +1,6 @@
 {
   "name": "@tak-nz/auth-infra",
-  "version": "0.1.1",
+  "version": "2026.8.3",
   "description": "Authentication infrastructure for TAK-NZ projects using AWS CDK",
   "private": true,
   "bin": {

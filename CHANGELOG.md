@@ -12,6 +12,8 @@
 
 ### Pending Release
 
+### v2026.8.3
+
 - :arrow_up: Bump Authentik to 2026.8.3
 - :bug: Remove the temporary LDAP memory-searcher patch and custom build stage (PR #137 workaround); the LDAP image is now the plain upstream ghcr.io/goauthentik/ldap image, since the fix shipped upstream in 2026.8.3 (goauthentik/authentik#26028)
 - :arrow_up: Upgrade aws-cdk-lib to 2.272.0 and aws-cdk CLI to 2.1144.0
