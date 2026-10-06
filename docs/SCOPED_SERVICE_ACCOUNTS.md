@@ -4,8 +4,8 @@
 
 Consumer applications (TAKTeamManager, CloudTAK) originally authenticated to
 Authentik's REST API using the same superuser bootstrap admin token that this
-stack uses internally for its own setup automation (OIDC provider setup,
-enrollment, LDAP outpost provisioning). That token can create, modify, or
+stack uses internally for its own setup automation (LDAP outpost
+provisioning). That token can create, modify, or
 delete *anything* in Authentik — other admin accounts, providers, outposts,
 flows, blueprints — none of which either consumer app needs or should be able
 to touch.
@@ -129,8 +129,8 @@ against the demo stack.
 
 ## Consuming these tokens from an application's own CDK stack
 
-The pattern mirrors how this stack's own Lambdas consume the admin token
-(`enroll-oidc-setup.ts`, `ldap-token-retriever.ts`):
+The pattern mirrors how this stack's own Lambda consumes the admin token
+(`ldap-token-retriever.ts`):
 
 1. Import the relevant secret's ARN via `Fn.importValue`, using this stack's
    `{stackName}-Authentik{App}TokenArn` export name convention (see

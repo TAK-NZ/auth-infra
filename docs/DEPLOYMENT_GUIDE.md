@@ -26,10 +26,10 @@ npm run deploy:prod
 
 ## **📋 Environment Configurations**
 
-| Environment | Stack Name | Domain | Enrollment | Features |
-|-------------|------------|--------|------------|----------|
-| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | `enroll.dev.tak.nz` | Aurora Serverless v2, minimal resource allocation |
-| **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | `enroll.tak.nz` | High availability, multi-AZ deployment |
+| Environment | Stack Name | Domain | Features |
+|-------------|------------|--------|----------|
+| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | Aurora Serverless v2, minimal resource allocation |
+| **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | High availability, multi-AZ deployment |
 
 ---
 
@@ -245,7 +245,6 @@ aws cloudformation describe-stacks --stack-name TAK-Dev-AuthInfra \
 
 ### **Access Services**
 - **Authentik Web Interface**: `https://account.{domain}`
-- **Device Enrollment**: `https://enroll.{domain}` - ATAK/iTAK device enrollment
 - **LDAP Endpoint**: `ldap.{domain}:389` (LDAP) / `ldap.{domain}:636` (LDAPS)
 
 ### **Cleanup**
@@ -266,5 +265,4 @@ npm run cdk:destroy -- --context env=prod
 - **[Main README](../README.md)** - Project overview and quick start
 - **[Architecture Guide](ARCHITECTURE.md)** - Technical architecture details
 - **[Configuration Guide](PARAMETERS.md)** - Complete configuration reference
-- **[Device Enrollment Guide](ENROLLMENT_GUIDE.md)** - ATAK/iTAK device enrollment
 - **[Quick Reference](QUICK_REFERENCE.md)** - Fast deployment commands
