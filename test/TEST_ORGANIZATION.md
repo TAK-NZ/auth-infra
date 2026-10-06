@@ -173,8 +173,8 @@ npm run build
 
 ## Test Coverage Summary
 
-- **Total Test Suites**: 13
-- **Total Tests**: ~75
+- **Total Test Suites**: 19
+- **Total Tests**: 106
 - **Overall Coverage**: >96% statements, >85% branches, >98% functions
 - **All Main Constructs Covered**: ✅ Yes
 - **Integration Tests**: ✅ Yes  

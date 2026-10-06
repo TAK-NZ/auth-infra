@@ -81,10 +81,6 @@ export function applyContextOverrides(
       enableDetailedLogging: contextBoolean(app, 'enableDetailedLogging', baseConfig.general.enableDetailedLogging),
       enableContainerInsights: contextBoolean(app, 'enableContainerInsights', baseConfig.general.enableContainerInsights),
     },
-    enrollment: baseConfig.enrollment ? {
-      ...baseConfig.enrollment,
-      enrollmentEnabled: contextBoolean(app, 'enrollmentEnabled', baseConfig.enrollment?.enrollmentEnabled),
-    } : undefined,
     docker: {
       ...baseConfig.docker,
       authentikImageTag: app.node.tryGetContext('authentikImageTag') ?? baseConfig.docker?.authentikImageTag,

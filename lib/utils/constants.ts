@@ -49,21 +49,6 @@ export const AUTHENTIK_CONSTANTS = {
 } as const;
 
 /**
- * Enrollment configuration constants
- * Settings for device enrollment application
- */
-export const ENROLLMENT_CONSTANTS = {
-  /** ALB listener rule priority for enrollment endpoint */
-  LISTENER_PRIORITY: 100,
-  /** Session cookie name for enrollment application */
-  SESSION_COOKIE_NAME: 'AWSELBAuthSessionCookie-Enrollment',
-  /** Session timeout duration in days */
-  SESSION_TIMEOUT_DAYS: 5/1440, // 5 minutes
-  /** OIDC scopes required for enrollment */
-  OIDC_SCOPES: 'openid email profile'
-} as const;
-
-/**
  * Elastic File System constants
  * Shared storage configuration for Authentik data persistence
  */
