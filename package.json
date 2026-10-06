@@ -27,8 +27,7 @@
     "synth:prod": "npm run build && cdk synth --context envType=prod",
     "cdk:diff:dev": "npm run build && cdk diff --context envType=dev-test",
     "cdk:diff:prod": "npm run build && cdk diff --context envType=prod",
-    "cdk:bootstrap": "cdk bootstrap",
-    "preview:enrollment": "node tools/preview/render-preview.js"
+    "cdk:bootstrap": "cdk bootstrap"
   },
   "devDependencies": {
     "@swc/core": "^1.15.33",
@@ -36,33 +35,23 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.2",
     "aws-cdk": "^2.1144.0",
-    "esbuild": "^0.28.1",
     "jest": "^30.5.2",
     "ts-node": "^10.9.2",
     "typescript": "~5.7.2"
   },
   "dependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.1045.0",
     "aws-cdk-lib": "^2.272.0",
-    "axios": "^1.20.0",
     "constructs": "^10.8.1",
-    "dotenv": "^17.4.2",
-    "form-data": "^4.0.0",
     "js-yaml": ">=5.4.1",
     "node-fetch": "^3.3.2",
     "source-map-support": "^0.5.21"
   },
   "overrides": {
-    "fast-xml-parser": ">=5.7.0",
     "ajv": ">=8.18.0",
-    "axios": {
-      "follow-redirects": ">=1.16.0"
-    },
-    "follow-redirects": ">=1.16.0",
     "brace-expansion": ">=5.0.12",
     "picomatch": ">=2.3.2",
     "@istanbuljs/load-nyc-config": {
-      "js-yaml": ">=3.15.2 <4"
+      "js-yaml": "$js-yaml"
     }
   }
 }
