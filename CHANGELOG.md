@@ -12,6 +12,10 @@
 
 ### Pending Release
 
+- :arrow_up: Bump Authentik to 2026.8.4 for both prod and dev-test (cdk.json, Dockerfile ARG defaults, README and docs/PARAMETERS.md)
+- :arrow_up: Upgrade aws-cdk-lib to 2.273.0 and aws-cdk CLI to 2.1145.0
+- :arrow_up: `npm audit` now reports 0 vulnerabilities: aws-cdk-lib 2.273.0 bundles brace-expansion 5.0.12, which clears the previously documented residual finding (GHSA-q2hr-2g5m-vwhr, GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p); .npmrc note updated, existing overrides kept
+
 ### v2026.8.3
 
 - :arrow_up: Bump Authentik to 2026.8.3
