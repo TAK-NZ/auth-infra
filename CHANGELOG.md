@@ -10,7 +10,13 @@
 
 ## Version History
 
-### Pending Release
+### v2026.8.5
+
+- :arrow_up: Bump Authentik to 2026.8.5 for both prod and dev-test (cdk.json, Dockerfile ARG defaults, README and docs/PARAMETERS.md); upstream release is bug fixes only (endpoints MultipleObjectsReturned fix, Microsoft Entra group member handling, cert-related dependency bumps, web UI fixes)
+- :arrow_up: Upgrade aws-cdk-lib to 2.274.0 and aws-cdk CLI to 2.1146.0 (constructs 10.8.1 is already the latest)
+- :arrow_up: `npm audit` reports 0 vulnerabilities at every severity level (`npm audit --audit-level=low`); existing overrides kept and .npmrc note unchanged since aws-cdk-lib 2.274.0 still bundles a fixed brace-expansion
+
+### v2026.8.4
 
 - :arrow_up: Bump Authentik to 2026.8.4 for both prod and dev-test (cdk.json, Dockerfile ARG defaults, README and docs/PARAMETERS.md)
 - :arrow_up: Upgrade aws-cdk-lib to 2.273.0 and aws-cdk CLI to 2.1145.0
