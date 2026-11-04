@@ -109,7 +109,7 @@
         "ldapHostname": "ldap",
         "ldapBaseDn": "dc=tak,dc=nz",
         "useS3AuthentikConfigFile": true,
-        "enablePostgresReadReplicas": false,
+        "enablePostgresReadReplicas": true,
         "branding": "tak-nz",
         "authentikVersion": "2026.8.5",
         "buildRevision": 1,
