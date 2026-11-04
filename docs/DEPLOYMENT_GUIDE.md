@@ -215,6 +215,23 @@ Error: Docker build failed
 ```
 **Solution:** Ensure Docker is running and Dockerfiles exist in docker/ directory.
 
+#### **Cannot Update Export LdapBaseDn**
+```
+Cannot update export TAK-Demo-AuthInfra-LdapBaseDn as it is in use by TAK-Demo-TakInfra
+```
+**Cause:** This happens when a stack was deployed with a non-default `ldapBaseDn` context override (the `cdk.json` default is `dc=tak,dc=nz`) and a later deploy omits that override. The exported value then changes, and CloudFormation refuses to change an export that another stack imports. The rolled-back update leaves the stack in `UPDATE_ROLLBACK_COMPLETE`.
+
+This was seen once on the `TAK-Demo-AuthInfra` stack in AWS account 453572736517 (us-west-2), which was deployed through `tak-deploy/deployAllLayers` and exports `dc=ldap,dc=tak`. Stacks that export the `cdk.json` default are not affected.
+
+**Solution:** Compare the deployed export with what the deploy would produce, then pass the same overrides the stack was deployed with:
+```bash
+aws cloudformation list-exports --query "Exports[?contains(Name,'LdapBaseDn')].[Name,Value]" --output text
+npm run cdk diff -- --context envType=dev-test --context stackName=Demo --context ldapBaseDn=<deployed value>
+```
+Confirm that no `LdapBaseDn` change appears before deploying. Also pass any other overrides the original deploy used. For example, `tak-deploy/deployAllLayers` sets `useS3AuthentikConfigFile=true`, and omitting it removes the S3 `authentik-config.env` from the Authentik containers.
+
+Changing the base DN of a live stack needs a two-phase change in TakInfra (stop importing the export, deploy AuthInfra, then import again) and matching Authentik LDAP and TAK Server settings.
+
 ### **Debug Commands**
 ```bash
 # Check what would be deployed
