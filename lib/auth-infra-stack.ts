@@ -87,7 +87,7 @@ export class AuthInfraStack extends cdk.Stack {
     const hostnameLdap = envConfig.authentik.ldapHostname;
     const enableEcsExec = envConfig.ecs.enableEcsExec ?? false;
     const useS3AuthentikConfigFile = envConfig.authentik.useS3AuthentikConfigFile ?? false;
-    // NOTE: Postgres read replicas are currently broken in Authentik - see https://github.com/goauthentik/authentik/issues/15191
+    // NOTE: Postgres read replicas need Authentik 2026.2.0+ (fix for https://github.com/goauthentik/authentik/issues/15191)
     const enablePostgresReadReplicas = envConfig.authentik.enablePostgresReadReplicas ?? false;
 
     // =================

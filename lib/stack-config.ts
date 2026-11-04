@@ -47,9 +47,8 @@ export interface ContextEnvironmentConfig {
     useS3AuthentikConfigFile?: boolean;
     /**
      * Enable routing Authentik read queries to the Aurora reader instance/endpoint.
-     * Defaults to false: read replica support is currently broken in Authentik and
-     * requires manual intervention to work correctly.
-     * See https://github.com/goauthentik/authentik/issues/15191
+     * Defaults to false. Requires Authentik 2026.2.0 or later, which fixes first-deploy
+     * failures when read replicas are enabled (goauthentik/authentik#15191, PR #19086).
      */
     enablePostgresReadReplicas?: boolean;
     branding: string;

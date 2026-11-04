@@ -10,6 +10,15 @@
 
 ## Version History
 
+### Unreleased
+
+- :tada: Enable Postgres read replicas (`enablePostgresReadReplicas`) for prod; dev-test stays disabled
+- :pencil2: Remove the "read replicas are broken" warnings from docs/PARAMETERS.md, lib/stack-config.ts and lib/auth-infra-stack.ts; first-deploy failures with read replicas were fixed upstream in Authentik 2026.2.0 (goauthentik/authentik#15191, PR #19086), and this repo runs 2026.8.5
+- :pencil2: Add a deployment guide troubleshooting entry for "Cannot update export LdapBaseDn" (deploying without the `ldapBaseDn` override a stack was originally deployed with)
+- :arrow_up: Upgrade aws-cdk-lib to 2.275.0 and aws-cdk CLI to 2.1147.0
+- :arrow_up: Add `minimatch` (>=11.0.1) and `glob` (>=14.0.2) overrides for GHSA-g3hv-75wg-m249 and GHSA-3g3m-2fjr-6pw4 (20 `npm audit` findings down to 7)
+- :pencil2: Known residual `npm audit` findings: (1) minimatch 10.2.6 is bundled inside the aws-cdk-lib 2.275.0 tarball (synth-time asset globbing only), so overrides cannot reach it; tracked in aws/aws-cdk#39594 with fix PR #39595, expected to clear once a release bundles minimatch >=11.0.1; (2) deepmerge 4.3.1 (GHSA-gcqx-w48m-w2h4, low, dev-only via jest-config) has no patched release upstream
+
 ### v2026.8.5
 
 - :arrow_up: Bump Authentik to 2026.8.5 for both prod and dev-test (cdk.json, Dockerfile ARG defaults, README and docs/PARAMETERS.md); upstream release is bug fixes only (endpoints MultipleObjectsReturned fix, Microsoft Entra group member handling, cert-related dependency bumps, web UI fixes)

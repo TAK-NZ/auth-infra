@@ -102,7 +102,7 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
         "ldapHostname": "ldap",
         "ldapBaseDn": "dc=tak,dc=nz",
         "useS3AuthentikConfigFile": true,
-        "enablePostgresReadReplicas": false,
+        "enablePostgresReadReplicas": true,
         "branding": "tak-nz",
         "authentikVersion": "2026.8.5",
         "outboundEmailServerPort": 587
@@ -191,7 +191,7 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 | `ldapHostname` | Hostname for LDAP service | `ldap` | `ldap` |
 | `ldapBaseDn` | LDAP base DN | `dc=tak,dc=nz` | `dc=tak,dc=nz` |
 | `useS3AuthentikConfigFile` | Use S3 configuration file | `false` | `true` |
-| `enablePostgresReadReplicas` | Enable read replicas (currently disabled - read replica support is broken in Authentik, see [goauthentik/authentik#15191](https://github.com/goauthentik/authentik/issues/15191); only enable after the manual workaround from that issue has been applied) | `false` | `false` |
+| `enablePostgresReadReplicas` | Route Authentik read queries to the Aurora reader endpoint (requires Authentik 2026.2.0 or later; see [goauthentik/authentik#15191](https://github.com/goauthentik/authentik/issues/15191)) | `false` | `true` |
 | `branding` | Docker image branding variant | `tak-nz` | `tak-nz` |
 | `authentikVersion` | Authentik version | `2026.8.5` | `2026.8.5` |
 | `outboundEmailServerPort` | Email server port for outbound connections | `587` | `587` |
