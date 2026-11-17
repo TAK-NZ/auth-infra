@@ -40,7 +40,8 @@ describe('LDAP Construct', () => {
     mockSecrets = {
       adminPassword: secretsmanager.Secret.fromSecretCompleteArn(stack, 'AdminPassword', 'arn:aws:secretsmanager:us-west-2:123456789012:secret:admin-password-AbCdEf'),
       configPassword: secretsmanager.Secret.fromSecretCompleteArn(stack, 'ConfigPassword', 'arn:aws:secretsmanager:us-west-2:123456789012:secret:config-password-AbCdEf'),
-      readonlyPassword: secretsmanager.Secret.fromSecretCompleteArn(stack, 'ReadonlyPassword', 'arn:aws:secretsmanager:us-west-2:123456789012:secret:readonly-password-AbCdEf')
+      readonlyPassword: secretsmanager.Secret.fromSecretCompleteArn(stack, 'ReadonlyPassword', 'arn:aws:secretsmanager:us-west-2:123456789012:secret:readonly-password-AbCdEf'),
+      ldapServiceUser: secretsmanager.Secret.fromSecretCompleteArn(stack, 'LdapServiceUser', 'arn:aws:secretsmanager:us-west-2:123456789012:secret:ldap-service-user-AbCdEf')
     };
   });
 
@@ -56,6 +57,8 @@ describe('LDAP Construct', () => {
       network: { sslCertificateArn: 'arn:aws:acm:us-west-2:123456789012:certificate/test-cert', hostedZoneId: 'Z123456789', hostedZoneName: 'test.com' },
       application: { authentikHost: 'https://auth.test.com' } as any,
       ldapToken: mockSecrets.adminPassword,
+      ldapServiceUser: mockSecrets.ldapServiceUser,
+      ldapBaseDn: 'dc=test,dc=com',
       nlbSecurityGroup
     });
 
@@ -82,6 +85,8 @@ describe('LDAP Construct', () => {
       network: { sslCertificateArn: 'arn:aws:acm:us-west-2:123456789012:certificate/test-cert', hostedZoneId: 'Z123456789', hostedZoneName: 'prod.com' },
       application: { authentikHost: 'https://auth.prod.com' } as any,
       ldapToken: mockSecrets.configPassword,
+      ldapServiceUser: mockSecrets.ldapServiceUser,
+      ldapBaseDn: 'dc=test,dc=com',
       nlbSecurityGroup: nlbSecurityGroup2
     });
 
@@ -101,6 +106,8 @@ describe('LDAP Construct', () => {
       network: { sslCertificateArn: 'arn:aws:acm:us-west-2:123456789012:certificate/test-cert', hostedZoneId: 'Z123456789', hostedZoneName: 'corp.com' },
       application: { authentikHost: 'https://auth.corp.com' } as any,
       ldapToken: mockSecrets.readonlyPassword,
+      ldapServiceUser: mockSecrets.ldapServiceUser,
+      ldapBaseDn: 'dc=test,dc=com',
       nlbSecurityGroup: nlbSecurityGroup3
     });
 
@@ -120,6 +127,8 @@ describe('LDAP Construct', () => {
       network: { sslCertificateArn: 'arn:aws:acm:us-west-2:123456789012:certificate/test-cert', hostedZoneId: 'Z123456789', hostedZoneName: 'corp.com' },
       application: { authentikHost: 'https://auth.corp.com' } as any,
       ldapToken: mockSecrets.readonlyPassword,
+      ldapServiceUser: mockSecrets.ldapServiceUser,
+      ldapBaseDn: 'dc=test,dc=com',
       nlbSecurityGroup: nlbSecurityGroup4
     });
 
@@ -141,6 +150,8 @@ describe('LDAP Construct', () => {
         network: { sslCertificateArn: 'arn:aws:acm:us-west-2:123456789012:certificate/test-cert', hostedZoneId: 'Z123456789', hostedZoneName: 'test.com' },
         application: { authentikHost: 'https://auth.test.com' } as any,
         ldapToken: mockSecrets.adminPassword,
+        ldapServiceUser: mockSecrets.ldapServiceUser,
+        ldapBaseDn: 'dc=test,dc=com',
         nlbSecurityGroup: nlbSecurityGroup5
       });
     }).not.toThrow(); // The construct should handle this gracefully
@@ -163,6 +174,8 @@ describe('LDAP Construct', () => {
       network: { sslCertificateArn: 'arn:aws:acm:us-west-2:123456789012:certificate/test-cert', hostedZoneId: 'Z123456789', hostedZoneName: 'test.com' },
       application: { authentikHost: '' } as any,
       ldapToken: mockSecrets.adminPassword,
+      ldapServiceUser: mockSecrets.ldapServiceUser,
+      ldapBaseDn: 'dc=test,dc=com',
       nlbSecurityGroup: nlbSecurityGroup6
     });
 
@@ -170,5 +183,68 @@ describe('LDAP Construct', () => {
     expect(ldap.ecsService).toBeDefined();
     expect(ldap.loadBalancer).toBeDefined();
     expect(ldap.dnsName).toBeDefined();
+  });
+
+  describe('container health check', () => {
+    function createLdap() {
+      const nlbSecurityGroup = new ec2.SecurityGroup(stack, 'HealthNlbSecurityGroup', { vpc });
+      new Ldap(stack, 'HealthLDAP', {
+        environment: 'dev-test',
+        contextConfig: TEST_CONFIG,
+        infrastructure: { vpc, ecsSecurityGroup: securityGroup, ecsCluster: cluster, kmsKey },
+        storage: { s3: { configBucket: {} as any }, efs: { fileSystemId: 'fs-123', mediaAccessPointId: 'fsap-123', customTemplatesAccessPointId: 'fsap-456' } },
+        deployment: { enableExecute: false, useConfigFile: false },
+        network: { sslCertificateArn: 'arn:aws:acm:us-west-2:123456789012:certificate/test-cert', hostedZoneId: 'Z123456789', hostedZoneName: 'test.com' },
+        application: { authentikHost: 'https://auth.test.com' } as any,
+        ldapToken: mockSecrets.adminPassword,
+        ldapServiceUser: mockSecrets.ldapServiceUser,
+        ldapBaseDn: 'dc=ldap,dc=tak',
+        nlbSecurityGroup
+      });
+      return Template.fromStack(stack);
+    }
+
+    function ldapContainer(template: Template) {
+      const defs = template.findResources('AWS::ECS::TaskDefinition');
+      const container = Object.values(defs)
+        .flatMap((d: any) => d.Properties.ContainerDefinitions)
+        .find((c: any) => c.Name === 'AuthentikLdap');
+      expect(container).toBeDefined();
+      return container as any;
+    }
+
+    test('binds as the service account through the outpost, not just a process check', () => {
+      const hc = ldapContainer(createLdap()).HealthCheck;
+      expect(hc.Command).toEqual(['CMD', '/ldap-bind-probe']);
+    });
+
+    test('waits for the directory sync and tolerates short Authentik blips', () => {
+      const hc = ldapContainer(createLdap()).HealthCheck;
+      // ECS maximum start period: the outpost does not listen until its cache is built
+      expect(hc.StartPeriod).toBe(300);
+      expect(hc.Interval).toBe(30);
+      expect(hc.Timeout).toBe(15);
+      // 5 x 30 s, so a brief Authentik restart does not replace the task
+      expect(hc.Retries).toBe(5);
+    });
+
+    test('gives the probe the service account and base DN', () => {
+      const container = ldapContainer(createLdap());
+      const secretNames = container.Secrets.map((x: any) => x.Name);
+      expect(secretNames).toEqual(expect.arrayContaining(['AUTHENTIK_TOKEN', 'LDAP_PROBE_USERNAME', 'LDAP_PROBE_PASSWORD']));
+      const env = Object.fromEntries(container.Environment.map((e: any) => [e.Name, e.Value]));
+      expect(env.LDAP_PROBE_BASE_DN).toBe('dc=ldap,dc=tak');
+      const user = container.Secrets.find((x: any) => x.Name === 'LDAP_PROBE_USERNAME');
+      const pass = container.Secrets.find((x: any) => x.Name === 'LDAP_PROBE_PASSWORD');
+      expect(JSON.stringify(user.ValueFrom)).toContain(':username::');
+      expect(JSON.stringify(pass.ValueFrom)).toContain(':password::');
+    });
+
+    test('lets the task execution role read the service account secret', () => {
+      const template = createLdap();
+      const policies = template.findResources('AWS::IAM::Policy');
+      const grants = JSON.stringify(Object.values(policies));
+      expect(grants).toContain('ldap-service-user-AbCdEf');
+    });
   });
 });

@@ -72,6 +72,17 @@ export interface LdapProps {
   ldapToken: secretsmanager.ISecret;
 
   /**
+   * LDAP service account (JSON secret with `username` and `password`). The container
+   * health check binds with it, the same way TAK Server does.
+   */
+  ldapServiceUser: secretsmanager.ISecret;
+
+  /**
+   * LDAP base DN the outpost serves (for example `dc=ldap,dc=tak`)
+   */
+  ldapBaseDn: string;
+
+  /**
    * Security group for the Network Load Balancer
    */
   nlbSecurityGroup: ec2.SecurityGroup;
@@ -163,6 +174,7 @@ export class Ldap extends Construct {
 
     // Add permissions to access secrets
     props.ldapToken.grantRead(executionRole);
+    props.ldapServiceUser.grantRead(executionRole);
 
     // Grant explicit KMS permissions for secrets decryption
     props.infrastructure.kmsKey.grantDecrypt(executionRole);
@@ -232,10 +244,31 @@ export class Ldap extends Construct {
       }),
       environment: {
         AUTHENTIK_HOST: props.application.authentikHost || '',
-        AUTHENTIK_INSECURE: 'false'
+        AUTHENTIK_INSECURE: 'false',
+        LDAP_PROBE_BASE_DN: props.ldapBaseDn
       },
       secrets: {
-        AUTHENTIK_TOKEN: ecs.Secret.fromSecretsManager(props.ldapToken)
+        AUTHENTIK_TOKEN: ecs.Secret.fromSecretsManager(props.ldapToken),
+        LDAP_PROBE_USERNAME: ecs.Secret.fromSecretsManager(props.ldapServiceUser, 'username'),
+        LDAP_PROBE_PASSWORD: ecs.Secret.fromSecretsManager(props.ldapServiceUser, 'password')
+      },
+      // The outpost image is distroless, so the check is a static binary baked into it
+      // (docker/authentik-ldap/bindprobe). It binds as the TAK service account through the
+      // outpost's own listener. `/ldap healthcheck` would not do: it only proves the process
+      // is up. The outpost caches every bind result in memory, failures included, so after an
+      // Authentik outage it can keep refusing the service account, and TAK Server with it,
+      // while the process looks healthy. Failing here makes ECS replace the task, which
+      // clears that cache.
+      healthCheck: {
+        command: ['CMD', '/ldap-bind-probe'],
+        interval: Duration.seconds(30),
+        timeout: Duration.seconds(15),
+        // Five failures in a row (about 3 minutes) so a brief Authentik blip does not
+        // restart the outpost.
+        retries: 5,
+        // Cached mode syncs the whole directory before the outpost listens (see the grace
+        // period on the service). 300 s is the ECS maximum.
+        startPeriod: Duration.seconds(300)
       },
       essential: true
     });

@@ -443,6 +443,8 @@ export class AuthInfraStack extends cdk.Stack {
       network: ldapNetworkConfig,
       application: ldapApplicationConfig,
       ldapToken: secretsManager.ldapToken,
+      ldapServiceUser: secretsManager.ldapServiceUser,
+      ldapBaseDn: ldapBaseDn,
       nlbSecurityGroup: securityGroups.ldapNlb,
       containerImageUri: ldapImageUri
     });
