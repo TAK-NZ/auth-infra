@@ -98,7 +98,7 @@ jobs:
         run: |
           if [[ "$COMMIT_MSG" != *"[use-prod-db]"* ]]; then
             echo "🔄 Using dev-test database settings for faster deployment"
-            echo "db-context=--context instanceClass=db.serverless --context instanceCount=1 --context enablePerformanceInsights=false --context monitoringInterval=0 --context backupRetentionDays=7 --context deleteProtection=false --context nodeType=cache.t3.micro --context numCacheNodes=1" >> $GITHUB_OUTPUT
+            echo "db-context=--context instanceClass=db.t4g.large --context instanceCount=1 --context enablePerformanceInsights=false --context monitoringInterval=0 --context backupRetentionDays=7 --context deleteProtection=false --context nodeType=cache.t3.micro --context numCacheNodes=1" >> $GITHUB_OUTPUT
           else
             echo "🚀 Using production database settings"
             echo "db-context=" >> $GITHUB_OUTPUT

@@ -104,7 +104,7 @@ The TAK Authentication Infrastructure provides centralized authentication and au
 
 #### **dev-test** (Default)
 - **Focus**: Development efficiency and resource-minimal deployment
-- **Database**: Aurora Serverless v2 (single instance, auto-scaling)
+- **Database**: Aurora provisioned `db.t4g.large` (single instance)
 - **Redis**: Single node, basic encryption (KMS at-rest only)
 - **ECS**: Minimal CPU/memory allocation (512/1024)
 - **Container Insights**: Disabled

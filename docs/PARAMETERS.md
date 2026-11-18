@@ -26,7 +26,7 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
     "dev-test": {
       "stackName": "Dev",
       "database": {
-        "instanceClass": "db.serverless",
+        "instanceClass": "db.t4g.large",
         "instanceCount": 1,
         "engineVersion": "17.4",
         "allocatedStorage": 20,
@@ -132,7 +132,7 @@ All configurations are stored in [`cdk.json`](../cdk.json) under the `context` s
 
 | Setting | dev-test | prod | Impact |
 |---------|----------|------|--------|
-| **Database Instance** | `db.serverless` (Aurora Serverless v2) | `db.t4g.large` (2 instances) | High availability |
+| **Database Instance** | `db.t4g.large` (1 instance) | `db.t4g.large` (2 instances) | High availability |
 | **Database Storage** | `20GB` initial, `100GB` max | `100GB` initial, `1000GB` max | Storage capacity |
 | **Performance Insights** | `false` | `true` | Database monitoring |
 | **Redis Nodes** | `cache.t3.micro` (1 node) | `cache.t3.small` (2 nodes) | High availability |
@@ -155,7 +155,7 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 ### **Database Configuration**
 | Parameter | Description | dev-test | prod |
 |-----------|-------------|----------|------|
-| `instanceClass` | RDS instance class | `db.serverless` | `db.t4g.large` |
+| `instanceClass` | RDS instance class | `db.t4g.large` | `db.t4g.large` |
 | `instanceCount` | Number of database instances | `1` | `2` |
 | `engineVersion` | PostgreSQL engine version | `17.4` | `17.4` |
 | `allocatedStorage` | Initial storage allocation (GB) | `20` | `100` |
@@ -235,7 +235,7 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 ## **Resource Scaling**
 
 ### **Development Environment Optimizations**
-- **Aurora Serverless v2**: Pay-per-use database scaling
+- **Aurora provisioned `db.t4g.large`**: single instance, no read replicas
 - **Single Redis Node**: Simplified single-node configuration
 - **Basic Encryption**: KMS storage encryption only (vs full transit + at-rest)
 - **Smaller ECS Tasks**: Minimal CPU/memory allocation

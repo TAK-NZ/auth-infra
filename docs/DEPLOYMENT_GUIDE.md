@@ -28,7 +28,7 @@ npm run deploy:prod
 
 | Environment | Stack Name | Domain | Features |
 |-------------|------------|--------|----------|
-| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | Aurora Serverless v2, minimal resource allocation |
+| **dev-test** | `TAK-Dev-AuthInfra` | `account.dev.tak.nz` | Aurora provisioned `db.t4g.large`, minimal resource allocation |
 | **prod** | `TAK-Prod-AuthInfra` | `account.tak.nz` | High availability, multi-AZ deployment |
 
 ---
@@ -76,7 +76,7 @@ All settings are stored in [`cdk.json`](../cdk.json) under the `context` section
     "dev-test": {
       "stackName": "Dev",
       "database": {
-        "instanceClass": "db.serverless",
+        "instanceClass": "db.t4g.large",
         "instanceCount": 1
       },
       "authentik": {
@@ -144,7 +144,7 @@ npm run deploy:dev -- --context stackName=Demo --context r53ZoneName=demo.tak.nz
 ```
 
 This creates a stack named `TAK-Demo-AuthInfra` with:
-- **Aurora Serverless v2** (minimal resource allocation)
+- **Aurora provisioned `db.t4g.large`** (single instance)
 - **Single AZ deployment** (basic availability)
 - **Development-grade settings** for logging and monitoring
 - **Minimal Redis configuration**

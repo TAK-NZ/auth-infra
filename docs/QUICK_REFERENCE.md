@@ -25,7 +25,7 @@ npx cdk deploy --context env=prod --profile your-aws-profile
 ### Development Environment (`dev-test`)
 - ✅ **Same core functionality** as production
 - ✅ **Perfect for development** and testing
-- ✅ **Aurora Serverless v2** (pay-per-use scaling)
+- ✅ **Aurora provisioned `db.t4g.large`** (single instance)
 - ❌ **Single AZ deployment** (potential downtime during maintenance)
 - ❌ **Basic encryption** (KMS encrypted storage only)
 - ❌ **Basic monitoring** (limited insights)
@@ -60,7 +60,7 @@ npm run deploy:dev -- \
 
 | Resource | Dev-Test | Production | Notes |
 |----------|----------|------------|-------|
-| **Aurora PostgreSQL** | **Serverless v2** | **Dedicated (Multi-AZ)** | Major performance difference |
+| **Aurora PostgreSQL** | **Provisioned `db.t4g.large`** | **Dedicated (Multi-AZ)** | Major performance difference |
 | **ElastiCache Redis** | **1 node** | **2 nodes** | Single vs clustered |
 | **ECS Tasks** | 1 × 512/1024 | 2 × 1024/2048 | CPU/Memory allocation |
 | **Application Load Balancer** | 1 | 1 | HTTPS termination |
