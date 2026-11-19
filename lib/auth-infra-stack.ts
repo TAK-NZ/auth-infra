@@ -389,6 +389,12 @@ export class AuthInfraStack extends cdk.Stack {
       containerImageUri: authentikImageUri
     });
 
+    // The task definitions only reference the file system by ID, so CloudFormation would otherwise
+    // start the services as soon as the file system exists, before its mount targets are available.
+    // The first tasks then fail with "Failed to resolve fs-xxx.efs.<region>.amazonaws.com" and can
+    // trip the ECS deployment circuit breaker (seen on a fresh deploy in ap-southeast-6).
+    authentikServer.ecsService.node.addDependency(efs.fileSystem.mountTargetsAvailable);
+    authentikWorker.ecsService.node.addDependency(efs.fileSystem.mountTargetsAvailable);
     // Connect Authentik Server to Load Balancer
     authentikServer.createTargetGroup(vpc, authentikELB.httpsListener, `tak-${envConfig.stackName.toLowerCase()}-authentik`);
 
