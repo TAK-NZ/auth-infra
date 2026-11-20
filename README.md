@@ -160,6 +160,7 @@ npm run deploy:dev -- --context branding=generic
 - **[🏗️ Architecture Guide](docs/ARCHITECTURE.md)** - Technical architecture and design decisions  
 - **[⚡ Quick Reference](docs/QUICK_REFERENCE.md)** - Fast deployment commands and environment comparison
 - **[⚙️ Configuration Guide](docs/PARAMETERS.md)** - Complete configuration management reference
+- **[🧩 Blueprints](docs/BLUEPRINTS.md)** - What the Authentik blueprints manage, what other stacks own, and the manual steps after a first deploy
 - **[🔑 Scoped Service Accounts](docs/SCOPED_SERVICE_ACCOUNTS.md)** - Least-privilege Authentik service accounts for consumer apps (TAKTeamManager, CloudTAK)
 - **[🐳 Docker Image Strategy](docs/DOCKER_IMAGE_STRATEGY.md)** - Hybrid image strategy for fast CI/CD and flexible development
 - **[🧪 Test Organization](test/TEST_ORGANIZATION.md)** - Test structure and coverage information

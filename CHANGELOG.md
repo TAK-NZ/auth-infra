@@ -10,6 +10,15 @@
 
 ## Version History
 
+### Unreleased
+
+- :tada: Add `authentik/blueprints/tak-flows.yaml` (TAK - Flows and sources): the login, passkey login, password change, user settings, enrollment, recovery and social login flows with their stages, prompts and policies, plus the Google and Apple login sources. Generated from a full export of the Demo instance with every database ID replaced by slug or name references. These were built by hand in the admin UI, so a rebuilt or new instance (for example preview.tak.nz) came up without them. The sources are created disabled with placeholder credentials and never overwrite credentials set in the UI; the first deploy to an existing instance takes over the flows and overwrites their settings with the file's (see docs/BLUEPRINTS.md)
+- :tada: `tak-branding-change.yaml` now applies `tak-flows.yaml` first and sets `tak-auth` as the default brand's login flow
+- :tada: Pass `TAK_TEAM_MANAGER_URL` (`https://<authentik.teamManagerHostname, default team>.<zone>`) to the Authentik server and worker, read by the enrollment flow's request-access redirect. New optional config `authentik.teamManagerHostname`
+- :tada: Captcha on password recovery and login is created by the blueprint when `TAK_CAPTCHA_SITE_KEY` and `TAK_CAPTCHA_SECRET_KEY` are set in the Authentik containers; without them the blueprint leaves captcha alone. The stack does not set these yet
+- :pencil2: Add docs/BLUEPRINTS.md: what each blueprint manages, which objects other stacks own (the OAuth2 providers and applications), the environment variables, the manual steps after a first deploy, and how to test a change
+- :white_check_mark: Add test/unit/blueprint-env.test.ts for `TAK_TEAM_MANAGER_URL` on both Authentik containers
+
 ### v2026.8.6
 - :arrow_up: Bump Authentik to 2026.8.6 for both prod and dev-test (cdk.json, Dockerfile ARG defaults, README and docs/PARAMETERS.md); upstream release is a bug-fix release, including the users-list superuser annotation split into two EXISTS subqueries (#26275), no DISTINCT on the users list when filtering by type (#26413) and batched cleanup of expired cache and channel records (#27587)
 - :bug: Make the `AuthentikServer` and `AuthentikWorker` ECS services wait for the EFS mount targets (`efs.fileSystem.mountTargetsAvailable`). The task definitions only reference the file system by ID, so the services were created as soon as the file system existed, before its mount targets were available (36 to 51 seconds earlier on a fresh `TAK-Akl-AuthInfra` deploy in ap-southeast-6). The first tasks then failed with `ResourceInitializationError: ... Failed to resolve "fs-xxx.efs.<region>.amazonaws.com"`, and on a slow run that trips the ECS deployment circuit breaker and rolls the stack back (#153). It only shows on a new deploy: the file system and mount targets already exist for a running environment.

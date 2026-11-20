@@ -190,6 +190,7 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 | `adminUserEmail` | Administrator email address | `admin@tak.nz` | `admin@tak.nz` |
 | `ldapHostname` | Hostname for LDAP service | `ldap` | `ldap` |
 | `ldapBaseDn` | LDAP base DN | `dc=tak,dc=nz` | `dc=tak,dc=nz` |
+| `teamManagerHostname` | Team Manager hostname in the hosted zone; the enrollment flow redirects here to request access (`TAK_TEAM_MANAGER_URL`) | `team` | `team` |
 | `useS3AuthentikConfigFile` | Use S3 configuration file | `false` | `true` |
 | `enablePostgresReadReplicas` | Route Authentik read queries to the Aurora reader endpoint (requires Authentik 2026.2.0 or later; see [goauthentik/authentik#15191](https://github.com/goauthentik/authentik/issues/15191)) | `false` | `true` |
 | `branding` | Docker image branding variant | `tak-nz` | `tak-nz` |

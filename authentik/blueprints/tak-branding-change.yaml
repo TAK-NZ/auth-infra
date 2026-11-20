@@ -3,15 +3,21 @@ metadata:
   name: TAK - Branding change
   labels:
     blueprints.goauthentik.io/description: |
-      This blueprint updates the default brand.
+      This blueprint updates the default brand: custom CSS and the TAK login flow (from tak-flows.yaml).
 entries:
 - model: authentik_blueprints.metaapplyblueprint
   attrs:
     identifiers:
       name: Default - Brand
     required: false 
+- model: authentik_blueprints.metaapplyblueprint
+  attrs:
+    identifiers:
+      name: TAK - Flows and sources
+    required: true
 - attrs:
     default: true
+    flow_authentication: !Find [authentik_flows.flow, [slug, tak-auth]]
     branding_custom_css: |
       ak-flow-executor::part(locale-select) {
         display: none;
