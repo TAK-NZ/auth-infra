@@ -293,6 +293,11 @@ export class AuthentikServer extends Construct {
         ...(props.application.authentikHost && {
           AUTHENTIK_WEB__BASE_URL: props.application.authentikHost,
         }),
+        // Read by the TAK blueprints (authentik/blueprints/tak-flows.yaml): where the enrollment flow
+        // sends people to request access.
+        ...(props.application.teamManagerUrl && {
+          TAK_TEAM_MANAGER_URL: props.application.teamManagerUrl,
+        }),
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),

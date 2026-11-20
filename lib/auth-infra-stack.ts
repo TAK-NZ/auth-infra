@@ -284,7 +284,8 @@ export class AuthInfraStack extends cdk.Stack {
         hostname: database.hostname,
         readReplicaHostname: enablePostgresReadReplicas ? database.readerEndpoint : undefined
       },
-      authentikHost: `https://${hostnameAuthentik}.${hostedZoneName}`
+      authentikHost: `https://${hostnameAuthentik}.${hostedZoneName}`,
+      teamManagerUrl: `https://${envConfig.authentik.teamManagerHostname ?? 'team'}.${hostedZoneName}`
     };
 
     const ldapNetworkConfig: NetworkConfig = {

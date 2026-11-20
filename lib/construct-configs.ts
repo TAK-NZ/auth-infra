@@ -175,6 +175,10 @@ export interface AuthentikApplicationConfig {
    * Authentik host URL (for worker and LDAP constructs)
    */
   authentikHost?: string;
+  /**
+   * TAK Team Manager URL, exposed to blueprints as TAK_TEAM_MANAGER_URL
+   */
+  teamManagerUrl?: string;
 }
 
 /**

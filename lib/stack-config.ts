@@ -44,6 +44,11 @@ export interface ContextEnvironmentConfig {
     adminUserEmail: string;
     ldapHostname: string;
     ldapBaseDn?: string;
+    /**
+     * Hostname of TAK Team Manager inside the hosted zone. Defaults to `team`. Used for the
+     * request-access redirect in the TAK enrollment flow (TAK_TEAM_MANAGER_URL for blueprints).
+     */
+    teamManagerHostname?: string;
     useS3AuthentikConfigFile?: boolean;
     /**
      * Enable routing Authentik read queries to the Aurora reader instance/endpoint.
