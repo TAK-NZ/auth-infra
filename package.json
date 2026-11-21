@@ -30,7 +30,7 @@
     "cdk:bootstrap": "cdk bootstrap"
   },
   "devDependencies": {
-    "@swc/core": "^1.15.33",
+    "@swc/core": "^1.16.22",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.2",
@@ -42,7 +42,7 @@
   "dependencies": {
     "aws-cdk-lib": "^2.278.0",
     "constructs": "^10.8.1",
-    "js-yaml": ">=5.4.1",
+    "js-yaml": "^5.5.0",
     "node-fetch": "^3.3.2",
     "source-map-support": "^0.5.21"
   },
