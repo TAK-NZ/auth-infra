@@ -58,7 +58,7 @@ entries:
   attrs:
     authentication: none
     background: ''
-    compatibility_mode: false
+    compatibility_mode: true
     denied_action: message_continue
     designation: authentication
     layout: stacked
@@ -71,7 +71,7 @@ entries:
   attrs:
     authentication: none
     background: ''
-    compatibility_mode: false
+    compatibility_mode: true
     denied_action: message_continue
     designation: enrollment
     layout: stacked
@@ -84,7 +84,7 @@ entries:
   attrs:
     authentication: none
     background: ''
-    compatibility_mode: false
+    compatibility_mode: true
     denied_action: message_continue
     designation: authentication
     layout: stacked
@@ -97,7 +97,7 @@ entries:
   attrs:
     authentication: require_authenticated
     background: ''
-    compatibility_mode: false
+    compatibility_mode: true
     denied_action: message_continue
     designation: stage_configuration
     layout: stacked
@@ -110,7 +110,7 @@ entries:
   attrs:
     authentication: require_unauthenticated
     background: ''
-    compatibility_mode: false
+    compatibility_mode: true
     denied_action: message_continue
     designation: recovery
     layout: stacked
@@ -124,7 +124,7 @@ entries:
   attrs:
     authentication: require_unauthenticated
     background: ''
-    compatibility_mode: false
+    compatibility_mode: true
     denied_action: message_continue
     designation: authentication
     layout: stacked
@@ -151,7 +151,7 @@ entries:
   attrs:
     authentication: require_authenticated
     background: ''
-    compatibility_mode: false
+    compatibility_mode: true
     denied_action: message_continue
     designation: stage_configuration
     layout: stacked
