@@ -27,19 +27,22 @@ entries:
         display: none !important;
       }
 
-      /* Hide the original label ("Use a security key") and keep content centered */
+      /* Hide the original label ("Use a security key") and keep content centered.
+         The !important flags are needed in compatibility mode (ShadyDOM), where the
+         PatternFly [class*="pf-c-"] reset (padding: 0) and the button's own font-size
+         otherwise win. */
       [data-ouia-component-id="passwordless"] {
           display: flex !important;
           align-items: center;
           justify-content: center;
-          font-size: 0;
+          font-size: 0 !important;
       }
 
       /* Replacement label with the Tabler fingerprint icon in front of it (light theme) */
       [data-ouia-component-id="passwordless"]::before {
           content: "Log in with Passkey";
           font-size: 1rem;
-          padding-left: calc(1.1rem + 8px);
+          padding-left: calc(1.1rem + 8px) !important;
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230066cc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3'/%3E%3Cpath d='M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6'/%3E%3Cpath d='M12 11v2a14 14 0 0 0 2.5 8'/%3E%3Cpath d='M8 15a18 18 0 0 0 1.8 6'/%3E%3Cpath d='M4.9 19a22 22 0 0 1 -.9 -7v-1a8 8 0 0 1 12 -6.95'/%3E%3C/svg%3E");
           background-repeat: no-repeat;
           background-position: left center;
@@ -51,6 +54,10 @@ entries:
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2373bcf7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3'/%3E%3Cpath d='M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6'/%3E%3Cpath d='M12 11v2a14 14 0 0 0 2.5 8'/%3E%3Cpath d='M8 15a18 18 0 0 0 1.8 6'/%3E%3Cpath d='M4.9 19a22 22 0 0 1 -.9 -7v-1a8 8 0 0 1 12 -6.95'/%3E%3C/svg%3E");
       }
 
+      /* Same dark icon for flows in compatibility mode (ShadyDOM), where :host() does not match */
+      html[data-theme="dark"] [data-ouia-component-id="passwordless"]::before {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2373bcf7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3'/%3E%3Cpath d='M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6'/%3E%3Cpath d='M12 11v2a14 14 0 0 0 2.5 8'/%3E%3Cpath d='M8 15a18 18 0 0 0 1.8 6'/%3E%3Cpath d='M4.9 19a22 22 0 0 1 -.9 -7v-1a8 8 0 0 1 12 -6.95'/%3E%3C/svg%3E");
+      }
       /* Ensures the footer link content stays centered and aligned */
       ak-brand-links[name="flow-links"] li[data-index="0"] {
           grid-column: 1 / -1;
