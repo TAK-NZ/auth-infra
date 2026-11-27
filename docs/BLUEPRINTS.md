@@ -22,7 +22,7 @@ objects that other stacks create, and do not apply on an instance without them.
 | `tak-cloudtak-setup.yaml` | TAK - CloudTAK Service Account Setup | Scoped service account for CloudTAK |
 | `tak-teammanager-setup.yaml` | TAK - TAKTeamManager Service Account Setup | Scoped service account for Team Manager |
 | `tak-flows.yaml` | TAK - Flows and sources | Login, passkey login, password change, user settings, enrollment and recovery flows, with their stages, prompts and policies, the MFA rules, the password policy and the IP lock on the login and recovery flows. The name predates the removal of the social login sources and stays, because other blueprints refer to it |
-| `tak-cleanup.yaml` | TAK - Cleanup of removed objects | Deletes objects that earlier versions created (the Google and Apple sources and their flows, the captcha stage, the administrator-only MFA stage, the second passkey flow `tak-passwordless-flow`, the flow `tak-password-change`). Can be deleted once every instance has applied it |
+| `tak-cleanup.yaml` | TAK - Cleanup of removed objects | Deletes objects that earlier versions created (the Google and Apple sources and their flows, the captcha stage, the administrator-only MFA stage, the second passkey flow `tak-passwordless-flow`, the flow `tak-password-change`, the login stage of the recovery flow). Can be deleted once every instance has applied it |
 | `tak-branding-change.yaml` | TAK - Branding change | Default brand: custom CSS (passkey button label, hidden Connected services tab and Save button), the user settings flow, English as the language, `tak-auth` as the login flow and `tak-recovery-flow` as the recovery flow. Applies `tak-flows.yaml` first |
 
 ## What is not here
@@ -130,6 +130,27 @@ the user proves possession of an existing authenticator unless one was used in t
 password change flow `default-password-change` stay on every instance, so each starts with the deny stage
 `tak-flow-disabled-deny` (order -100). The copy of the passkey flow `tak-passwordless-flow`, which only the
 Demo and Test instances had, is deleted by `tak-cleanup.yaml`.
+### Activation and recovery
+`tak-recovery-flow` serves first activation and recovery. Both start with an identified user, either through the
+email link of the self-service recovery or through the one-time link that TAK Team Manager makes with
+`POST /api/v3/core/users/{id}/recovery/` (valid 24 hours, used up the first time it is opened; it skips the
+identification and email stages). Team Manager also sets the user attribute `tak_activation_expires` (an ISO 8601
+time, 7 days ahead) when it sends the link. After the identified user:
+| Order | Stage | Runs for |
+|---|---|---|
+| 22 | `tak-recovery-deny` | an inactive account, a member of `tak-break-glass`, or an account with no authenticator and no open activation window |
+| 26 | `tak-recovery-validate-user` (passkey, authenticator app or recovery code) | an ordinary user with an authenticator |
+| 27 | `tak-recovery-validate-admin` (passkey) | an administrator with an authenticator; one with none of its own passkeys is refused and needs an administrator reset |
+| 30, 40 | new password (with `tak-password-policy`) and write | everybody |
+| 50 to 60 | the enrolment stages and rules of `tak-auth` | a user with fewer than two authenticators (a first activation) |
+| 100 | `tak-recovery-done`, a redirect to `/` | everybody |
+A user who already has an authenticator proves possession of one **before** the new password prompt, so an email
+link alone cannot reset a password (NZISM 16.1.36). The flow has no login stage: the user ends at the login page
+and signs in under the rules of `tak-auth`, so there is no session after an email link. An account that has no
+authenticator and no open activation window (for example one whose devices an administrator removed, until a new
+link is sent) is refused. Opening a link does not switch a suspended account back on (`activate_user_on_success`
+is off on the email stage). The redirect goes to `/`, not to the login flow, so that the flow token in the URL is
+not carried along.
 ### Passwords
 `tak-password-policy` asks for at least 16 characters, with no rules on the kind of characters (NZISM
 16.1.31), and a zxcvbn strength estimate, which runs inside Authentik and rejects common and predictable

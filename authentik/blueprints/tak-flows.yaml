@@ -443,26 +443,6 @@ entries:
     invalid_response_action: retry
     policy_engine_mode: any
     re_evaluate_policies: true
-- model: authentik_stages_user_login.userloginstage
-  identifiers:
-    name: tak-recovery-user-login
-  attrs:
-    geoip_binding: no_binding
-    network_binding: no_binding
-    remember_device: days=30
-    remember_me_offset: seconds=0
-    session_duration: seconds=0
-    terminate_other_sessions: false
-- model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
-    stage: !Find [authentik_stages_user_login.userloginstage, [name, tak-recovery-user-login]]
-    order: 100
-  attrs:
-    evaluate_on_plan: true
-    invalid_response_action: retry
-    policy_engine_mode: any
-    re_evaluate_policies: false
 # --- MFA -------------------------------------------------------------------------------------------------
 # Policies. They run for the user who is signing in (the identified user, or the logged-in user in a settings flow).
 # An authenticator is a passkey, an authenticator app, or the set of recovery codes (counted once, and only while
@@ -1322,3 +1302,328 @@ entries:
     failure_result: false
     negate: false
     timeout: 30
+# --- Activation and recovery -------------------------------------------------------------------------------
+# One flow, `tak-recovery-flow`, serves three cases. All of them start with a user who has been identified, either
+# by the email link of the self-service recovery or by the one-time link that TAK Team Manager issues (POST
+# /core/users/{id}/recovery/, valid 24 hours, which skips the identification and email stages).
+#   - The account is inactive, belongs to `tak-break-glass`, or has no authenticator and no open activation window
+#     (the user attribute `tak_activation_expires`, an ISO 8601 time that Team Manager sets when it sends the
+#     link): refused at order 22.
+#   - The user has an authenticator (recovery of an account that was already set up): proves possession of one
+#     before the new password prompt (order 26, an administrator with a passkey only). An administrator without a
+#     passkey is refused: an administrator has to reset it.
+#   - The user has none and the window is open (first activation): no proof beyond the link.
+# Then the new password (30, 40). A user with fewer than two authenticators enrols the rest here: the same rules
+# and stages as `tak-auth` (50 to 60). There is no login stage: the flow ends with a redirect to / (100), which sends
+# the user to the login page. A plain address, not the login flow, so that the flow token is not carried along.
+- model: authentik_policies_expression.expressionpolicy
+  identifiers:
+    name: tak-recovery-user-inactive
+  attrs:
+    execution_logging: false
+    expression: |-
+      return not request.user.is_active
+- model: authentik_policies_expression.expressionpolicy
+  identifiers:
+    name: tak-recovery-not-activatable
+  attrs:
+    execution_logging: false
+    expression: |-
+      from datetime import datetime, timezone
+      user = request.user
+      if ak_user_has_authenticator(user):
+          return False
+      value = user.attributes.get('tak_activation_expires')
+      if not value:
+          return True
+      try:
+          expires = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+      except ValueError:
+          return True
+      if expires.tzinfo is None:
+          expires = expires.replace(tzinfo=timezone.utc)
+      return expires <= datetime.now(timezone.utc)
+- model: authentik_stages_deny.denystage
+  identifiers:
+    name: tak-recovery-deny
+  attrs:
+    deny_message: This link cannot be used. Ask your team administrator to send you a new one.
+- model: authentik_stages_authenticator_validate.authenticatorvalidatestage
+  identifiers:
+    name: tak-recovery-validate-user
+  attrs:
+    configuration_stages: []
+    device_classes:
+    - static
+    - totp
+    - webauthn
+    email_otp_throttling_factor: 1.0
+    last_auth_threshold: seconds=0
+    not_configured_action: deny
+    sms_otp_throttling_factor: 1.0
+    static_otp_throttling_factor: 1.0
+    totp_otp_throttling_factor: 1.0
+    webauthn_allowed_device_types: []
+    webauthn_hints: []
+    webauthn_user_verification: required
+- model: authentik_stages_authenticator_validate.authenticatorvalidatestage
+  identifiers:
+    name: tak-recovery-validate-admin
+  attrs:
+    configuration_stages: []
+    device_classes:
+    - webauthn
+    email_otp_throttling_factor: 1.0
+    last_auth_threshold: seconds=0
+    not_configured_action: deny
+    sms_otp_throttling_factor: 1.0
+    static_otp_throttling_factor: 1.0
+    totp_otp_throttling_factor: 1.0
+    webauthn_allowed_device_types: []
+    webauthn_hints: []
+    webauthn_user_verification: required
+- model: authentik_stages_redirect.redirectstage
+  identifiers:
+    name: tak-recovery-done
+  attrs:
+    keep_context: false
+    mode: static
+    target_flow: null
+    target_static: /
+- id: binding-recovery-refuse
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_deny.denystage, [name, tak-recovery-deny]]
+    order: 22
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: any
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-refuse'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-recovery-user-inactive]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-refuse'
+    order: 1
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-break-glass]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-refuse'
+    order: 2
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-recovery-not-activatable]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- id: binding-recovery-validate-user
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_authenticator_validate.authenticatorvalidatestage, [name, tak-recovery-validate-user]]
+    order: 26
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-validate-user'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: true
+    timeout: 30
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-validate-user'
+    order: 1
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-authenticator]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- id: binding-recovery-validate-admin
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_authenticator_validate.authenticatorvalidatestage, [name, tak-recovery-validate-admin]]
+    order: 27
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-validate-admin'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-validate-admin'
+    order: 1
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-authenticator]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- id: binding-recovery-enrol
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_authenticator_validate.authenticatorvalidatestage, [name, tak-authentication-mfa-enrol]]
+    order: 50
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-enrol'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: true
+    timeout: 30
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-enrol'
+    order: 1
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-passkey-or-app]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: true
+    timeout: 30
+- id: binding-recovery-passkey-1
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_authenticator_webauthn.authenticatorwebauthnstage, [name, default-authenticator-webauthn-setup]]
+    order: 52
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-passkey-1'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-passkey-1'
+    order: 1
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- id: binding-recovery-passkey-2
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_authenticator_webauthn.authenticatorwebauthnstage, [name, default-authenticator-webauthn-setup]]
+    order: 54
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-passkey-2'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-passkey-2'
+    order: 1
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- id: binding-recovery-codes
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_authenticator_static.authenticatorstaticstage, [name, default-authenticator-static-setup]]
+    order: 60
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-codes'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: true
+    timeout: 30
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-codes'
+    order: 1
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-authenticators]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_redirect.redirectstage, [name, tak-recovery-done]]
+    order: 100
+  attrs:
+    evaluate_on_plan: true
+    invalid_response_action: retry
+    policy_engine_mode: any
+    re_evaluate_policies: false
