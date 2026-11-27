@@ -1753,9 +1753,12 @@ entries:
     stage: !Find [authentik_stages_deny.denystage, [name, tak-recovery-deny]]
     order: 22
   attrs:
+    # `any`: the deny stage runs when one policy passes. An instance that had this binding before
+    # tak-recovery-refuse existed still carries the policy row of tak-mfa-is-break-glass (a blueprint cannot delete
+    # a binding or a policy row), and with `all` that row would stop the refusal from ever running.
     evaluate_on_plan: false
     invalid_response_action: retry
-    policy_engine_mode: all
+    policy_engine_mode: any
     re_evaluate_policies: true
 - model: authentik_policies.policybinding
   identifiers:

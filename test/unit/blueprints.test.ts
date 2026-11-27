@@ -584,7 +584,9 @@ describe('activation and recovery flow (tak-flows.yaml)', () => {
   });
   test('the MFA bindings of the flow need ALL of their policies', () => {
     const modes = Object.fromEntries(bindings.map((b) => [b.stage + b.order, b.entry.attrs?.policy_engine_mode]));
-    for (const key of ['tak-recovery-deny22', 'tak-recovery-validate-user26', 'tak-recovery-validate-admin27', 'tak-authentication-mfa-enrol50']) {
+    // the refusal runs when any of its policies passes: an old policy row on an upgraded instance must not stop it
+    expect(modes['tak-recovery-deny22']).toBe('any');
+    for (const key of ['tak-recovery-validate-user26', 'tak-recovery-validate-admin27', 'tak-authentication-mfa-enrol50']) {
       expect(modes[key]).toBe('all');
     }
   });
