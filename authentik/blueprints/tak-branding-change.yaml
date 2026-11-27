@@ -3,7 +3,7 @@ metadata:
   name: TAK - Branding change
   labels:
     blueprints.goauthentik.io/description: |
-      This blueprint updates the default brand: custom CSS, the TAK login flow and the TAK recovery flow (from tak-flows.yaml).
+      This blueprint updates the default brand: custom CSS, the TAK login flow, recovery flow and user settings flow (from tak-flows.yaml), and the interface language.
 entries:
 - model: authentik_blueprints.metaapplyblueprint
   attrs:
@@ -19,6 +19,12 @@ entries:
     default: true
     flow_authentication: !Find [authentik_flows.flow, [slug, tak-auth]]
     flow_recovery: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    # User settings > User details: username, name and email are shown read-only (see tak-user-settings)
+    flow_user_settings: !Find [authentik_flows.flow, [slug, tak-user-settings]]
+    # Interface language: English for everybody (the locale selector is not offered)
+    attributes:
+      settings:
+        locale: en
     branding_custom_css: |
       ak-flow-executor::part(locale-select) {
         display: none;
@@ -58,6 +64,16 @@ entries:
       /* Same dark icon for flows in compatibility mode (ShadyDOM), where :host() does not match */
       html[data-theme="dark"] [data-ouia-component-id="passwordless"]::before {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2373bcf7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18.9 7a8 8 0 0 1 1.1 5v1a6 6 0 0 0 .8 3'/%3E%3Cpath d='M8 11a4 4 0 0 1 8 0v1a10 10 0 0 0 2 6'/%3E%3Cpath d='M12 11v2a14 14 0 0 0 2.5 8'/%3E%3Cpath d='M8 15a18 18 0 0 0 1.8 6'/%3E%3Cpath d='M4.9 19a22 22 0 0 1 -.9 -7v-1a8 8 0 0 1 12 -6.95'/%3E%3C/svg%3E");
+      }
+      /* User settings: hide the "Connected services" tab. There is no source a user can connect (the social
+         login sources are removed). The brand CSS reaches the tab bar's shadow root, which is where the tab is. */
+      li.pf-c-tabs__item:has(> #page-sources-tab) {
+          display: none !important;
+      }
+      /* User settings > User details: nothing can be saved, so hide the Save button. The user settings use their
+         own stage element, ak-user-stage-prompt, so the login and recovery flows are not affected. */
+      :host(ak-user-stage-prompt) .pf-c-form__group.pf-m-action {
+          display: none !important;
       }
       /* Ensures the footer link content stays centered and aligned */
       ak-brand-links[name="flow-links"] li[data-index="0"] {

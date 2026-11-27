@@ -58,7 +58,7 @@
         "enablePostgresReadReplicas": false,
         "branding": "tak-nz",
         "authentikVersion": "2026.8.7",
-        "buildRevision": 8,
+        "buildRevision": 11,
         "ipLock": {
           "enabled": false,
           "threshold": -5,
@@ -127,7 +127,7 @@
         "enablePostgresReadReplicas": true,
         "branding": "tak-nz",
         "authentikVersion": "2026.8.7",
-        "buildRevision": 8,
+        "buildRevision": 11,
         "ipLock": {
           "enabled": false,
           "threshold": -5,
