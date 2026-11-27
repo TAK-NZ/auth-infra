@@ -110,6 +110,12 @@ gets a session.
 | 30 | `tak-authentication-mfa-enrol` (passkey or authenticator app) | an ordinary user with no passkey and no authenticator app |
 | 40 | the recovery code setup stage | an ordinary user with fewer than two authenticators |
 | 100 | `tak-authentication-login` | everybody |
+An administrator needs two passkeys. Authentik asks the browser to register a passkey without listing the ones that
+already exist, so a passkey made again on the same device or password manager **replaces** the first one: the
+account would hold two records and one working passkey. A screen in front of every second-passkey registration
+(`tak-admin-passkey-intro`, orders 24 in `tak-auth`, 13 in `tak-passkey`, 51 and 53 in `tak-recovery-flow`) tells the
+administrator to use a different device or a security key. Nothing enforces it; only upstream could (by sending the
+existing credential ids as excluded).
 `tak-passkey` (the passkey button and passkey autofill on the login page) applies the same rules at orders 12,
 14 and 16 before its login stage at 20, because a passkey login there never visits `tak-auth`. The stages at
 15 to 40 are bound with policy engine mode *all*, to the policies `tak-mfa-is-admin`, `tak-mfa-is-break-glass`,
@@ -123,9 +129,15 @@ user settings page lists them by that name. Authentik's default blueprint resets
 (after an upgrade), and the next deploy applies this file again. The device type column and some labels
 inside the stages ("Security key", "Recovery keys") come from Authentik and cannot be renamed from a blueprint.
 **Changing authenticators.** The three setup flows (`default-authenticator-*-setup`, which the user settings
-page links to) start with a validate stage at order -20 (ordinary users) or -10 (administrators):
-the user proves possession of an existing authenticator unless one was used in the last 5 minutes
-(NZISM 16.1.36). Removing a device cannot be gated by a flow, because it is an API call.
+page links to) start with a validate stage at order -20 (ordinary users) or -10 (administrators): the user proves
+possession of an existing authenticator (NZISM 16.1.36). Authentik remembers a passed check for 5 minutes in the
+cookie `authentik_mfa`, so one check covers all three flows in that browser for that time. A user who has just
+enrolled has not passed the check yet and is asked once. An administrator is asked for a passkey, which the browser
+offers straight away; an ordinary user first chooses between a passkey and a recovery code or authenticator app. A
+screen in front of the check ("Confirm it is you", order -30, shown only when the check will run, which the policy
+`tak-mfa-reauth-needed` decides from the cookie) says why, and the flows are titled for what they add: *Add a
+passkey*, *Add an authenticator app* and *Get recovery codes*. Removing a device cannot be gated by a flow, because
+it is an API call.
 **Flows this stack does not use.** The default login flow `default-authentication-flow` and the default
 password change flow `default-password-change` stay on every instance, so each starts with the deny stage
 `tak-flow-disabled-deny` (order -100). The copy of the passkey flow `tak-passwordless-flow`, which only the
@@ -138,7 +150,7 @@ identification and email stages). Team Manager also sets the user attribute `tak
 time, 7 days ahead) when it sends the link. After the identified user:
 | Order | Stage | Runs for |
 |---|---|---|
-| 22 | `tak-recovery-deny` | an inactive account, a member of `tak-break-glass`, or an account with no authenticator and no open activation window |
+| 22 | `tak-recovery-deny`, decided by the policy `tak-recovery-refuse` | an inactive account, a member of `tak-break-glass`, or an account with no authenticator and no open activation window |
 | 25 | `tak-recovery-verify-intro`, a screen "Confirm it is you" | a user with an authenticator |
 | 26 | `tak-recovery-validate-user` (passkey, authenticator app or recovery code) | an ordinary user with an authenticator |
 | 27 | `tak-recovery-validate-admin` (passkey) | an administrator with an authenticator; one with none of its own passkeys is refused and needs an administrator reset |
@@ -153,6 +165,11 @@ be changed from a blueprint. So the password screen has a heading and a descript
 activation, an administrator and a recovery), and the three screens above are prompt stages that hold only static
 text, placed in front of or after those stages. Static prompt fields accept HTML and, with `initial_value_expression`,
 a Python expression that sees the identified user as `user`. They need a non-blank label.
+`tak-recovery-refuse` first reads the user again from the database and puts that copy into the flow. A flow keeps
+a copy of the identified user from the moment its link was made (up to 24 hours), and Authentik's user write stage
+saves that copy over the current row. Without the refresh, a link made before an account was suspended switched
+the account back on when the password was set, and attributes that Team Manager had changed in the meantime were
+reverted. The same read makes the activation window count as it is now, not as it was when the link was made.
 A user who already has an authenticator proves possession of one **before** the new password prompt, so an email
 link alone cannot reset a password (NZISM 16.1.36). The flow has no login stage: the user ends at the login page
 and signs in under the rules of `tak-auth`, so there is no session after an email link. An account that has no

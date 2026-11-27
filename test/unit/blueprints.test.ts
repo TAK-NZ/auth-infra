@@ -269,6 +269,7 @@ describe('MFA rules (tak-flows.yaml)', () => {
       [15, 'tak-authentication-break-glass-deny', ['tak-mfa-is-break-glass']],
       [20, 'tak-authentication-mfa-validation-user', ['not tak-mfa-is-admin', 'tak-mfa-has-authenticator']],
       [22, 'tak-authentication-mfa-validation-admin', ['tak-mfa-is-admin']],
+      [24, 'tak-admin-passkey-intro', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
       [25, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
       [30, 'tak-authentication-mfa-enrol', ['not tak-mfa-is-admin', 'not tak-mfa-has-passkey-or-app']],
       [40, 'default-authenticator-static-setup', ['not tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
@@ -280,6 +281,7 @@ describe('MFA rules (tak-flows.yaml)', () => {
     expect(bindings.map(summary)).toEqual([
       [10, 'tak-authentication-webauthn', []],
       [12, 'tak-authentication-break-glass-deny', ['tak-mfa-is-break-glass']],
+      [13, 'tak-admin-passkey-intro', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
       [14, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
       [16, 'default-authenticator-static-setup', ['not tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
       [20, 'tak-authentication-login', []]
@@ -355,10 +357,10 @@ describe('MFA rules (tak-flows.yaml)', () => {
     expect(codes.attrs?.token_count).toBe(10);
   });
   test.each(['webauthn', 'totp', 'static'])(
-    'changing authenticators in the user settings (%s) asks for an authenticator first, within 5 minutes of the last use',
+    'changing authenticators in the user settings (%s) asks for an authenticator first, and remembers the check for 5 minutes',
     (kind) => {
       const bindings = bindingsOf(flows, `default-authenticator-${kind}-setup`);
-      expect(bindings.map((b) => b.stage).sort()).toEqual(['tak-reauth-validate', 'tak-reauth-validate-admin']);
+      expect(bindings.map((b) => b.stage).sort()).toEqual(['tak-reauth-intro', 'tak-reauth-validate', 'tak-reauth-validate-admin']);
       for (const b of bindings) {
         // the setup stage of the default blueprint is at order 0
         expect(b.order).toBeLessThan(0);
@@ -369,6 +371,46 @@ describe('MFA rules (tak-flows.yaml)', () => {
       }
     }
   );
+  test.each([
+    ['webauthn', 'Add a passkey'],
+    ['totp', 'Add an authenticator app'],
+    ['static', 'Get recovery codes']
+  ])('the %s setup flow is titled for what it adds and explains the check before it', (kind, title) => {
+    const flow = entry(flows, 'authentik_flows.flow', { slug: `default-authenticator-${kind}-setup` });
+    expect(flow.attrs?.title).toBe(title);
+    const intro = bindingsOf(flows, `default-authenticator-${kind}-setup`).find((b) => b.stage === 'tak-reauth-intro');
+    // in front of both variants of the check (-20 and -10), and only when the user has something to check and the check will run
+    expect(intro?.order).toBeLessThan(-20);
+    expect(intro?.policies.map((p) => p.name)).toEqual(['tak-mfa-has-authenticator', 'tak-mfa-reauth-needed']);
+    expect(intro?.entry.attrs?.policy_engine_mode).toBe('all');
+  });
+  test('the explanation shows only while the check runs: the check leaves a cookie for 5 minutes', () => {
+    const expression = String(
+      entry(flows, 'authentik_policies_expression.expressionpolicy', { name: 'tak-mfa-reauth-needed' }).attrs?.expression
+    );
+    expect(expression).toContain("return 'authentik_mfa' not in http_request.COOKIES");
+    // only the two check stages have a threshold, so only they set the cookie
+    const validate = flows.filter((e) => e.model === 'authentik_stages_authenticator_validate.authenticatorvalidatestage');
+    const withThreshold = validate.filter((e) => e.attrs?.last_auth_threshold !== 'seconds=0').map((e) => e.identifiers?.name);
+    expect(withThreshold.sort()).toEqual(['tak-reauth-validate', 'tak-reauth-validate-admin']);
+  });
+  test('every second-passkey registration is preceded by the screen that says to use another device', () => {
+    // Authentik registers without listing the existing passkeys, so a passkey made again on the same device replaces
+    // the first. The screen is the only protection against two records and one working passkey.
+    for (const slug of ['tak-auth', 'tak-passkey', 'tak-recovery-flow']) {
+      const list = bindingsOf(flows, slug);
+      const registrations = list.filter((b) => b.stage === 'default-authenticator-webauthn-setup');
+      expect(registrations.length).toBeGreaterThan(0);
+      for (const r of registrations) {
+        const before = list.filter((b) => b.order < r.order).pop();
+        expect(before?.stage).toBe('tak-admin-passkey-intro');
+        expect(before?.policies.map((p) => p.name)).toEqual(r.policies.map((p) => p.name));
+      }
+    }
+    const text = String(entry(flows, 'authentik_stages_prompt.prompt', { name: 'tak-admin-passkey-text' }).attrs?.initial_value);
+    expect(text).toContain('different device');
+    expect(text).toContain('replaces');
+  });
   test('the policies read the user who signs in and count what the rules name', () => {
     const expr = (name: string) =>
       String(entry(flows, 'authentik_policies_expression.expressionpolicy', { name }).attrs?.expression);
@@ -464,7 +506,7 @@ describe('activation and recovery flow (tak-flows.yaml)', () => {
       [5, 'tak-ip-lock-deny', ['tak-brute-force-protection']],
       [10, 'tak-recovery-identification', ['default-recovery-skip-if-restored']],
       [20, 'tak-recovery-email', []],
-      [22, 'tak-recovery-deny', ['tak-recovery-user-inactive', 'tak-mfa-is-break-glass', 'tak-recovery-not-activatable']],
+      [22, 'tak-recovery-deny', ['tak-recovery-refuse']],
       [25, 'tak-recovery-verify-intro', ['tak-mfa-has-authenticator']],
       [26, 'tak-recovery-validate-user', ['not tak-mfa-is-admin', 'tak-mfa-has-authenticator']],
       [27, 'tak-recovery-validate-admin', ['tak-mfa-is-admin', 'tak-mfa-has-authenticator']],
@@ -472,7 +514,9 @@ describe('activation and recovery flow (tak-flows.yaml)', () => {
       [40, 'tak-recovery-user-write', []],
       [45, 'tak-recovery-enrol-intro', ['tak-mfa-needs-enrolment']],
       [50, 'tak-authentication-mfa-enrol', ['not tak-mfa-is-admin', 'not tak-mfa-has-passkey-or-app']],
+      [51, 'tak-admin-passkey-intro', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
       [52, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
+      [53, 'tak-admin-passkey-intro', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
       [54, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
       [60, 'default-authenticator-static-setup', ['not tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
       [90, 'tak-recovery-finished', []],
@@ -520,10 +564,9 @@ describe('activation and recovery flow (tak-flows.yaml)', () => {
       }
     }
   });
-  test('the refusal runs when ANY of its conditions holds, the other MFA bindings need ALL of theirs', () => {
+  test('the MFA bindings of the flow need ALL of their policies', () => {
     const modes = Object.fromEntries(bindings.map((b) => [b.stage + b.order, b.entry.attrs?.policy_engine_mode]));
-    expect(modes['tak-recovery-deny22']).toBe('any');
-    for (const key of ['tak-recovery-validate-user26', 'tak-recovery-validate-admin27', 'tak-authentication-mfa-enrol50']) {
+    for (const key of ['tak-recovery-deny22', 'tak-recovery-validate-user26', 'tak-recovery-validate-admin27', 'tak-authentication-mfa-enrol50']) {
       expect(modes[key]).toBe('all');
     }
   });
@@ -554,22 +597,37 @@ describe('activation and recovery flow (tak-flows.yaml)', () => {
     // the email stage must not switch a suspended user back on
     expect(entry(flows, 'authentik_stages_email.emailstage', { name: 'tak-recovery-email' }).attrs?.activate_user_on_success).toBe(false);
   });
-  test('the activation window is read from tak_activation_expires and is closed when missing, unreadable or past', () => {
-    const policy = entry(flows, 'authentik_policies_expression.expressionpolicy', { name: 'tak-recovery-not-activatable' });
-    const expression = String(policy.attrs?.expression);
-    expect(expression).toContain("user.attributes.get('tak_activation_expires')");
-    // has an authenticator: not this policy's business (the validate stages decide)
+  test('the refusal reads the user again, so a suspended account or newer attributes are not overwritten by an old copy', () => {
+    // A flow keeps a copy of the identified user from the moment its link was made. Without the refresh the
+    // password write saved that copy over the current row: it switched a suspended account back on.
+    const expression = String(
+      entry(flows, 'authentik_policies_expression.expressionpolicy', { name: 'tak-recovery-refuse' }).attrs?.expression
+    );
+    expect(expression).toContain('user = User.objects.get(pk=request.user.pk)');
+    expect(expression).toContain("plan.context['pending_user'] = user");
+    // the refresh comes before every decision
+    const refresh = expression.indexOf("plan.context['pending_user'] = user");
+    for (const decision of ['user.is_active', "name='tak-break-glass'", 'ak_user_has_authenticator(user)', "user.attributes.get('tak_activation_expires')"]) {
+      expect(expression.indexOf(decision)).toBeGreaterThan(refresh);
+    }
+    // an unknown user (no primary key) is refused
+    expect(expression).toContain('if not request.user.pk:\n    return True');
+  });
+  test('the activation window is closed when missing, unreadable or past, and has no say over a user with an authenticator', () => {
+    const expression = String(
+      entry(flows, 'authentik_policies_expression.expressionpolicy', { name: 'tak-recovery-refuse' }).attrs?.expression
+    );
     expect(expression).toContain('if ak_user_has_authenticator(user):\n    return False');
     expect(expression).toContain('if not value:\n    return True');
     expect(expression).toContain('except ValueError:\n    return True');
     expect(expression).toContain('return expires <= datetime.now(timezone.utc)');
-    expect(String(entry(flows, 'authentik_policies_expression.expressionpolicy', { name: 'tak-recovery-user-inactive' }).attrs?.expression)).toBe(
-      'return not request.user.is_active'
-    );
+    expect(expression).toContain('if not user.is_active:\n    return True');
   });
   test('deletes the login stage the recovery flow used to have', () => {
-    expect(cleanup.map((e) => `${e.model}:${JSON.stringify(e.identifiers)}`)).toContain(
-      'authentik_stages_user_login.userloginstage:{"name":"tak-recovery-user-login"}'
-    );
+    const deleted = cleanup.map((e) => `${e.model}:${JSON.stringify(e.identifiers)}`);
+    expect(deleted).toContain('authentik_stages_user_login.userloginstage:{"name":"tak-recovery-user-login"}');
+    // and the refusal policies that tak-recovery-refuse replaced
+    expect(deleted).toContain('authentik_policies_expression.expressionpolicy:{"name":"tak-recovery-user-inactive"}');
+    expect(deleted).toContain('authentik_policies_expression.expressionpolicy:{"name":"tak-recovery-not-activatable"}');
   });
 });
