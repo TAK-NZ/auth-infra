@@ -52,6 +52,14 @@ entries:
     identifiers:
       name: Default - User settings flow
     required: true
+# Break-glass accounts (for example the CloudTAK local administrator). Members are skipped by the MFA
+# rules and denied in the web login flows once those rules are in place. The blueprint only creates the
+# group; the account that owns the sealed credential is added to it by the stack that creates the account.
+- model: authentik_core.group
+  identifiers:
+    name: tak-break-glass
+  attrs:
+    is_superuser: false
 - model: authentik_flows.flow
   identifiers:
     slug: tak-auth
@@ -587,7 +595,7 @@ entries:
   identifiers:
     name: tak-recovery-email
   attrs:
-    activate_user_on_success: true
+    activate_user_on_success: false
     from_address: system@authentik.local
     host: localhost
     port: 25
@@ -814,12 +822,14 @@ entries:
   conditions:
   - !Env [TAK_CAPTCHA_SITE_KEY, '']
   - !Env [TAK_CAPTCHA_SECRET_KEY, '']
+# True when the flow was NOT restored from a recovery link, so a link issued for a known user skips the
+# identification stage. The upstream expression (bool(is_restored, True)) is always true and never skips.
 - model: authentik_policies_expression.expressionpolicy
   identifiers:
     name: default-recovery-skip-if-restored
   attrs:
     execution_logging: false
-    expression: return bool(request.context.get('is_restored', True))
+    expression: return not request.context.get('is_restored', False)
 - model: authentik_policies.policybinding
   identifiers:
     target: !KeyOf 'binding-5'
