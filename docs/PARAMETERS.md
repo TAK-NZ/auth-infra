@@ -203,6 +203,17 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 | `ecr.imageRetentionCount` | Number of ECR images to retain | `5` | `20` |
 | `ecr.scanOnPush` | Enable ECR vulnerability scanning | `false` | `true` |
 
+### **WAF Configuration**
+Optional block `waf` per environment. Without it, or with `enabled: false`, no web ACL is created. Every rule can run as
+`count` first and be switched to `block` after reviewing the metrics and logs, see [WAF.md](WAF.md).
+| Parameter | Description | dev-test | prod |
+|-----------|-------------|----------|------|
+| `waf.enabled` | Create the web ACL and attach it to the Authentik load balancer | `true` | `true` |
+| `waf.forwardingHeaders` | Action for requests that already carry `X-Forwarded-For`, `X-Real-IP` or `Forwarded` (`count` or `block`) | `count` | `count` |
+| `waf.rateLimit.requestsPer5Minutes` | Per source IP, on the flow executor API (the LDAP flow is excluded). 10 to 2000000000 | `300` | `300` |
+| `waf.rateLimit.action` | `count` or `block` | `count` | `count` |
+| `waf.ipReputation` | AWS managed IP reputation list, `count` or `block` | `count` | `count` |
+| `waf.logRetentionDays` | Retention of the CloudWatch log group `aws-waf-logs-tak-<stack>-auth` | `30` | `90` |
 ### **General Configuration**
 | Parameter | Description | dev-test | prod |
 |-----------|-------------|----------|------|
