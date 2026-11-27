@@ -11,6 +11,8 @@
 ## Version History
 
 ### Unreleased
+### v2026.8.7
+- :arrow_up: Bump Authentik to 2026.8.7 for both prod and dev-test (cdk.json, Dockerfile ARG defaults, README, docs/PARAMETERS.md and the package version). Upstream release notes: https://docs.goauthentik.io/releases/2026.8#fixed-in-202687. It includes ten security patch backports (notification webhook response, forward auth allowlist, kubeconfig validation, nginx forward auth path normalisation, JWT federation user matching, SAML inflate size limit, event email preview, notification hyperlink scheme, request smuggling, SMS override and policy engine fail-open), unique attribute checks that exclude the edited object (#27700), and `next` kept on the access denied page's cancel link (#27698)
 
 - :arrow_up: Upgrade aws-cdk-lib to 2.278.0 and aws-cdk CLI to 2.1149.0. This release bundles `minimatch` 11.0.9, which clears the last `npm audit` findings (GHSA-g3hv-75wg-m249 and the `aws-cdk-lib` entry that depended on it); `npm audit` now reports 0 vulnerabilities at every severity level and Dependabot alert 147 can close. The "known residual" `minimatch` note below no longer applies
 - :bug: Bump `buildRevision` from 2 to 3 for dev-test and prod. The image build skips a tag that already exists, so the `authentik-2026.8.6-tak-nz-r2` image pushed before the TAK flow blueprints merged was reused, and Demo ran without `tak-flows.yaml`. Bump `buildRevision` whenever anything baked into the images changes (blueprints, branding, templates) without a version change
