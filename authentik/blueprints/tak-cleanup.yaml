@@ -1,8 +1,14 @@
-# Deletes objects that earlier versions of tak-flows.yaml created and that no longer exist in the design:
-# the Google and Apple login sources with their two flows, the email verification stages and the reCAPTCHA
-# stage. A blueprint only creates and updates objects, so removing them from tak-flows.yaml alone leaves
-# them behind on an instance that already has them (and deleting a source also deletes the links that users
-# have to it). On a new instance every entry here is a no-op.
+# Deletes objects that earlier versions of the TAK blueprints created and that no longer exist in the design:
+#   - the Google and Apple login sources with their two flows, the email verification stages and the reCAPTCHA
+#     stage;
+#   - the MFA validate stage that only administrators met (`tak-authentication-mfa-validation`, deleting it also
+#     deletes its binding and the policy binding on the `authentik Admins` group);
+#   - the second passkey login flow `tak-passwordless-flow`, a copy of `tak-passkey` that nothing refers to;
+#   - the password change flow `tak-password-change`, replaced by `tak-change-password` (it ran the shared
+#     default prompt and write stages, which cannot be unbound by a blueprint).
+# A blueprint only creates and updates objects, so removing them from tak-flows.yaml alone leaves them behind
+# on an instance that already has them (and deleting a source also deletes the links that users have to it).
+# On a new instance every entry here is a no-op.
 #
 # Order matters: the sources first (they point at the flows), then the flows, then the stages and the policy.
 # Once every instance has applied this file, it can be deleted from the repository.
@@ -11,7 +17,7 @@ metadata:
   name: TAK - Cleanup of removed objects
   labels:
     blueprints.goauthentik.io/description: |
-      Deletes the social login sources and flows and the captcha stage that earlier versions created.
+      Deletes the social login sources and flows, the captcha stage, the old administrator-only MFA stage, the second passkey flow and the old password change flow that earlier versions created.
 entries:
 - model: authentik_sources_oauth.oauthsource
   state: absent
@@ -49,3 +55,15 @@ entries:
   state: absent
   identifiers:
     name: tak-require-sso-context
+- model: authentik_flows.flow
+  state: absent
+  identifiers:
+    slug: tak-passwordless-flow
+- model: authentik_stages_authenticator_validate.authenticatorvalidatestage
+  state: absent
+  identifiers:
+    name: tak-authentication-mfa-validation
+- model: authentik_flows.flow
+  state: absent
+  identifiers:
+    slug: tak-password-change

@@ -78,3 +78,20 @@ describe('AuthInfraStack safety + wiring properties', () => {
     expect(images.some((img) => img.includes('container-assets'))).toBe(false);
   });
 });
+describe('AuthInfraStack blueprint apply ordering', () => {
+  test.each(['dev-test', 'prod'] as const)('%s: the custom resource that applies the blueprints waits for the server and worker services', (environment) => {
+    const { template } = synthStack(environment, environment === 'prod' ? MOCK_CONFIGS.PROD : MOCK_CONFIGS.DEV_TEST);
+    const services = template.findResources('AWS::ECS::Service');
+    const idsByPrefix = (prefix: string) => Object.keys(services).filter((id) => id.startsWith(prefix));
+    const server = idsByPrefix('AuthentikServerService');
+    const worker = idsByPrefix('AuthentikWorkerWorkerService');
+    expect(server).toHaveLength(1);
+    expect(worker).toHaveLength(1);
+    const custom = Object.entries(template.findResources('AWS::CloudFormation::CustomResource')).filter(([id]) =>
+      id.startsWith('LdapTokenRetriever')
+    );
+    expect(custom).toHaveLength(1);
+    // Authentik queues an apply to whichever worker takes it. Old tasks do not have the new blueprint files.
+    expect(custom[0][1].DependsOn).toEqual(expect.arrayContaining([server[0], worker[0]]));
+  });
+});

@@ -151,7 +151,7 @@ export class LdapTokenRetriever extends Construct {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       role: lambdaRole,
-      timeout: Duration.minutes(10), // Increased timeout for retry logic
+      timeout: Duration.minutes(15), // Retry logic and the blueprint applies
       logGroup: logGroup,
       environment: {
         NODE_OPTIONS: '--enable-source-maps',
@@ -580,6 +580,90 @@ async function applyLdapBlueprint(authentikHost, adminToken) {
     }
 }
 
+// Blueprints that carry the login rules, in the order they are applied. Authentik applies a blueprint on its
+// own only when it first finds the file or the file changes, and the worker that does it may still be the old
+// one while a deployment drains. A setting that comes from the environment (TAK_IP_LOCK_THRESHOLD) changes
+// without the file changing. So every deployment applies these again here, once the new tasks are serving,
+// and fails when one of them does not apply. The branding blueprint applies tak-flows.yaml first (a required
+// meta apply), so it covers both; the cleanup blueprint deletes what the flows no longer use and runs after it.
+const TAK_FLOW_BLUEPRINTS = ['tak/tak-branding-change.yaml', 'tak/tak-cleanup.yaml'];
+const BLUEPRINT_FILE_WAIT_MS = 5 * 60 * 1000;
+const BLUEPRINT_APPLY_WAIT_MS = 6 * 60 * 1000;
+const BLUEPRINT_APPLY_ATTEMPTS = 3;
+// Returns the blueprint instance for a file, creating it when Authentik has not registered the file yet
+async function findBlueprintInstance(authentikHost, headers, path) {
+    const deadline = Date.now() + BLUEPRINT_FILE_WAIT_MS;
+    while (true) {
+        const list = await fetchJson(authentikHost + '/api/v3/managed/blueprints/?page_size=200', { method: 'GET', headers });
+        const existing = list.results.find(bp => bp.path === path);
+        if (existing) {
+            return existing;
+        }
+        const available = await fetchJson(authentikHost + '/api/v3/managed/blueprints/available/', { method: 'GET', headers });
+        const file = available.find(f => f.path === path);
+        if (file) {
+            const name = (file.meta && file.meta.name) || path;
+            logWithTimestamp('info', 'Creating blueprint instance', { path, name });
+            return await fetchJson(authentikHost + '/api/v3/managed/blueprints/', {
+                method: 'POST',
+                headers,
+                body: { name, path, enabled: true, context: {} }
+            });
+        }
+        if (Date.now() > deadline) {
+            throw new Error('Blueprint file ' + path + ' is not in the running Authentik image');
+        }
+        // The file is in the new image only; the old tasks are still answering
+        logWithTimestamp('info', 'Blueprint file not available yet, waiting', { path });
+        await sleep(15000);
+    }
+}
+// Applies one blueprint and waits for the result. The apply API call only queues the task.
+async function applyTakBlueprint(authentikHost, headers, path) {
+    const instance = await findBlueprintInstance(authentikHost, headers, path);
+    const before = instance.last_applied;
+    await fetchJson(authentikHost + '/api/v3/managed/blueprints/' + instance.pk + '/apply/', { method: 'POST', headers });
+    const deadline = Date.now() + BLUEPRINT_APPLY_WAIT_MS;
+    while (Date.now() < deadline) {
+        await sleep(5000);
+        const current = await fetchJson(authentikHost + '/api/v3/managed/blueprints/' + instance.pk + '/', { method: 'GET', headers });
+        if (current.last_applied !== before) {
+            if (current.status !== 'successful') {
+                throw new Error('Blueprint ' + path + ' applied with status ' + current.status);
+            }
+            logWithTimestamp('info', 'Blueprint applied', { path, status: current.status, lastApplied: current.last_applied });
+            return;
+        }
+    }
+    throw new Error('Blueprint ' + path + ' was not applied within ' + (BLUEPRINT_APPLY_WAIT_MS / 1000) + ' seconds');
+}
+async function applyTakFlowBlueprints(authentikHost, adminToken) {
+    const headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + adminToken
+    };
+    for (const path of TAK_FLOW_BLUEPRINTS) {
+        let lastError;
+        for (let attempt = 1; attempt <= BLUEPRINT_APPLY_ATTEMPTS; attempt++) {
+            try {
+                await applyTakBlueprint(authentikHost, headers, path);
+                lastError = undefined;
+                break;
+            } catch (error) {
+                lastError = error;
+                logWithTimestamp('warn', 'Blueprint apply failed', { path, attempt, error: error.message });
+                if (attempt < BLUEPRINT_APPLY_ATTEMPTS) {
+                    // a blueprint that Authentik applies at the same time can fail on a database deadlock
+                    await sleep(20000);
+                }
+            }
+        }
+        if (lastError) {
+            throw lastError;
+        }
+    }
+}
 // Trigger LDAP blueprint to create outpost and service account
 async function triggerLdapBlueprint(authentikHost, adminToken) {
     const headers = {
@@ -854,6 +938,8 @@ exports.handler = async (event, context) => {
                 'putLDAPSecret',
                 { secretName: LDAPSecretName }
             );
+            // Apply the login flow blueprints again, so a deployment always ends with them in place
+            await applyTakFlowBlueprints(AuthentikHost, adminToken);
             
             const executionTime = Date.now() - startTime;
             

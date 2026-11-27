@@ -493,6 +493,11 @@ export class AuthInfraStack extends cdk.Stack {
     // This helps break circular dependencies while maintaining the correct execution order
     ldapTokenRetriever.customResource.node.addDependency(route53Authentik.authentikARecord);
     ldapTokenRetriever.customResource.node.addDependency(route53Authentik.authentikAAAARecord);
+    // The custom resource also applies the TAK blueprints, and Authentik queues that to whichever worker takes it.
+    // Wait for the rolling deployment of the server and the worker to finish, so that the old tasks, which do not
+    // have the new blueprint files, are gone.
+    ldapTokenRetriever.customResource.node.addDependency(authentikServer.ecsService);
+    ldapTokenRetriever.customResource.node.addDependency(authentikWorker.ecsService);
     
     // Ensure LDAP service depends on the token retriever, not the other way around
     // This breaks the circular dependency chain

@@ -53,7 +53,7 @@ entries:
       - authentik.core.auth.InbuiltBackend
       - authentik.core.auth.TokenBackend
       - authentik.sources.ldap.auth.LDAPBackend
-      configure_flow: !Find [authentik_flows.flow, [slug, default-password-change]]
+      configure_flow: null
       failed_attempts_before_cancel: 5
     identifiers:
       name: ldap-authentication-password

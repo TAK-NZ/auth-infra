@@ -4,14 +4,26 @@ The Authentik server and worker images carry every file in `authentik/blueprints
 `/blueprints/tak/` by `docker/authentik-server/Dockerfile.*`). Authentik applies a blueprint when it is
 discovered at startup and again whenever the file changes, so a change here needs a new image and a
 redeploy. See [Scoped service accounts](SCOPED_SERVICE_ACCOUNTS.md) for the service account blueprints.
+### Applied on every deploy
+Authentik's own discovery is not enough for the login rules. It runs in whichever worker is up, and during a
+deployment that is often the old one, which then finds nothing new (the new worker's startup tasks get
+consumed by the draining one, and the next discovery is the hourly run). It also ignores a change that comes
+only from an environment variable. So the Lambda of the `LdapTokenRetriever` custom resource, which runs on
+every deploy, applies `tak-branding-change.yaml` (which applies `tak-flows.yaml` first) and then
+`tak-cleanup.yaml`, waits for each result and fails the deploy when one does not succeed. The custom resource
+depends on the server and worker ECS services, so it starts after the old tasks are gone. If Authentik has not
+registered a file yet, the Lambda creates the blueprint instance. `tak-ldap-setup.yaml` is applied by the same
+Lambda earlier.
+`tak-cloudtak-setup.yaml` and `tak-teammanager-setup.yaml` are left to Authentik's own discovery: they need
+objects that other stacks create, and do not apply on an instance without them.
 
 | File | Blueprint name | What it manages |
 |---|---|---|
 | `tak-ldap-setup.yaml` | TAK - LDAP Setup | LDAP service account, LDAP flow, provider, application and outpost |
 | `tak-cloudtak-setup.yaml` | TAK - CloudTAK Service Account Setup | Scoped service account for CloudTAK |
 | `tak-teammanager-setup.yaml` | TAK - TAKTeamManager Service Account Setup | Scoped service account for Team Manager |
-| `tak-flows.yaml` | TAK - Flows and sources | Login, passkey login, password change, user settings, enrollment and recovery flows, with their stages, prompts and policies, and the IP lock on the login and recovery flows. The name predates the removal of the social login sources and stays, because other blueprints refer to it |
-| `tak-cleanup.yaml` | TAK - Cleanup of removed objects | Deletes objects that earlier versions created (the Google and Apple sources and their flows, the captcha stage). Can be deleted once every instance has applied it |
+| `tak-flows.yaml` | TAK - Flows and sources | Login, passkey login, password change, user settings, enrollment and recovery flows, with their stages, prompts and policies, the MFA rules, the password policy and the IP lock on the login and recovery flows. The name predates the removal of the social login sources and stays, because other blueprints refer to it |
+| `tak-cleanup.yaml` | TAK - Cleanup of removed objects | Deletes objects that earlier versions created (the Google and Apple sources and their flows, the captcha stage, the administrator-only MFA stage, the second passkey flow `tak-passwordless-flow`, the flow `tak-password-change`). Can be deleted once every instance has applied it |
 | `tak-branding-change.yaml` | TAK - Branding change | Default brand: custom CSS, `tak-auth` as the login flow and `tak-recovery-flow` as the recovery flow. Applies `tak-flows.yaml` first |
 
 ## What is not here
@@ -54,10 +66,10 @@ left as they are (a blueprint never deletes).
 
 This is a plain variable read by an attribute, not a `conditions` entry: the policy exists either way and
 the value decides whether it can ever match. **Authentik applies a blueprint only when its file changes**, so
-after changing `authentik.ipLock` (or any variable in this table) and deploying, apply *TAK - Flows and
-sources* yourself: **System > Blueprints**, or `POST /api/v3/managed/blueprints/<id>/apply/`. The new value
-is not picked up before that. Do not switch the lock off by disabling the policy binding. A
-stage binding with no enabled policy always runs, and the deny stage would then deny everybody.
+after changing `authentik.ipLock` (or any variable in this table) the file does not change, so Authentik
+would not apply it. The deploy applies the blueprints itself (see above) and picks the new value up. Do not
+switch the lock off by disabling the policy binding. A stage binding with no enabled policy always runs, and
+the deny stage would then deny everybody.
 
 ### IP lock
 
@@ -81,6 +93,57 @@ the password check shows whether the password was right. The IP lock only protec
 trustworthy, so enable it after the WAF rule for client-supplied forwarding headers is on `block`, see
 [WAF.md](WAF.md). The LDAP flow has no IP lock: every LDAP bind comes from the VPC's NAT address.
 
+### MFA
+Every human ends a web login with at least two authenticators, at least one of them a passkey or an
+authenticator app. Recovery codes count as the second authenticator, as one authenticator however many codes
+there are, and only while unused codes are left. Administrators (members of a group with superuser rights) hold
+two passkeys and are never offered recovery codes. SMS, email codes and Duo are not offered. Members of the
+`tak-break-glass` group cannot sign in on the web at all. The rules are checked at every login, so an account
+that has fewer authenticators (an older account, or a device that was removed) is sent to enrol before it
+gets a session.
+`tak-auth`, after the identification stage (order 10):
+| Order | Stage | Runs for |
+|---|---|---|
+| 15 | `tak-authentication-break-glass-deny` | members of `tak-break-glass` |
+| 20 | `tak-authentication-mfa-validation-user` (passkey, authenticator app or recovery code) | an ordinary user with any authenticator |
+| 22 | `tak-authentication-mfa-validation-admin` (passkey; enrols the first one if there is none) | an administrator |
+| 25 | the passkey setup stage | an administrator with fewer than two passkeys |
+| 30 | `tak-authentication-mfa-enrol` (passkey or authenticator app) | an ordinary user with no passkey and no authenticator app |
+| 40 | the recovery code setup stage | an ordinary user with fewer than two authenticators |
+| 100 | `tak-authentication-login` | everybody |
+`tak-passkey` (the passkey button and passkey autofill on the login page) applies the same rules at orders 12,
+14 and 16 before its login stage at 20, because a passkey login there never visits `tak-auth`. The stages at
+15 to 40 are bound with policy engine mode *all*, to the policies `tak-mfa-is-admin`, `tak-mfa-is-break-glass`,
+`tak-mfa-has-authenticator`, `tak-mfa-has-passkey-or-app`, `tak-mfa-fewer-than-two-passkeys` and
+`tak-mfa-fewer-than-two-authenticators`, which are expression policies that look at the user who has just
+been identified. A user who signs in with only a recovery code is asked for it, and then has to enrol a
+passkey or authenticator app.
+The three setup stages are the ones from Authentik's default blueprints, renamed in place: *Passkey* (a
+discoverable credential, user verification required), *Authenticator app* and *Recovery codes* (10 codes). The
+user settings page lists them by that name. Authentik's default blueprint resets the names when it changes
+(after an upgrade), and the next deploy applies this file again. The device type column and some labels
+inside the stages ("Security key", "Recovery keys") come from Authentik and cannot be renamed from a blueprint.
+**Changing authenticators.** The three setup flows (`default-authenticator-*-setup`, which the user settings
+page links to) start with a validate stage at order -20 (ordinary users) or -10 (administrators):
+the user proves possession of an existing authenticator unless one was used in the last 5 minutes
+(NZISM 16.1.36). Removing a device cannot be gated by a flow, because it is an API call.
+**Flows this stack does not use.** The default login flow `default-authentication-flow` and the default
+password change flow `default-password-change` stay on every instance, so each starts with the deny stage
+`tak-flow-disabled-deny` (order -100). The copy of the passkey flow `tak-passwordless-flow`, which only the
+Demo and Test instances had, is deleted by `tak-cleanup.yaml`.
+### Passwords
+`tak-password-policy` asks for at least 16 characters, with no rules on the kind of characters (NZISM
+16.1.31), and a zxcvbn strength estimate, which runs inside Authentik and rejects common and predictable
+passwords. It is on the password prompt of the recovery flow and of the password change flow. The check against
+the list of breached passwords (`check_have_i_been_pwned`) is off: it sends a hash prefix of the password to
+api.pwnedpasswords.com, and a password change fails while that service cannot be reached.
+The password change flow is `tak-change-password` (the earlier `tak-password-change` ran the shared default
+stages, which a blueprint cannot unbind, and is deleted by `tak-cleanup.yaml`). The user settings page reaches it
+through the password stage `tak-authentication-password`, the only password stage with a configure flow, so
+the page lists one "Change password" entry. The flow asks for the current password first (order 10). That is a
+password stage, so wrong guesses lower the IP reputation and the flow ends after 3. An account without a
+password yet skips it. The flow works only when opened from the user settings page: the password stage needs
+the user that page puts into the flow.
 ### Removed objects
 
 The Google and Apple login sources, their flows (`tak-source-authentication`,
@@ -100,11 +163,15 @@ default brand has a recovery flow, so `tak-branding-change.yaml` sets `flow_reco
 
 - `default-recovery-*` (a policy and two prompts) are defined here under their existing names. They came from
   Authentik's example recovery blueprint, which this stack does not apply.
-- Objects from Authentik's own default blueprints (the `default-password-change` flow, the password change and
-  user settings stages, and the like) are referenced, not redefined. The blueprint applies those default
-  blueprints first. The login password stage is the exception: `tak-authentication-password` is a copy that
-  this blueprint owns, because a change to `default-authentication-password` is reset whenever Authentik
-  applies its own blueprint.
+- Objects from Authentik's own default blueprints (the user settings flow and stage, the password prompt
+  fields, and the like) are referenced, not redefined. The blueprint applies those default blueprints first.
+  The login password stage is the exception: `tak-authentication-password` is a copy that this blueprint owns,
+  because a change to `default-authentication-password` is reset whenever Authentik applies its own blueprint.
+  The three authenticator setup stages are the other exception: they are renamed and tightened in place, and
+  the deploy applies this file again after Authentik applies the default ones.
+- The user settings flow is still `default-user-settings-flow`, which the default brand names. `tak-user-settings`
+  (which makes name and email read-only) is defined here but no brand uses it. The tenant settings
+  (*default user change name, email and username*) are off, which has the same effect.
 - Four unused prompt fields (`tak-user-settings-field-region`, `-color`, `-callsign`, `-role`) and the stage
   `tak-oauth-user-login` exist in Demo but belong to no flow. They are not in the blueprint and can be deleted
   in the UI.
@@ -134,3 +201,8 @@ Apply it twice: the second run must report no errors and create nothing. Things 
   stage lists all of its settings.
 - A blueprint creates and updates; it never deletes. Removing an object from the file leaves it on every
   instance that has it. Add an `absent` entry to `tak-cleanup.yaml` as well.
+- Do not use `absent` for a stage binding. Authentik fails on the second apply, when the binding is already
+  gone. Delete the flow or the stage instead (which removes its bindings), as the cleanup file does.
+- A stage binding with no policy needs `evaluate_on_plan: true` or `re_evaluate_policies: true`; one with
+  policies that must be checked when the stage is reached needs `re_evaluate_policies: true`.
+- A blueprint apply started by hand while the worker applies one fails on a database deadlock. Wait for the worker.
