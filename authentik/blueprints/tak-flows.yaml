@@ -1,27 +1,22 @@
-# TAK login experience: login, passkey login, password change, user settings, access request (enrollment),
-# password recovery, and the social login flows and sources.
+# TAK login experience: login, passkey login, password change, user settings, access request (enrollment) and
+# password recovery, plus the IP lock that protects the login and recovery flows.
 #
-# One file on purpose. These objects reference each other in a circle (the identification stage lists the
-# sources, the sources use the source flows, the identification stage links the recovery and enrollment
-# flows), and splitting them made Authentik re-apply the same blueprints several times over.
+# One file on purpose. These objects reference each other in a circle (the identification stage links the
+# recovery and enrollment flows), and splitting them made Authentik re-apply the same blueprints several times
+# over.
 #
 # Objects are identified by slug or name, so the file works in any instance and adopts objects that were
-# first created by hand. It is applied at startup and again whenever it changes.
-#
-# Social login sources (Google, Apple). Each has two entries:
-#   1. `state: created` makes a disabled shell with placeholder credentials, only if the source is missing.
-#      An existing source is never touched by it.
-#   2. The second entry keeps the structure (URLs, flows, matching rules) in step with this file. It does not
-#      carry the client ID, client secret, icon or enabled flag, so the values set in the admin UI survive.
-#   After the first deploy, open Directory > Federation and Social login in the admin UI, enter the client ID
-#   and secret from the Google or Apple developer console for this domain, and enable the source.
+# first created by hand. It is applied at startup and again whenever it changes. Objects that were removed
+# from this file (social login, captcha) are deleted by tak-cleanup.yaml.
 #
 # Entries with `conditions` are skipped while their environment variables are empty, and left as they are if
 # they already exist:
-#   TAK_TEAM_MANAGER_URL                           request-access redirect (https://team.<zone>); set by the stack
-#   TAK_CAPTCHA_SITE_KEY / TAK_CAPTCHA_SECRET_KEY  captcha on password recovery and login
-# The identification stage therefore appears twice. The first entry holds its settings; the last one repeats
-# them with the captcha link (Authentik validates the whole stage on every update).
+#   TAK_TEAM_MANAGER_URL    request-access redirect (https://team.<zone>); set by the stack
+#
+# IP lock (`tak-brute-force-protection` and `tak-ip-lock-deny`): a deny stage at the start of the login and
+# recovery flows, reached only by an IP whose reputation score is at or below TAK_IP_LOCK_THRESHOLD. It
+# is off unless the stack sets TAK_IP_LOCK_THRESHOLD (authentik.ipLock.enabled). Do not switch it on before
+# the client IP can be trusted, see docs/WAF.md.
 #
 # `default-recovery-*` come from Authentik's example recovery blueprint, which this stack does not apply, so
 # they are defined here under their existing names.
@@ -30,7 +25,7 @@ metadata:
   name: TAK - Flows and sources
   labels:
     blueprints.goauthentik.io/description: |
-      Login, passkey, password change, user settings, enrollment, recovery and social login flows, and the Google and Apple login sources.
+      Login, passkey, password change, user settings, enrollment and recovery flows, and the IP lock on the login and recovery flows.
 entries:
 - model: authentik_blueprints.metaapplyblueprint
   attrs:
@@ -41,11 +36,6 @@ entries:
   attrs:
     identifiers:
       name: Default - Password change flow
-    required: true
-- model: authentik_blueprints.metaapplyblueprint
-  attrs:
-    identifiers:
-      name: Default - Source authentication flow
     required: true
 - model: authentik_blueprints.metaapplyblueprint
   attrs:
@@ -125,34 +115,6 @@ entries:
     name: TAK recovery flow
     policy_engine_mode: any
     title: Reset your password
-- id: flow-tak-source-authentication
-  model: authentik_flows.flow
-  identifiers:
-    slug: tak-source-authentication
-  attrs:
-    authentication: require_unauthenticated
-    background: ''
-    compatibility_mode: true
-    denied_action: message_continue
-    designation: authentication
-    layout: stacked
-    name: tak-source-authentication
-    policy_engine_mode: any
-    title: TAK.NZ Login
-- id: flow-tak-source-enrollment-email-verification
-  model: authentik_flows.flow
-  identifiers:
-    slug: tak-source-enrollment-email-verification
-  attrs:
-    authentication: none
-    background: ''
-    compatibility_mode: true
-    denied_action: message_continue
-    designation: enrollment
-    layout: stacked
-    name: tak-source-enrollment-email-verification
-    policy_engine_mode: any
-    title: Verify your Email to connect this service
 - model: authentik_flows.flow
   identifiers:
     slug: tak-user-settings
@@ -178,16 +140,6 @@ entries:
     re_evaluate_policies: true
 - model: authentik_flows.flowstagebinding
   identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-source-authentication]]
-    stage: !Find [authentik_stages_user_login.userloginstage, [name, default-source-authentication-login]]
-    order: 0
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: any
-    re_evaluate_policies: true
-- model: authentik_flows.flowstagebinding
-  identifiers:
     target: !Find [authentik_flows.flow, [slug, tak-password-change]]
     stage: !Find [authentik_stages_user_write.userwritestage, [name, default-password-change-write]]
     order: 1
@@ -196,90 +148,6 @@ entries:
     invalid_response_action: retry
     policy_engine_mode: any
     re_evaluate_policies: true
-- model: authentik_stages_captcha.captchastage
-  identifiers:
-    name: tak-captcha-stage
-  attrs:
-    api_url: https://www.recaptcha.net/recaptcha/api/siteverify
-    error_on_invalid_score: false
-    interactive: false
-    js_url: https://www.recaptcha.net/recaptcha/api.js
-    public_key: !Env 'TAK_CAPTCHA_SITE_KEY'
-    request_content_type: application/x-www-form-urlencoded
-    score_max_threshold: 1.0
-    score_min_threshold: 0.5
-    private_key: !Env 'TAK_CAPTCHA_SECRET_KEY'
-  conditions:
-  - !Env [TAK_CAPTCHA_SITE_KEY, '']
-  - !Env [TAK_CAPTCHA_SECRET_KEY, '']
-- model: authentik_sources_oauth.oauthsource
-  state: created
-  identifiers:
-    slug: google
-  attrs:
-    name: Log in with Google
-    provider_type: google
-    enabled: false
-    consumer_key: set-in-the-admin-ui
-    consumer_secret: set-in-the-admin-ui
-- model: authentik_sources_oauth.oauthsource
-  identifiers:
-    slug: google
-  attrs:
-    access_token_url: https://oauth2.googleapis.com/token
-    additional_scopes: ''
-    authentication_flow: !Find [authentik_flows.flow, [slug, tak-source-authentication]]
-    authorization_code_auth_method: basic_auth
-    authorization_url: https://accounts.google.com/o/oauth2/v2/auth
-    enrollment_flow: null
-    group_matching_mode: identifier
-    group_property_mappings: []
-    name: Log in with Google
-    oidc_jwks_url: https://www.googleapis.com/oauth2/v3/certs
-    oidc_well_known_url: ''
-    pkce: S256
-    policy_engine_mode: any
-    profile_url: https://openidconnect.googleapis.com/v1/userinfo
-    promoted: false
-    provider_type: google
-    request_token_url: null
-    user_matching_mode: email_link
-    user_path_template: goauthentik.io/sources/%(slug)s
-    user_property_mappings: []
-- model: authentik_sources_oauth.oauthsource
-  state: created
-  identifiers:
-    slug: apple
-  attrs:
-    name: Log in with Apple
-    provider_type: apple
-    enabled: false
-    consumer_key: set-in-the-admin-ui
-    consumer_secret: set-in-the-admin-ui
-- model: authentik_sources_oauth.oauthsource
-  identifiers:
-    slug: apple
-  attrs:
-    access_token_url: https://appleid.apple.com/auth/token
-    additional_scopes: ''
-    authentication_flow: !Find [authentik_flows.flow, [slug, tak-source-authentication]]
-    authorization_code_auth_method: basic_auth
-    authorization_url: https://appleid.apple.com/auth/authorize
-    enrollment_flow: !Find [authentik_flows.flow, [slug, tak-source-enrollment-email-verification]]
-    group_matching_mode: identifier
-    group_property_mappings: []
-    name: Log in with Apple
-    oidc_jwks_url: https://appleid.apple.com/auth/keys
-    oidc_well_known_url: ''
-    pkce: none
-    policy_engine_mode: any
-    profile_url: ''
-    promoted: false
-    provider_type: apple
-    request_token_url: null
-    user_matching_mode: identifier
-    user_path_template: goauthentik.io/sources/%(slug)s
-    user_property_mappings: []
 - model: authentik_stages_authenticator_validate.authenticatorvalidatestage
   identifiers:
     name: tak-authentication-webauthn
@@ -296,22 +164,34 @@ entries:
     webauthn_allowed_device_types: []
     webauthn_hints: []
     webauthn_user_verification: required
+# Password stage of the login flow. Own copy instead of the default-authentication-password stage that the
+# Authentik default blueprint owns and resets: the flow is cancelled after 3 wrong passwords, and only the
+# standing-password and app-password backends are enabled (no Kerberos or LDAP source is configured).
+- model: authentik_stages_password.passwordstage
+  identifiers:
+    name: tak-authentication-password
+  attrs:
+    allow_show_password: false
+    backends:
+    - authentik.core.auth.InbuiltBackend
+    - authentik.core.auth.TokenBackend
+    configure_flow: !Find [authentik_flows.flow, [slug, default-password-change]]
+    failed_attempts_before_cancel: 3
 - model: authentik_stages_identification.identificationstage
   identifiers:
     name: tak-authentication-identification
   attrs:
+    captcha_stage: null
     case_insensitive_matching: true
     enable_remember_me: false
     enrollment_flow: !Find [authentik_flows.flow, [slug, tak-enrollment]]
-    password_stage: !Find [authentik_stages_password.passwordstage, [name, default-authentication-password]]
+    password_stage: !Find [authentik_stages_password.passwordstage, [name, tak-authentication-password]]
     passwordless_flow: !Find [authentik_flows.flow, [slug, tak-passkey]]
     pretend_user_exists: true
     recovery_flow: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
     show_matched_user: true
-    show_source_labels: true
-    sources:
-    - !Find [authentik_sources_oauth.oauthsource, [slug, google]]
-    - !Find [authentik_sources_oauth.oauthsource, [slug, apple]]
+    show_source_labels: false
+    sources: []
     user_fields:
     - username
     - email
@@ -385,34 +265,6 @@ entries:
     order: 10
   attrs:
     evaluate_on_plan: true
-    invalid_response_action: retry
-    policy_engine_mode: any
-    re_evaluate_policies: true
-- model: authentik_stages_identification.identificationstage
-  identifiers:
-    name: tak-identify-by-email
-  attrs:
-    captcha_stage: null
-    case_insensitive_matching: true
-    enable_remember_me: false
-    enrollment_flow: null
-    password_stage: null
-    passwordless_flow: null
-    pretend_user_exists: true
-    recovery_flow: null
-    show_matched_user: true
-    show_source_labels: false
-    sources: []
-    user_fields:
-    - email
-    webauthn_stage: null
-- model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-source-enrollment-email-verification]]
-    stage: !Find [authentik_stages_identification.identificationstage, [name, tak-identify-by-email]]
-    order: 10
-  attrs:
-    evaluate_on_plan: false
     invalid_response_action: retry
     policy_engine_mode: any
     re_evaluate_policies: true
@@ -619,34 +471,6 @@ entries:
     invalid_response_action: retry
     policy_engine_mode: any
     re_evaluate_policies: true
-- model: authentik_stages_email.emailstage
-  identifiers:
-    name: tak-email-verification-otp
-  attrs:
-    activate_user_on_success: false
-    from_address: system@authentik.local
-    host: localhost
-    port: 25
-    recovery_cache_timeout: minutes=5
-    recovery_max_attempts: 5
-    subject: Verify your email for TAK.NZ
-    template: email/account_confirmation.html
-    timeout: 10
-    token_expiry: minutes=10
-    use_global_settings: true
-    use_ssl: false
-    use_tls: false
-    username: ''
-- model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-source-enrollment-email-verification]]
-    stage: !Find [authentik_stages_email.emailstage, [name, tak-email-verification-otp]]
-    order: 20
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: any
-    re_evaluate_policies: true
 - model: authentik_stages_prompt.prompt
   identifiers:
     name: default-recovery-field-password
@@ -695,25 +519,6 @@ entries:
     re_evaluate_policies: false
 - model: authentik_stages_user_write.userwritestage
   identifiers:
-    name: tak-link-social-provider
-  attrs:
-    create_users_as_inactive: false
-    create_users_group: null
-    user_creation_mode: never_create
-    user_path_template: ''
-    user_type: internal
-- model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-source-enrollment-email-verification]]
-    stage: !Find [authentik_stages_user_write.userwritestage, [name, tak-link-social-provider]]
-    order: 30
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: any
-    re_evaluate_policies: true
-- model: authentik_stages_user_write.userwritestage
-  identifiers:
     name: tak-recovery-user-write
   attrs:
     create_users_as_inactive: false
@@ -731,66 +536,6 @@ entries:
     invalid_response_action: retry
     policy_engine_mode: any
     re_evaluate_policies: false
-- id: binding-4
-  model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
-    stage: !Find [authentik_stages_captcha.captchastage, [name, tak-captcha-stage]]
-    order: 5
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: any
-    re_evaluate_policies: true
-  conditions:
-  - !Env [TAK_CAPTCHA_SITE_KEY, '']
-  - !Env [TAK_CAPTCHA_SECRET_KEY, '']
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'flow-tak-source-authentication'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, default-source-authentication-if-sso]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies_expression.expressionpolicy
-  identifiers:
-    name: tak-require-sso-context
-  attrs:
-    execution_logging: false
-    expression: |-
-      # Check if this flow is being executed from an SSO/OAuth source
-      is_sso = request.context.get('is_sso', False)
-
-      if not is_sso:
-          ak_message("This enrollment flow can only be used with social login providers.")
-          return False
-
-      # Verify we have OAuth user info
-      oauth_userinfo = request.context.get('oauth_userinfo')
-      if not oauth_userinfo:
-          ak_message("No OAuth provider information found.")
-          return False
-
-      # Verify we have a source
-      source = request.context.get('source')
-      if not source:
-          ak_message("No identity provider source found.")
-          return False
-
-      return True
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'flow-tak-source-enrollment-email-verification'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-require-sso-context]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
 - model: authentik_policies.policybinding
   identifiers:
     target: !KeyOf 'binding-3'
@@ -801,17 +546,39 @@ entries:
     failure_result: false
     negate: false
     timeout: 30
+# IP lock. The policy passes when the source IP's reputation score is at or below the threshold, so the deny
+# stage bound to it runs only for an IP that has failed too often. Authentik subtracts 1 per failed login or
+# identification and keeps the score for AUTHENTIK_REPUTATION__EXPIRY seconds. Each (IP, username) score is
+# limited to -5 by default and the policy adds up the usernames seen from the IP. The default threshold here
+# is far below any sum a real IP reaches, which switches the lock off; the stack sets TAK_IP_LOCK_THRESHOLD
+# (default -5) when authentik.ipLock.enabled is true.
 - model: authentik_policies_reputation.reputationpolicy
   identifiers:
     name: tak-brute-force-protection
   attrs:
     check_ip: true
     check_username: false
-    execution_logging: true
-    threshold: -5
+    execution_logging: false
+    threshold: !Env [TAK_IP_LOCK_THRESHOLD, '-1000000']
+- model: authentik_stages_deny.denystage
+  identifiers:
+    name: tak-ip-lock-deny
+  attrs:
+    deny_message: Too many failed attempts from your network. Try again later.
+- id: binding-ip-lock-auth
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-auth]]
+    stage: !Find [authentik_stages_deny.denystage, [name, tak-ip-lock-deny]]
+    order: 5
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: any
+    re_evaluate_policies: true
 - model: authentik_policies.policybinding
   identifiers:
-    target: !KeyOf 'binding-4'
+    target: !KeyOf 'binding-ip-lock-auth'
     order: 0
     policy: !Find [authentik_policies_reputation.reputationpolicy, [name, tak-brute-force-protection]]
   attrs:
@@ -819,9 +586,27 @@ entries:
     failure_result: false
     negate: false
     timeout: 30
-  conditions:
-  - !Env [TAK_CAPTCHA_SITE_KEY, '']
-  - !Env [TAK_CAPTCHA_SECRET_KEY, '']
+- id: binding-ip-lock-recovery
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_deny.denystage, [name, tak-ip-lock-deny]]
+    order: 5
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: any
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-ip-lock-recovery'
+    order: 0
+    policy: !Find [authentik_policies_reputation.reputationpolicy, [name, tak-brute-force-protection]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
 # True when the flow was NOT restored from a recovery link, so a link issued for a known user skips the
 # identification stage. The upstream expression (bool(is_restored, True)) is always true and never skips.
 - model: authentik_policies_expression.expressionpolicy
@@ -840,27 +625,3 @@ entries:
     failure_result: false
     negate: false
     timeout: 30
-- model: authentik_stages_identification.identificationstage
-  conditions:
-  - !Env [TAK_CAPTCHA_SITE_KEY, '']
-  - !Env [TAK_CAPTCHA_SECRET_KEY, '']
-  identifiers:
-    name: tak-authentication-identification
-  attrs:
-    case_insensitive_matching: true
-    enable_remember_me: false
-    enrollment_flow: !Find [authentik_flows.flow, [slug, tak-enrollment]]
-    password_stage: !Find [authentik_stages_password.passwordstage, [name, default-authentication-password]]
-    passwordless_flow: !Find [authentik_flows.flow, [slug, tak-passkey]]
-    pretend_user_exists: true
-    recovery_flow: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
-    show_matched_user: true
-    show_source_labels: true
-    sources:
-    - !Find [authentik_sources_oauth.oauthsource, [slug, google]]
-    - !Find [authentik_sources_oauth.oauthsource, [slug, apple]]
-    user_fields:
-    - username
-    - email
-    webauthn_stage: !Find [authentik_stages_authenticator_validate.authenticatorvalidatestage, [name, tak-authentication-webauthn]]
-    captcha_stage: !Find [authentik_stages_captcha.captchastage, [name, tak-captcha-stage]]

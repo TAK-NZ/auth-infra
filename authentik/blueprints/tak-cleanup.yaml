@@ -1,0 +1,51 @@
+# Deletes objects that earlier versions of tak-flows.yaml created and that no longer exist in the design:
+# the Google and Apple login sources with their two flows, the email verification stages and the reCAPTCHA
+# stage. A blueprint only creates and updates objects, so removing them from tak-flows.yaml alone leaves
+# them behind on an instance that already has them (and deleting a source also deletes the links that users
+# have to it). On a new instance every entry here is a no-op.
+#
+# Order matters: the sources first (they point at the flows), then the flows, then the stages and the policy.
+# Once every instance has applied this file, it can be deleted from the repository.
+version: 1
+metadata:
+  name: TAK - Cleanup of removed objects
+  labels:
+    blueprints.goauthentik.io/description: |
+      Deletes the social login sources and flows and the captcha stage that earlier versions created.
+entries:
+- model: authentik_sources_oauth.oauthsource
+  state: absent
+  identifiers:
+    slug: google
+- model: authentik_sources_oauth.oauthsource
+  state: absent
+  identifiers:
+    slug: apple
+- model: authentik_flows.flow
+  state: absent
+  identifiers:
+    slug: tak-source-authentication
+- model: authentik_flows.flow
+  state: absent
+  identifiers:
+    slug: tak-source-enrollment-email-verification
+- model: authentik_stages_identification.identificationstage
+  state: absent
+  identifiers:
+    name: tak-identify-by-email
+- model: authentik_stages_email.emailstage
+  state: absent
+  identifiers:
+    name: tak-email-verification-otp
+- model: authentik_stages_user_write.userwritestage
+  state: absent
+  identifiers:
+    name: tak-link-social-provider
+- model: authentik_stages_captcha.captchastage
+  state: absent
+  identifiers:
+    name: tak-captcha-stage
+- model: authentik_policies_expression.expressionpolicy
+  state: absent
+  identifiers:
+    name: tak-require-sso-context

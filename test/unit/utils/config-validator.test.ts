@@ -208,4 +208,28 @@ describe('ConfigValidator', () => {
 
 
   });
+
+  describe('IP lock validation', () => {
+    const withIpLock = (ipLock: unknown) =>
+      ({ ...MOCK_CONFIGS.DEV_TEST, authentik: { ...MOCK_CONFIGS.DEV_TEST.authentik, ipLock } }) as any;
+
+    test('accepts no ipLock block, an empty one and a full one', () => {
+      expect(() => ConfigValidator.validateEnvironmentConfig(withIpLock(undefined), 'dev-test')).not.toThrow();
+      expect(() => ConfigValidator.validateEnvironmentConfig(withIpLock({ enabled: false }), 'dev-test')).not.toThrow();
+      expect(() =>
+        ConfigValidator.validateEnvironmentConfig(withIpLock({ enabled: true, threshold: -5, windowSeconds: 900 }), 'dev-test')
+      ).not.toThrow();
+    });
+
+    test.each([
+      [{ enabled: 'yes' }, 'authentik.ipLock.enabled'],
+      [{ enabled: true, threshold: 0 }, 'authentik.ipLock.threshold'],
+      [{ enabled: true, threshold: -101 }, 'authentik.ipLock.threshold'],
+      [{ enabled: true, threshold: -2.5 }, 'authentik.ipLock.threshold'],
+      [{ enabled: true, windowSeconds: 30 }, 'authentik.ipLock.windowSeconds'],
+      [{ enabled: true, windowSeconds: 90000 }, 'authentik.ipLock.windowSeconds']
+    ])('rejects %j', (ipLock, message) => {
+      expect(() => ConfigValidator.validateEnvironmentConfig(withIpLock(ipLock), 'dev-test')).toThrow(message);
+    });
+  });
 });

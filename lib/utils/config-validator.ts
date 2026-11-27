@@ -75,6 +75,20 @@ export class ConfigValidator {
     if (!authentikConfig.ldapBaseDn) {
       throw new Error('authentik.ldapBaseDn is required');
     }
+    const ipLock = authentikConfig.ipLock;
+    if (ipLock) {
+      if (typeof ipLock.enabled !== 'boolean') {
+        throw new Error('authentik.ipLock.enabled must be true or false');
+      }
+      // Authentik limits each (IP, username) score to -5..5 by default and the policy adds up the usernames
+      // seen from an IP, so a threshold below -5 is reachable only through several usernames
+      if (ipLock.threshold !== undefined && (!Number.isInteger(ipLock.threshold) || ipLock.threshold > -1 || ipLock.threshold < -100)) {
+        throw new Error('authentik.ipLock.threshold must be an integer between -100 and -1');
+      }
+      if (ipLock.windowSeconds !== undefined && (!Number.isInteger(ipLock.windowSeconds) || ipLock.windowSeconds < 60 || ipLock.windowSeconds > 86400)) {
+        throw new Error('authentik.ipLock.windowSeconds must be an integer between 60 and 86400');
+      }
+    }
   }
 
   private static validateWaf(wafConfig: any): void {

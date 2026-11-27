@@ -30,6 +30,12 @@ The LDAP outpost runs its bind flow through this load balancer, so every bind co
 Paths are URL-decoded and normalised before they are matched, so `..` or `%2e%2e` cannot be used to step around
 the exclusion. WAF counts the real connection address here, which a client cannot forge.
 
+## The IP lock depends on this
+The Authentik IP lock (`authentik.ipLock`, see [BLUEPRINTS.md](BLUEPRINTS.md#ip-lock)) keys on the client IP
+that Authentik sees. While a client can send its own `X-Forwarded-For`, it can pick a fresh IP for every
+attempt and the lock does nothing. Turn the lock on only after `forwardingHeaders` is `block`, or after you
+have decided that the clients that send those headers do not matter. The rate rule does not depend on it.
+
 ## Logs and metrics
 - **Metrics** (CloudWatch namespace `AWS/WAFV2`, dimension `Rule`): `Tak<Stack>AuthForwardingHeaders`,
   `Tak<Stack>AuthRateLimitFlowExecutor`, `Tak<Stack>AuthIpReputation`, and `Tak<Stack>AuthWebAcl` for the whole ACL.
