@@ -557,7 +557,7 @@ async function applyLdapBlueprint(authentikHost, adminToken) {
     logWithTimestamp('info', 'Applying LDAP blueprint');
     
     try {
-        const blueprints = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/\`, { method: 'GET', headers });
+        const blueprints = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/?page_size=200\`, { method: 'GET', headers });
         const takLdapBlueprint = blueprints.results.find(bp => bp.path === 'tak/tak-ldap-setup.yaml');
         
         if (takLdapBlueprint) {
@@ -586,7 +586,7 @@ async function applyLdapBlueprint(authentikHost, adminToken) {
 // without the file changing. So every deployment applies these again here, once the new tasks are serving,
 // and fails when one of them does not apply. The branding blueprint applies tak-flows.yaml first (a required
 // meta apply), so it covers both; the cleanup blueprint deletes what the flows no longer use and runs after it.
-const TAK_FLOW_BLUEPRINTS = ['tak/tak-branding-change.yaml', 'tak/tak-cleanup.yaml'];
+const TAK_FLOW_BLUEPRINTS = ['tak/tak-ldap-setup.yaml', 'tak/tak-branding-change.yaml', 'tak/tak-cleanup.yaml'];
 const BLUEPRINT_FILE_WAIT_MS = 5 * 60 * 1000;
 const BLUEPRINT_APPLY_WAIT_MS = 6 * 60 * 1000;
 const BLUEPRINT_APPLY_ATTEMPTS = 3;
@@ -700,7 +700,7 @@ async function triggerLdapBlueprint(authentikHost, adminToken) {
             // Service account missing, find and trigger blueprint
             if (!blueprintInstanceUuid) {
                 try {
-                    const blueprints = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/\`, { method: 'GET', headers });
+                    const blueprints = await fetchJson(\`\${authentikHost}/api/v3/managed/blueprints/?page_size=200\`, { method: 'GET', headers });
                     const takLdapBlueprint = blueprints.results.find(bp => bp.path === 'tak/tak-ldap-setup.yaml');
                     if (takLdapBlueprint) {
                         blueprintInstanceUuid = takLdapBlueprint.pk;

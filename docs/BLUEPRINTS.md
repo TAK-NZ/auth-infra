@@ -9,11 +9,10 @@ Authentik's own discovery is not enough for the login rules. It runs in whicheve
 deployment that is often the old one, which then finds nothing new (the new worker's startup tasks get
 consumed by the draining one, and the next discovery is the hourly run). It also ignores a change that comes
 only from an environment variable. So the Lambda of the `LdapTokenRetriever` custom resource, which runs on
-every deploy, applies `tak-branding-change.yaml` (which applies `tak-flows.yaml` first) and then
-`tak-cleanup.yaml`, waits for each result and fails the deploy when one does not succeed. The custom resource
-depends on the server and worker ECS services, so it starts after the old tasks are gone. If Authentik has not
-registered a file yet, the Lambda creates the blueprint instance. `tak-ldap-setup.yaml` is applied by the same
-Lambda earlier.
+every deploy, applies `tak-ldap-setup.yaml`, `tak-branding-change.yaml` (which applies `tak-flows.yaml`
+first) and then `tak-cleanup.yaml`, waits for each result and fails the deploy when one does not succeed. The
+custom resource depends on the server and worker ECS services, so it starts after the old tasks are gone. If
+Authentik has not registered a file yet, the Lambda creates the blueprint instance.
 `tak-cloudtak-setup.yaml` and `tak-teammanager-setup.yaml` are left to Authentik's own discovery: they need
 objects that other stacks create, and do not apply on an instance without them.
 

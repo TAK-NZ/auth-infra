@@ -104,9 +104,14 @@ describe('LDAP Token Retriever Construct', () => {
       // The code is a template string, so an unescaped backtick or ${ only shows up when it runs.
       expect(() => new Function('require', 'exports', 'module', lambdaCode('SyntaxCheck'))).not.toThrow();
     });
-    test('applies the branding blueprint (which applies the flows first) and then the cleanup blueprint', () => {
+    test('applies the LDAP, branding (which applies the flows first) and cleanup blueprints', () => {
       const code = lambdaCode('Blueprints');
-      expect(code).toContain("const TAK_FLOW_BLUEPRINTS = ['tak/tak-branding-change.yaml', 'tak/tak-cleanup.yaml'];");
+      expect(code).toContain(
+        "const TAK_FLOW_BLUEPRINTS = ['tak/tak-ldap-setup.yaml', 'tak/tak-branding-change.yaml', 'tak/tak-cleanup.yaml'];"
+      );
+      // the blueprint list is paginated (20 by default) and the TAK files are not on the first page
+      expect(code).not.toContain("/api/v3/managed/blueprints/`, { method: 'GET', headers }");
+      expect(code).toContain('/api/v3/managed/blueprints/?page_size=200');
       // the apply call only queues the task, so the Lambda waits for the result and fails on anything but success
       expect(code).toContain("'/api/v3/managed/blueprints/' + instance.pk + '/apply/'");
       expect(code).toContain("current.status !== 'successful'");
