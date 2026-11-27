@@ -67,7 +67,6 @@ entries:
       show_matched_user: true
       user_fields:
       - username
-      - email
     identifiers:
       name: ldap-identification-stage
     model: authentik_stages_identification.identificationstage
