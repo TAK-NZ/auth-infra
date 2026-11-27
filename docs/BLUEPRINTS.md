@@ -11,7 +11,7 @@ redeploy. See [Scoped service accounts](SCOPED_SERVICE_ACCOUNTS.md) for the serv
 | `tak-cloudtak-setup.yaml` | TAK - CloudTAK Service Account Setup | Scoped service account for CloudTAK |
 | `tak-teammanager-setup.yaml` | TAK - TAKTeamManager Service Account Setup | Scoped service account for Team Manager |
 | `tak-flows.yaml` | TAK - Flows and sources | Login, passkey login, password change, user settings, enrollment, recovery and social login flows, with their stages, prompts and policies, and the Google and Apple login sources |
-| `tak-branding-change.yaml` | TAK - Branding change | Default brand: custom CSS, and `tak-auth` as the login flow. Applies `tak-flows.yaml` first |
+| `tak-branding-change.yaml` | TAK - Branding change | Default brand: custom CSS, `tak-auth` as the login flow and `tak-recovery-flow` as the recovery flow. Applies `tak-flows.yaml` first |
 
 ## What is not here
 
@@ -21,7 +21,9 @@ own setup Lambda on every deploy: CloudTAK (`TAK-CloudTAK`, plus the SCIM provid
 and WebTAK in tak-infra (`TAK-WebTAK`). Do not add them as blueprints: two writers on one object overwrite
 each other.
 
-Users, groups, tokens and passwords are data, not configuration. They are not in any blueprint. Moving a
+Users, tokens and passwords are data, not configuration. They are not in any blueprint. The one group in a
+blueprint is the empty `tak-break-glass` group that flow rules refer to; the stack that creates a break-glass
+account adds it to the group. Moving a
 live instance needs a database restore, see [below](#moving-or-recreating-an-instance).
 
 ## tak-flows.yaml
@@ -59,6 +61,14 @@ secret from the provider's developer console for this domain, and enable the sou
 carries the client ID, secret, icon or enabled flag, so those survive every later apply. The callback URL
 to register with Google and Apple is `https://<authentik host>/source/oauth/callback/<slug>/`.
 
+### Recovery links
+`POST /api/v3/core/users/{id}/recovery/` (used by TAK Team Manager to issue a one-time link) only works when the
+default brand has a recovery flow, so `tak-branding-change.yaml` sets `flow_recovery` to `tak-recovery-flow`.
+- `default-recovery-skip-if-restored` passes only when the flow was not restored from a link, so a link issued
+  for a known user skips the identification stage. The upstream expression (`bool(is_restored, True)`) is always
+  true and never skipped it.
+- `tak-recovery-email` has `activate_user_on_success: false`. With `true`, opening any valid link switched a
+  suspended user back to active, even when a later stage then denied the flow.
 ### Left out on purpose
 
 - `default-recovery-*` (a policy and two prompts) are defined here under their existing names. They came from
