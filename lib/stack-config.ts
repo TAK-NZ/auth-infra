@@ -52,6 +52,25 @@ export interface ContextEnvironmentConfig {
      * request-access redirect in the TAK enrollment flow (TAK_TEAM_MANAGER_URL for blueprints).
      */
     teamManagerHostname?: string;
+    /**
+     * Lock a source IP out of the login and recovery flows after repeated failed logins (Authentik
+     * reputation policy plus a deny stage in tak-flows.yaml). Off unless `enabled` is true. Switch it on only
+     * when the client IP can be trusted: Authentik takes the leftmost X-Forwarded-For value, so a client can
+     * choose its own IP until the WAF blocks client-supplied forwarding headers (see docs/WAF.md).
+     */
+    ipLock?: {
+      enabled: boolean;
+      /**
+       * Lock at or below this reputation score. Authentik takes one point per failed login or identification,
+       * and keeps each (IP, username) score between its tenant limits, -5 and 5 by default. The policy adds up
+       * the scores of every username seen from the IP. So -5 means five failures for one username, or five
+       * spread over several, and a threshold below -5 needs failures against at least two usernames.
+       * Defaults to -5.
+       */
+      threshold?: number;
+      /** How long a failure counts, in seconds (AUTHENTIK_REPUTATION__EXPIRY). Defaults to 900. */
+      windowSeconds?: number;
+    };
     useS3AuthentikConfigFile?: boolean;
     /**
      * Enable routing Authentik read queries to the Aurora reader instance/endpoint.

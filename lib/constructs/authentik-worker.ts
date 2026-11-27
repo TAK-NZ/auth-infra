@@ -301,6 +301,15 @@ export class AuthentikWorker extends Construct {
         ...(props.application.teamManagerUrl && {
           TAK_TEAM_MANAGER_URL: props.application.teamManagerUrl,
         }),
+        // Read by tak-flows.yaml: the reputation score at or below which the IP lock denies the login and
+        // recovery flows. Unset keeps the lock off.
+        ...(props.application.ipLockThreshold !== undefined && {
+          TAK_IP_LOCK_THRESHOLD: String(props.application.ipLockThreshold),
+        }),
+        // How long a failed login counts against an IP (Authentik's default is 24 hours).
+        ...(props.application.reputationExpirySeconds !== undefined && {
+          AUTHENTIK_REPUTATION__EXPIRY: String(props.application.reputationExpirySeconds),
+        }),
       },
       secrets: {
         AUTHENTIK_POSTGRESQL__USER: ecs.Secret.fromSecretsManager(props.secrets.database, 'username'),

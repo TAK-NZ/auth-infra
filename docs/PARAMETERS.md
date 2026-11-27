@@ -196,6 +196,9 @@ Use CDK's built-in `--context` flag with **flat parameter names** to override an
 | `branding` | Docker image branding variant | `tak-nz` | `tak-nz` |
 | `authentikVersion` | Authentik version | `2026.8.7` | `2026.8.7` |
 | `outboundEmailServerPort` | Email server port for outbound connections | `587` | `587` |
+| `ipLock.enabled` | Lock a source IP out of the login and recovery flows after repeated failed logins. Switch on only when the client IP can be trusted, see [WAF.md](WAF.md). After changing it, apply the *TAK - Flows and sources* blueprint, see [BLUEPRINTS.md](BLUEPRINTS.md#settings-that-come-from-the-environment) | `false` | `false` |
+| `ipLock.threshold` | Lock at or below this Authentik reputation score: one point per failed login, added up over every username seen from the IP, with each (IP, username) score limited to -5 by Authentik's default tenant settings. -5 locks after five failures; a lower value needs failures against two or more usernames. See [BLUEPRINTS.md](BLUEPRINTS.md#ip-lock) | `-5` | `-5` |
+| `ipLock.windowSeconds` | How long a failure counts (`AUTHENTIK_REPUTATION__EXPIRY`), 60 to 86400. Applied whenever the `ipLock` block exists, enabled or not | `900` | `900` |
 
 ### **ECR Configuration**
 | Parameter | Description | dev-test | prod |

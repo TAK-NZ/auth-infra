@@ -179,6 +179,15 @@ export interface AuthentikApplicationConfig {
    * TAK Team Manager URL, exposed to blueprints as TAK_TEAM_MANAGER_URL
    */
   teamManagerUrl?: string;
+  /**
+   * Reputation score at or below which an IP is locked out of the login and recovery flows, exposed to
+   * blueprints as TAK_IP_LOCK_THRESHOLD. Leave undefined to keep the lock off.
+   */
+  ipLockThreshold?: number;
+  /**
+   * How long a failed login counts against an IP, in seconds (AUTHENTIK_REPUTATION__EXPIRY).
+   */
+  reputationExpirySeconds?: number;
 }
 
 /**
