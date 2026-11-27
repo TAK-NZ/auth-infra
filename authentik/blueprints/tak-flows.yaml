@@ -1049,6 +1049,24 @@ entries:
     re_evaluate_policies: true
 - model: authentik_stages_prompt.prompt
   identifiers:
+    name: tak-readonly-user-settings-field-username
+  attrs:
+    field_key: username
+    initial_value: |-
+      try:
+          return user.username
+      except:
+          return ''
+    initial_value_expression: true
+    label: Username
+    order: 200
+    placeholder: Username
+    placeholder_expression: false
+    required: false
+    sub_text: Your TAK.NZ username
+    type: text_read_only
+- model: authentik_stages_prompt.prompt
+  identifiers:
     name: tak-readonly-user-settings-field-name
   attrs:
     field_key: name
@@ -1076,12 +1094,12 @@ entries:
       except:
           return ''
     initial_value_expression: true
-    label: Email / Username
+    label: Email
     order: 202
     placeholder: Email
     placeholder_expression: false
     required: false
-    sub_text: Your Email address / TAK.NZ username
+    sub_text: ''
     type: text_read_only
 - model: authentik_policies_expression.expressionpolicy
   identifiers:
@@ -1116,6 +1134,7 @@ entries:
     name: tak-user-settings
   attrs:
     fields:
+    - !Find [authentik_stages_prompt.prompt, [name, tak-readonly-user-settings-field-username]]
     - !Find [authentik_stages_prompt.prompt, [name, tak-readonly-user-settings-field-name]]
     - !Find [authentik_stages_prompt.prompt, [name, tak-readonly-user-settings-field-email]]
     validation_policies:

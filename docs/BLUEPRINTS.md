@@ -23,7 +23,7 @@ objects that other stacks create, and do not apply on an instance without them.
 | `tak-teammanager-setup.yaml` | TAK - TAKTeamManager Service Account Setup | Scoped service account for Team Manager |
 | `tak-flows.yaml` | TAK - Flows and sources | Login, passkey login, password change, user settings, enrollment and recovery flows, with their stages, prompts and policies, the MFA rules, the password policy and the IP lock on the login and recovery flows. The name predates the removal of the social login sources and stays, because other blueprints refer to it |
 | `tak-cleanup.yaml` | TAK - Cleanup of removed objects | Deletes objects that earlier versions created (the Google and Apple sources and their flows, the captcha stage, the administrator-only MFA stage, the second passkey flow `tak-passwordless-flow`, the flow `tak-password-change`). Can be deleted once every instance has applied it |
-| `tak-branding-change.yaml` | TAK - Branding change | Default brand: custom CSS (passkey button label, hidden Connected services tab), `tak-auth` as the login flow and `tak-recovery-flow` as the recovery flow. Applies `tak-flows.yaml` first |
+| `tak-branding-change.yaml` | TAK - Branding change | Default brand: custom CSS (passkey button label, hidden Connected services tab and Save button), the user settings flow, English as the language, `tak-auth` as the login flow and `tak-recovery-flow` as the recovery flow. Applies `tak-flows.yaml` first |
 
 ## What is not here
 
@@ -168,9 +168,12 @@ default brand has a recovery flow, so `tak-branding-change.yaml` sets `flow_reco
   because a change to `default-authentication-password` is reset whenever Authentik applies its own blueprint.
   The three authenticator setup stages are the other exception: they are renamed and tightened in place, and
   the deploy applies this file again after Authentik applies the default ones.
-- The user settings flow is still `default-user-settings-flow`, which the default brand names. `tak-user-settings`
-  (which makes name and email read-only) is defined here but no brand uses it. The tenant settings
-  (*default user change name, email and username*) are off, which has the same effect.
+- User settings > User details is the flow `tak-user-settings`, which `tak-branding-change.yaml` sets on the
+  default brand. It shows username, name and email as read-only fields and has no locale field. The tenant
+  settings (*default user change name, email and username*) are off as well, and the validation policy
+  `tak-user-settings-authorization` refuses a changed value. The brand CSS hides the Save button of that page
+  (`ak-user-stage-prompt` is the stage element of the user settings only, so no other flow is affected), and
+  the brand attribute `settings.locale` is `en`, so the interface is in English whatever the browser asks for.
 - Four unused prompt fields (`tak-user-settings-field-region`, `-color`, `-callsign`, `-role`) and the stage
   `tak-oauth-user-login` exist in Demo but belong to no flow. They are not in the blueprint and can be deleted
   in the UI.

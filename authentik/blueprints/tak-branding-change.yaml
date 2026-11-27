@@ -3,7 +3,7 @@ metadata:
   name: TAK - Branding change
   labels:
     blueprints.goauthentik.io/description: |
-      This blueprint updates the default brand: custom CSS, the TAK login flow and the TAK recovery flow (from tak-flows.yaml).
+      This blueprint updates the default brand: custom CSS, the TAK login flow, recovery flow and user settings flow (from tak-flows.yaml), and the interface language.
 entries:
 - model: authentik_blueprints.metaapplyblueprint
   attrs:
@@ -19,6 +19,12 @@ entries:
     default: true
     flow_authentication: !Find [authentik_flows.flow, [slug, tak-auth]]
     flow_recovery: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    # User settings > User details: username, name and email are shown read-only (see tak-user-settings)
+    flow_user_settings: !Find [authentik_flows.flow, [slug, tak-user-settings]]
+    # Interface language: English for everybody (the locale selector is not offered)
+    attributes:
+      settings:
+        locale: en
     branding_custom_css: |
       ak-flow-executor::part(locale-select) {
         display: none;
@@ -62,6 +68,11 @@ entries:
       /* User settings: hide the "Connected services" tab. There is no source a user can connect (the social
          login sources are removed). The brand CSS reaches the tab bar's shadow root, which is where the tab is. */
       li.pf-c-tabs__item:has(> #page-sources-tab) {
+          display: none !important;
+      }
+      /* User settings > User details: nothing can be saved, so hide the Save button. The user settings use their
+         own stage element, ak-user-stage-prompt, so the login and recovery flows are not affected. */
+      :host(ak-user-stage-prompt) .pf-c-form__group.pf-m-action {
           display: none !important;
       }
       /* Ensures the footer link content stays centered and aligned */

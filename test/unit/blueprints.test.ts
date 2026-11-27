@@ -63,6 +63,32 @@ describe('recovery flow prerequisites (tak-flows.yaml, tak-branding-change.yaml)
     const css = String(brand.attrs?.branding_custom_css).replace(/\s+/g, ' ');
     expect(css).toContain('li.pf-c-tabs__item:has(> #page-sources-tab) { display: none !important; }');
   });
+  test('the user settings flow is the TAK one, in English, and has no Save button', () => {
+    const brand = entry(branding, 'authentik_brands.brand', { domain: 'authentik-default' });
+    expect(brand.attrs?.flow_user_settings).toEqual(['authentik_flows.flow', ['slug', 'tak-user-settings']]);
+    expect(brand.attrs?.attributes).toEqual({ settings: { locale: 'en' } });
+    const css = String(brand.attrs?.branding_custom_css).replace(/\s+/g, ' ');
+    // :host(...) limits the rule to the user settings stage, so the login and recovery flows keep their buttons
+    expect(css).toContain(':host(ak-user-stage-prompt) .pf-c-form__group.pf-m-action { display: none !important; }');
+  });
+  test('User details shows username, name and email, all read-only, and no locale', () => {
+    const stage = entry(flows, 'authentik_stages_prompt.promptstage', { name: 'tak-user-settings' });
+    const fields = (stage.attrs?.fields as unknown[][]).map((f) => (f[1] as string[])[1]);
+    expect(fields).toEqual([
+      'tak-readonly-user-settings-field-username',
+      'tak-readonly-user-settings-field-name',
+      'tak-readonly-user-settings-field-email'
+    ]);
+    for (const name of fields) {
+      const prompt = entry(flows, 'authentik_stages_prompt.prompt', { name });
+      expect(prompt.attrs?.type).toBe('text_read_only');
+    }
+    expect(fields.map((f) => entry(flows, 'authentik_stages_prompt.prompt', { name: f }).attrs?.field_key)).toEqual([
+      'username',
+      'name',
+      'email'
+    ]);
+  });
   test('the skip-if-restored policy passes only when the flow was not restored', () => {
     // The upstream expression, bool(is_restored, True), is always true and never skips the stage.
     const policy = entry(flows, 'authentik_policies_expression.expressionpolicy', {
