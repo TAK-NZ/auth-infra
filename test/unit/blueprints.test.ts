@@ -58,6 +58,11 @@ describe('recovery flow prerequisites (tak-flows.yaml, tak-branding-change.yaml)
     expect(brand.attrs?.flow_recovery).toEqual(['authentik_flows.flow', ['slug', 'tak-recovery-flow']]);
   });
 
+  test('the brand CSS hides the Connected services tab of the user settings', () => {
+    const brand = entry(branding, 'authentik_brands.brand', { domain: 'authentik-default' });
+    const css = String(brand.attrs?.branding_custom_css).replace(/\s+/g, ' ');
+    expect(css).toContain('li.pf-c-tabs__item:has(> #page-sources-tab) { display: none !important; }');
+  });
   test('the skip-if-restored policy passes only when the flow was not restored', () => {
     // The upstream expression, bool(is_restored, True), is always true and never skips the stage.
     const policy = entry(flows, 'authentik_policies_expression.expressionpolicy', {

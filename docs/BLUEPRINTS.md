@@ -23,7 +23,7 @@ objects that other stacks create, and do not apply on an instance without them.
 | `tak-teammanager-setup.yaml` | TAK - TAKTeamManager Service Account Setup | Scoped service account for Team Manager |
 | `tak-flows.yaml` | TAK - Flows and sources | Login, passkey login, password change, user settings, enrollment and recovery flows, with their stages, prompts and policies, the MFA rules, the password policy and the IP lock on the login and recovery flows. The name predates the removal of the social login sources and stays, because other blueprints refer to it |
 | `tak-cleanup.yaml` | TAK - Cleanup of removed objects | Deletes objects that earlier versions created (the Google and Apple sources and their flows, the captcha stage, the administrator-only MFA stage, the second passkey flow `tak-passwordless-flow`, the flow `tak-password-change`). Can be deleted once every instance has applied it |
-| `tak-branding-change.yaml` | TAK - Branding change | Default brand: custom CSS, `tak-auth` as the login flow and `tak-recovery-flow` as the recovery flow. Applies `tak-flows.yaml` first |
+| `tak-branding-change.yaml` | TAK - Branding change | Default brand: custom CSS (passkey button label, hidden Connected services tab), `tak-auth` as the login flow and `tak-recovery-flow` as the recovery flow. Applies `tak-flows.yaml` first |
 
 ## What is not here
 
