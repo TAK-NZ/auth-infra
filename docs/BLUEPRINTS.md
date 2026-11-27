@@ -95,8 +95,9 @@ trustworthy, so enable it after the WAF rule for client-supplied forwarding head
 ### MFA
 Every human ends a web login with at least two authenticators, at least one of them a passkey or an
 authenticator app. Recovery codes count as the second authenticator, as one authenticator however many codes
-there are, and only while unused codes are left. Administrators (members of a group with superuser rights) hold
-two passkeys and are never offered recovery codes. SMS, email codes and Duo are not offered. Members of the
+there are, and only while unused codes are left. Administrators (members of a group with superuser rights) hold at
+least one passkey, which is all their login accepts, and at least two authenticators in all: the second is the
+recovery codes, which no login or recovery check accepts from an administrator. SMS, email codes and Duo are not offered. Members of the
 `tak-break-glass` group cannot sign in on the web at all. The rules are checked at every login, so an account
 that has fewer authenticators (an older account, or a device that was removed) is sent to enrol before it
 gets a session.
@@ -105,17 +106,20 @@ gets a session.
 |---|---|---|
 | 15 | `tak-authentication-break-glass-deny` | members of `tak-break-glass` |
 | 20 | `tak-authentication-mfa-validation-user` (passkey, authenticator app or recovery code) | an ordinary user with any authenticator |
+| 21 | `tak-authentication-mfa-validation-admin-fallback` (authenticator app or recovery code) | an administrator who has authenticators but no passkey: a password alone does not add a passkey to such an account |
 | 22 | `tak-authentication-mfa-validation-admin` (passkey; enrols the first one if there is none) | an administrator |
-| 25 | the passkey setup stage | an administrator with fewer than two passkeys |
+| 25 | the passkey setup stage (retired: asks only when there is no passkey, which 22 has dealt with) | an administrator |
 | 30 | `tak-authentication-mfa-enrol` (passkey or authenticator app) | an ordinary user with no passkey and no authenticator app |
 | 40 | the recovery code setup stage | an ordinary user with fewer than two authenticators |
+| 41 | the recovery code setup stage | an administrator with fewer than two authenticators |
 | 100 | `tak-authentication-login` | everybody |
-An administrator needs two passkeys. Authentik asks the browser to register a passkey without listing the ones that
-already exist, so a passkey made again on the same device or password manager **replaces** the first one: the
-account would hold two records and one working passkey. A screen in front of every second-passkey registration
-(`tak-admin-passkey-intro`, orders 24 in `tak-auth`, 13 in `tak-passkey`, 51 and 53 in `tak-recovery-flow`) tells the
-administrator to use a different device or a security key. Nothing enforces it; only upstream could (by sending the
-existing credential ids as excluded).
+An administrator needs one passkey and one more authenticator, which is the recovery codes. It used to need two
+passkeys, but Authentik asks the browser to register a passkey without listing the ones that already exist, so a
+second passkey made on the same device or password manager **replaces** the first one: the account would hold two
+records and one working passkey. The bindings that asked for a second passkey stay (a blueprint cannot delete a
+binding), and an extra policy, `tak-mfa-has-no-passkey`, limits them to an administrator who has none. A screen
+(`tak-admin-passkey-intro`, orders 24 in `tak-auth`, 13 in `tak-passkey`, 51 and 53 in `tak-recovery-flow`) says what
+the registration is for.
 `tak-passkey` (the passkey button and passkey autofill on the login page) applies the same rules at orders 12,
 14 and 16 before its login stage at 20, because a passkey login there never visits `tak-auth`. The stages at
 15 to 40 are bound with policy engine mode *all*, to the policies `tak-mfa-is-admin`, `tak-mfa-is-break-glass`,
