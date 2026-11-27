@@ -7,6 +7,9 @@
  * Context-based configuration interface matching cdk.context.json structure
  * This is used directly by the stack without complex transformations
  */
+/** What a WAF rule does with a matching request */
+export type WafAction = 'count' | 'block';
+
 export interface ContextEnvironmentConfig {
   stackName: string;
   database: {
@@ -69,6 +72,37 @@ export interface ContextEnvironmentConfig {
     removalPolicy: string;
     enableDetailedLogging: boolean;
     enableContainerInsights: boolean;
+  };
+  /**
+   * AWS WAF on the Authentik load balancer. Optional: without it (or with enabled false) no web ACL is
+   * created. Every rule can run as `count` first (metrics and logs only) and be switched to `block`
+   * once the counts look right.
+   */
+  waf?: {
+    enabled: boolean;
+    /**
+     * Requests that already carry X-Forwarded-For, X-Real-IP or Forwarded. Authentik takes the leftmost
+     * X-Forwarded-For value as the client IP, so a client-supplied one lets any client choose its IP.
+     * Defaults to `count`. Block it only after checking the counts: proxies that add the header to
+     * HTTPS traffic (for example TLS-inspecting gateways) would be blocked too.
+     */
+    forwardingHeaders?: WafAction;
+    /**
+     * Rate limit per source IP on the flow executor API (the LDAP flow is excluded).
+     * Defaults to 300 requests per 5 minutes and `count`.
+     */
+    rateLimit?: {
+      requestsPer5Minutes?: number;
+      action?: WafAction;
+    };
+    /**
+     * AWS managed IP reputation list. Defaults to `count`.
+     */
+    ipReputation?: WafAction;
+    /**
+     * Retention of the CloudWatch log group that holds matched requests. Defaults to 30.
+     */
+    logRetentionDays?: number;
   };
   docker?: {
     authentikImageTag?: string;

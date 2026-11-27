@@ -7,6 +7,7 @@ export class ConfigValidator {
 
     this.validateEcs(config.ecs);
     this.validateAuthentik(config.authentik);
+    this.validateWaf(config.waf);
     this.validateEnvironmentConstraints(config, environment);
   }
 
@@ -73,6 +74,32 @@ export class ConfigValidator {
     }
     if (!authentikConfig.ldapBaseDn) {
       throw new Error('authentik.ldapBaseDn is required');
+    }
+  }
+
+  private static validateWaf(wafConfig: any): void {
+    if (!wafConfig || !wafConfig.enabled) {
+      return;
+    }
+    const actions = ['count', 'block'];
+    for (const [key, value] of [
+      ['waf.forwardingHeaders', wafConfig.forwardingHeaders],
+      ['waf.rateLimit.action', wafConfig.rateLimit?.action],
+      ['waf.ipReputation', wafConfig.ipReputation]
+    ]) {
+      if (value !== undefined && !actions.includes(value as string)) {
+        throw new Error(`${key} must be 'count' or 'block'`);
+      }
+    }
+    const limit = wafConfig.rateLimit?.requestsPer5Minutes;
+    // AWS WAF rate-based rules accept 10 to 2,000,000,000
+    if (limit !== undefined && (!Number.isInteger(limit) || limit < 10 || limit > 2000000000)) {
+      throw new Error('waf.rateLimit.requestsPer5Minutes must be an integer between 10 and 2000000000');
+    }
+    const retention = wafConfig.logRetentionDays;
+    const validRetention = [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653];
+    if (retention !== undefined && !validRetention.includes(retention)) {
+      throw new Error(`waf.logRetentionDays must be a CloudWatch Logs retention value (${validRetention.join(', ')})`);
     }
   }
 

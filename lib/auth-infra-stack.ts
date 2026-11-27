@@ -15,6 +15,7 @@ import { Efs } from './constructs/efs';
 import { SecretsManager } from './constructs/secrets-manager';
 import { SecurityGroups } from './constructs/security-groups';
 import { Elb } from './constructs/elb';
+import { AuthWaf } from './constructs/waf';
 import { AuthentikServer } from './constructs/authentik-server';
 import { AuthentikWorker } from './constructs/authentik-worker';
 import { Ldap } from './constructs/ldap';
@@ -171,6 +172,16 @@ export class AuthInfraStack extends cdk.Stack {
       network: authentikNetworkConfig
     });
 
+    // AWS WAF on the load balancer (optional, see waf in cdk.json)
+    const authentikWaf = envConfig.waf?.enabled
+      ? new AuthWaf(this, 'AuthentikWaf', { contextConfig: envConfig, loadBalancer: authentikELB.loadBalancer })
+      : undefined;
+    if (authentikWaf) {
+      new CfnOutput(this, 'WafWebAclArnOutput', {
+        value: authentikWaf.webAcl.attrArn,
+        description: 'AWS WAF web ACL on the Authentik load balancer'
+      });
+    }
     // =================
     // SECURITY GROUPS
     // =================

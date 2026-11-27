@@ -69,6 +69,16 @@
         "removalPolicy": "DESTROY",
         "enableDetailedLogging": true,
         "enableContainerInsights": false
+      },
+      "waf": {
+        "enabled": true,
+        "forwardingHeaders": "count",
+        "rateLimit": {
+          "requestsPer5Minutes": 300,
+          "action": "count"
+        },
+        "ipReputation": "count",
+        "logRetentionDays": 30
       }
     },
     "prod": {
@@ -123,6 +133,16 @@
         "removalPolicy": "RETAIN",
         "enableDetailedLogging": false,
         "enableContainerInsights": true
+      },
+      "waf": {
+        "enabled": true,
+        "forwardingHeaders": "count",
+        "rateLimit": {
+          "requestsPer5Minutes": 300,
+          "action": "count"
+        },
+        "ipReputation": "count",
+        "logRetentionDays": 90
       }
     },
     "tak-defaults": {
