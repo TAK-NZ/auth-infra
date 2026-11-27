@@ -465,16 +465,60 @@ describe('activation and recovery flow (tak-flows.yaml)', () => {
       [10, 'tak-recovery-identification', ['default-recovery-skip-if-restored']],
       [20, 'tak-recovery-email', []],
       [22, 'tak-recovery-deny', ['tak-recovery-user-inactive', 'tak-mfa-is-break-glass', 'tak-recovery-not-activatable']],
+      [25, 'tak-recovery-verify-intro', ['tak-mfa-has-authenticator']],
       [26, 'tak-recovery-validate-user', ['not tak-mfa-is-admin', 'tak-mfa-has-authenticator']],
       [27, 'tak-recovery-validate-admin', ['tak-mfa-is-admin', 'tak-mfa-has-authenticator']],
       [30, 'Change your password', []],
       [40, 'tak-recovery-user-write', []],
+      [45, 'tak-recovery-enrol-intro', ['tak-mfa-needs-enrolment']],
       [50, 'tak-authentication-mfa-enrol', ['not tak-mfa-is-admin', 'not tak-mfa-has-passkey-or-app']],
       [52, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
       [54, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys']],
       [60, 'default-authenticator-static-setup', ['not tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
+      [90, 'tak-recovery-finished', []],
       [100, 'tak-recovery-done', []]
     ]);
+  });
+  test('every screen of the flow says what it is for', () => {
+    // The flow title is the same for activation and recovery, so it must fit both.
+    const flow = entry(flows, 'authentik_flows.flow', { slug: 'tak-recovery-flow' });
+    expect(flow.attrs?.title).toBe('Your TAK.NZ account');
+    // Authentik's own stages (authenticator choice, passkey registration, recovery codes) have no text of their own.
+    // Prompt stages with static text stand in front of them, and the password prompt has a heading and a description.
+    const fieldsOf = (stageName: string) =>
+      (entry(flows, 'authentik_stages_prompt.promptstage', { name: stageName }).attrs?.fields as unknown[][]).map(
+        (f) => (f[1] as string[])[1]
+      );
+    const screens: Record<string, string[]> = {
+      'tak-recovery-verify-intro': ['tak-recovery-verify-heading', 'tak-recovery-verify-text'],
+      'Change your password': [
+        'tak-recovery-password-heading',
+        'tak-recovery-password-text',
+        'default-recovery-field-password',
+        'default-recovery-field-password-repeat'
+      ],
+      'tak-recovery-enrol-intro': ['tak-recovery-enrol-heading', 'tak-recovery-enrol-text'],
+      'tak-recovery-finished': ['tak-recovery-finished-heading', 'tak-recovery-finished-text']
+    };
+    for (const [stage, fields] of Object.entries(screens)) {
+      expect(fieldsOf(stage)).toEqual(fields);
+      for (const f of fields.filter((x) => x.startsWith('tak-recovery-'))) {
+        const prompt = entry(flows, 'authentik_stages_prompt.prompt', { name: f });
+        expect(prompt.attrs?.type).toBe('static');
+        expect(String(prompt.attrs?.initial_value).length).toBeGreaterThan(10);
+      }
+    }
+    // the text that depends on the user is an expression, the rest is fixed
+    for (const f of ['tak-recovery-password-heading', 'tak-recovery-password-text', 'tak-recovery-verify-text', 'tak-recovery-enrol-text']) {
+      expect(entry(flows, 'authentik_stages_prompt.prompt', { name: f }).attrs?.initial_value_expression).toBe(true);
+    }
+    // a heading never ends up under a field that is defined later in the file than the stage that uses it
+    const position = (model: string, name: string) => flows.findIndex((e) => e.model === model && e.identifiers?.name === name);
+    for (const stage of Object.keys(screens)) {
+      for (const f of fieldsOf(stage)) {
+        expect(position('authentik_stages_prompt.prompt', f)).toBeLessThan(position('authentik_stages_prompt.promptstage', stage));
+      }
+    }
   });
   test('the refusal runs when ANY of its conditions holds, the other MFA bindings need ALL of theirs', () => {
     const modes = Object.fromEntries(bindings.map((b) => [b.stage + b.order, b.entry.attrs?.policy_engine_mode]));

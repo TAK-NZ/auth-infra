@@ -139,11 +139,20 @@ time, 7 days ahead) when it sends the link. After the identified user:
 | Order | Stage | Runs for |
 |---|---|---|
 | 22 | `tak-recovery-deny` | an inactive account, a member of `tak-break-glass`, or an account with no authenticator and no open activation window |
+| 25 | `tak-recovery-verify-intro`, a screen "Confirm it is you" | a user with an authenticator |
 | 26 | `tak-recovery-validate-user` (passkey, authenticator app or recovery code) | an ordinary user with an authenticator |
 | 27 | `tak-recovery-validate-admin` (passkey) | an administrator with an authenticator; one with none of its own passkeys is refused and needs an administrator reset |
 | 30, 40 | new password (with `tak-password-policy`) and write | everybody |
+| 45 | `tak-recovery-enrol-intro`, a screen "Add a second step to your sign-in" | a user who still has to enrol (policy `tak-mfa-needs-enrolment`) |
 | 50 to 60 | the enrolment stages and rules of `tak-auth` | a user with fewer than two authenticators (a first activation) |
+| 90 | `tak-recovery-finished`, a screen "Your password is saved" | everybody |
 | 100 | `tak-recovery-done`, a redirect to `/` | everybody |
+The flow title is "Your TAK.NZ account", because one flow serves activation and recovery. Authentik's own stages (the
+choice of an authenticator, the passkey registration, the recovery codes) carry no explanation and their text cannot
+be changed from a blueprint. So the password screen has a heading and a description (which differ for a first
+activation, an administrator and a recovery), and the three screens above are prompt stages that hold only static
+text, placed in front of or after those stages. Static prompt fields accept HTML and, with `initial_value_expression`,
+a Python expression that sees the identified user as `user`. They need a non-blank label.
 A user who already has an authenticator proves possession of one **before** the new password prompt, so an email
 link alone cannot reset a password (NZISM 16.1.36). The flow has no login stage: the user ends at the login page
 and signs in under the rules of `tak-auth`, so there is no session after an email link. An account that has no

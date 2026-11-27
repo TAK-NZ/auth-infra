@@ -139,7 +139,7 @@ entries:
     layout: stacked
     name: TAK recovery flow
     policy_engine_mode: any
-    title: Reset your password
+    title: Your TAK.NZ account
 - model: authentik_flows.flow
   identifiers:
     slug: tak-user-settings
@@ -1185,11 +1185,61 @@ entries:
     required: true
     sub_text: ''
     type: password
+- model: authentik_stages_prompt.prompt
+  identifiers:
+    name: tak-recovery-password-heading
+  attrs:
+    field_key: tak_recovery_password_heading
+    initial_value: |-
+      if ak_user_has_authenticator(user):
+          return '<strong>Choose a new password</strong>'
+      return '<strong>Welcome to TAK.NZ. Choose a password</strong>'
+    initial_value_expression: true
+    label: Information
+    order: -2
+    placeholder: ''
+    placeholder_expression: false
+    required: false
+    sub_text: ''
+    type: static
+- model: authentik_stages_prompt.prompt
+  identifiers:
+    name: tak-recovery-password-text
+  attrs:
+    field_key: tak_recovery_password_text
+    initial_value: |-
+      from authentik.stages.authenticator_static.models import StaticToken
+      from authentik.stages.authenticator_totp.models import TOTPDevice
+      from authentik.stages.authenticator_webauthn.models import WebAuthnDevice
+      passkeys = WebAuthnDevice.objects.filter(user=user, confirmed=True).count()
+      apps = TOTPDevice.objects.filter(user=user, confirmed=True).count()
+      codes = StaticToken.objects.filter(device__user=user, device__confirmed=True).exists()
+      if user.is_superuser:
+          needs_enrolment = passkeys < 2
+      else:
+          needs_enrolment = (passkeys + apps == 0) or (passkeys + apps + (1 if codes else 0) < 2)
+
+      text = 'Use at least 16 characters. A sentence or a few unrelated words work well, and are easier to remember than symbols.'
+      if not needs_enrolment:
+          return text + ' Afterwards you go to the login page.'
+      if user.is_superuser:
+          return text + ' Next you add two passkeys, for example one on your phone and one on a security key.'
+      return text + ' Next you add a passkey or an authenticator app, and save your recovery codes.'
+    initial_value_expression: true
+    label: Information
+    order: -1
+    placeholder: ''
+    placeholder_expression: false
+    required: false
+    sub_text: ''
+    type: static
 - model: authentik_stages_prompt.promptstage
   identifiers:
     name: Change your password
   attrs:
     fields:
+    - !Find [authentik_stages_prompt.prompt, [name, tak-recovery-password-heading]]
+    - !Find [authentik_stages_prompt.prompt, [name, tak-recovery-password-text]]
     - !Find [authentik_stages_prompt.prompt, [name, default-recovery-field-password]]
     - !Find [authentik_stages_prompt.prompt, [name, default-recovery-field-password-repeat]]
     validation_policies:
@@ -1617,6 +1667,206 @@ entries:
     failure_result: false
     negate: false
     timeout: 30
+# Screens of the recovery flow that tell the user what is going on. Authentik's own stages (the choice of an
+# authenticator, the passkey registration, the recovery codes) carry no explanation, so a prompt stage with only
+# static text goes in front of them, and the password screen has a heading and a description of its own. The
+# static fields accept HTML and, with initial_value_expression, a Python expression for the identified user.
+- model: authentik_policies_expression.expressionpolicy
+  identifiers:
+    name: tak-mfa-needs-enrolment
+  attrs:
+    execution_logging: false
+    expression: |-
+      user = request.user
+      from authentik.stages.authenticator_static.models import StaticToken
+      from authentik.stages.authenticator_totp.models import TOTPDevice
+      from authentik.stages.authenticator_webauthn.models import WebAuthnDevice
+      passkeys = WebAuthnDevice.objects.filter(user=user, confirmed=True).count()
+      apps = TOTPDevice.objects.filter(user=user, confirmed=True).count()
+      codes = StaticToken.objects.filter(device__user=user, device__confirmed=True).exists()
+      if user.is_superuser:
+          needs_enrolment = passkeys < 2
+      else:
+          needs_enrolment = (passkeys + apps == 0) or (passkeys + apps + (1 if codes else 0) < 2)
+      return needs_enrolment
+- model: authentik_stages_prompt.prompt
+  identifiers:
+    name: tak-recovery-verify-heading
+  attrs:
+    field_key: tak_recovery_verify_heading
+    initial_value: '<strong>Confirm it is you</strong>'
+    initial_value_expression: false
+    label: Information
+    order: 0
+    placeholder: ''
+    placeholder_expression: false
+    required: false
+    sub_text: ''
+    type: static
+- model: authentik_stages_prompt.prompt
+  identifiers:
+    name: tak-recovery-verify-text
+  attrs:
+    field_key: tak_recovery_verify_text
+    initial_value: |-
+      if user.is_superuser:
+          return 'Use one of your passkeys. When it is confirmed you can choose a new password.'
+      return 'Use a passkey, an authenticator app or a recovery code. When it is confirmed you can choose a new password.'
+    initial_value_expression: true
+    label: Information
+    order: 1
+    placeholder: ''
+    placeholder_expression: false
+    required: false
+    sub_text: ''
+    type: static
+- model: authentik_stages_prompt.promptstage
+  identifiers:
+    name: tak-recovery-verify-intro
+  attrs:
+    fields:
+    - !Find [authentik_stages_prompt.prompt, [name, tak-recovery-verify-heading]]
+    - !Find [authentik_stages_prompt.prompt, [name, tak-recovery-verify-text]]
+    validation_policies: []
+- model: authentik_stages_prompt.prompt
+  identifiers:
+    name: tak-recovery-enrol-heading
+  attrs:
+    field_key: tak_recovery_enrol_heading
+    initial_value: '<strong>Add a second step to your sign-in</strong>'
+    initial_value_expression: false
+    label: Information
+    order: 0
+    placeholder: ''
+    placeholder_expression: false
+    required: false
+    sub_text: ''
+    type: static
+- model: authentik_stages_prompt.prompt
+  identifiers:
+    name: tak-recovery-enrol-text
+  attrs:
+    field_key: tak_recovery_enrol_text
+    initial_value: |-
+      from authentik.stages.authenticator_static.models import StaticToken
+      from authentik.stages.authenticator_totp.models import TOTPDevice
+      from authentik.stages.authenticator_webauthn.models import WebAuthnDevice
+      passkeys = WebAuthnDevice.objects.filter(user=user, confirmed=True).count()
+      apps = TOTPDevice.objects.filter(user=user, confirmed=True).count()
+      codes = StaticToken.objects.filter(device__user=user, device__confirmed=True).exists()
+      if user.is_superuser:
+          needs_enrolment = passkeys < 2
+      else:
+          needs_enrolment = (passkeys + apps == 0) or (passkeys + apps + (1 if codes else 0) < 2)
+
+      if user.is_superuser:
+          return 'Administrators sign in with a passkey. Add two, for example one on your phone and one on a security key, so that you still get in if you lose one.'
+      return 'A password alone is not enough to sign in. Choose a passkey (it uses your fingerprint, face or device PIN) or an authenticator app, then save the recovery codes you are shown. You can add more in your account settings later.'
+    initial_value_expression: true
+    label: Information
+    order: 1
+    placeholder: ''
+    placeholder_expression: false
+    required: false
+    sub_text: ''
+    type: static
+- model: authentik_stages_prompt.promptstage
+  identifiers:
+    name: tak-recovery-enrol-intro
+  attrs:
+    fields:
+    - !Find [authentik_stages_prompt.prompt, [name, tak-recovery-enrol-heading]]
+    - !Find [authentik_stages_prompt.prompt, [name, tak-recovery-enrol-text]]
+    validation_policies: []
+- model: authentik_stages_prompt.prompt
+  identifiers:
+    name: tak-recovery-finished-heading
+  attrs:
+    field_key: tak_recovery_finished_heading
+    initial_value: '<strong>Your password is saved</strong>'
+    initial_value_expression: false
+    label: Information
+    order: 0
+    placeholder: ''
+    placeholder_expression: false
+    required: false
+    sub_text: ''
+    type: static
+- model: authentik_stages_prompt.prompt
+  identifiers:
+    name: tak-recovery-finished-text
+  attrs:
+    field_key: tak_recovery_finished_text
+    initial_value: 'Continue to the login page and sign in with your password and your passkey, authenticator app or a recovery code.'
+    initial_value_expression: false
+    label: Information
+    order: 1
+    placeholder: ''
+    placeholder_expression: false
+    required: false
+    sub_text: ''
+    type: static
+- model: authentik_stages_prompt.promptstage
+  identifiers:
+    name: tak-recovery-finished
+  attrs:
+    fields:
+    - !Find [authentik_stages_prompt.prompt, [name, tak-recovery-finished-heading]]
+    - !Find [authentik_stages_prompt.prompt, [name, tak-recovery-finished-text]]
+    validation_policies: []
+- id: binding-recovery-verify-intro
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_prompt.promptstage, [name, tak-recovery-verify-intro]]
+    order: 25
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-verify-intro'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-authenticator]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- id: binding-recovery-enrol-intro
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_prompt.promptstage, [name, tak-recovery-enrol-intro]]
+    order: 45
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-enrol-intro'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-needs-enrolment]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- id: binding-recovery-finished
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_prompt.promptstage, [name, tak-recovery-finished]]
+    order: 90
+  attrs:
+    evaluate_on_plan: true
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: false
 - model: authentik_flows.flowstagebinding
   identifiers:
     target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
