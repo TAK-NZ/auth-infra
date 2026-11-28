@@ -108,7 +108,6 @@ gets a session.
 | 20 | `tak-authentication-mfa-validation-user` (passkey, authenticator app or recovery code) | an ordinary user with any authenticator |
 | 21 | `tak-authentication-mfa-validation-admin-fallback` (authenticator app or recovery code) | an administrator who has authenticators but no passkey: a password alone does not add a passkey to such an account |
 | 22 | `tak-authentication-mfa-validation-admin` (passkey; enrols the first one if there is none) | an administrator |
-| 25 | the passkey setup stage (retired: asks only when there is no passkey, which 22 has dealt with) | an administrator |
 | 30 | `tak-authentication-mfa-enrol` (passkey or authenticator app) | an ordinary user with no passkey and no authenticator app |
 | 40 | the recovery code setup stage | an ordinary user with fewer than two authenticators |
 | 41 | the recovery code setup stage | an administrator with fewer than two authenticators |
@@ -116,10 +115,17 @@ gets a session.
 An administrator needs one passkey and one more authenticator, which is the recovery codes. It used to need two
 passkeys, but Authentik asks the browser to register a passkey without listing the ones that already exist, so a
 second passkey made on the same device or password manager **replaces** the first one: the account would hold two
-records and one working passkey. The bindings that asked for a second passkey stay (a blueprint cannot delete a
-binding), and an extra policy, `tak-mfa-has-no-passkey`, limits them to an administrator who has none. A screen
-(`tak-admin-passkey-intro`, orders 24 in `tak-auth`, 13 in `tak-passkey`, 51 and 53 in `tak-recovery-flow`) says what
-the registration is for.
+records and one working passkey. The first passkey is registered in the validate stage at order 22, or in the
+recovery flow for a first activation (a screen, `tak-admin-passkey-intro`, then the registration, at orders 55 and 56).
+#### Retired bindings on an instance that had them
+The bindings that asked for a second passkey are not in the file any more, but a blueprint cannot delete a binding,
+so Test and any instance that deployed the earlier version still has them: `tak-auth` orders 24 and 25, `tak-passkey`
+13 and 14, and `tak-recovery-flow` 51 to 54 (the screen `tak-admin-passkey-intro` and the stage
+`default-authenticator-webauthn-setup`). They never run: the policy `tak-mfa-fewer-than-two-passkeys`, which gates
+them, now never passes. **Do not delete that policy** while such bindings may exist, because they would then run for
+every administrator. To tidy up, delete the bindings by hand, in **Flows and Stages > Flows >** the flow **> Stage
+Bindings**, or with `DELETE /api/v3/flows/bindings/<id>/` (find the id with
+`GET /api/v3/flows/bindings/?target=<flow id>&ordering=order`). A new instance never gets them.
 `tak-passkey` (the passkey button and passkey autofill on the login page) applies the same rules at orders 12,
 14 and 16 before its login stage at 20, because a passkey login there never visits `tak-auth`. The stages at
 15 to 40 are bound with policy engine mode *all*, to the policies `tak-mfa-is-admin`, `tak-mfa-is-break-glass`,

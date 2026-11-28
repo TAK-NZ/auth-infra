@@ -270,8 +270,6 @@ describe('MFA rules (tak-flows.yaml)', () => {
       [20, 'tak-authentication-mfa-validation-user', ['not tak-mfa-is-admin', 'tak-mfa-has-authenticator']],
       [21, 'tak-authentication-mfa-validation-admin-fallback', ['tak-mfa-is-admin', 'tak-mfa-has-no-passkey', 'tak-mfa-has-authenticator']],
       [22, 'tak-authentication-mfa-validation-admin', ['tak-mfa-is-admin']],
-      [24, 'tak-admin-passkey-intro', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys', 'tak-mfa-has-no-passkey']],
-      [25, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys', 'tak-mfa-has-no-passkey']],
       [30, 'tak-authentication-mfa-enrol', ['not tak-mfa-is-admin', 'not tak-mfa-has-passkey-or-app']],
       [40, 'default-authenticator-static-setup', ['not tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
       [41, 'default-authenticator-static-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
@@ -283,8 +281,6 @@ describe('MFA rules (tak-flows.yaml)', () => {
     expect(bindings.map(summary)).toEqual([
       [10, 'tak-authentication-webauthn', []],
       [12, 'tak-authentication-break-glass-deny', ['tak-mfa-is-break-glass']],
-      [13, 'tak-admin-passkey-intro', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys', 'tak-mfa-has-no-passkey']],
-      [14, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys', 'tak-mfa-has-no-passkey']],
       [16, 'default-authenticator-static-setup', ['not tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
       [17, 'default-authenticator-static-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
       [20, 'tak-authentication-login', []]
@@ -414,26 +410,32 @@ describe('MFA rules (tak-flows.yaml)', () => {
     const withThreshold = validate.filter((e) => e.attrs?.last_auth_threshold !== 'seconds=0').map((e) => e.identifiers?.name);
     expect(withThreshold.sort()).toEqual(['tak-reauth-validate', 'tak-reauth-validate-admin']);
   });
-  test('every passkey registration for an administrator is preceded by a screen that says what is asked', () => {
-    for (const slug of ['tak-auth', 'tak-passkey', 'tak-recovery-flow']) {
-      const list = bindingsOf(flows, slug);
-      const registrations = list.filter((b) => b.stage === 'default-authenticator-webauthn-setup');
-      expect(registrations.length).toBeGreaterThan(0);
-      for (const r of registrations) {
-        const before = list.filter((b) => b.order < r.order).pop();
-        expect(before?.stage).toBe('tak-admin-passkey-intro');
-        expect(before?.policies.map((p) => p.name)).toEqual(r.policies.map((p) => p.name));
-      }
+  test('the only passkey registration for an administrator outside the login is in the recovery flow, behind a screen that says what is asked', () => {
+    // tak-auth registers the first passkey in the validate stage (order 22), tak-passkey never needs one
+    for (const slug of ['tak-auth', 'tak-passkey']) {
+      expect(bindingsOf(flows, slug).filter((b) => b.stage === 'default-authenticator-webauthn-setup')).toEqual([]);
     }
+    const list = bindingsOf(flows, 'tak-recovery-flow');
+    const registrations = list.filter((b) => b.stage === 'default-authenticator-webauthn-setup');
+    expect(registrations.map((b) => b.order)).toEqual([56]);
+    expect(list.filter((b) => b.order < 56).pop()?.stage).toBe('tak-admin-passkey-intro');
     const text = String(entry(flows, 'authentik_stages_prompt.prompt', { name: 'tak-admin-passkey-text' }).attrs?.initial_value);
     expect(text).toContain('passkey');
+  });
+  test('the second-passkey policy is retired: it never passes, so the bindings that used it stay dead on an instance that has them', () => {
+    const policy = entry(flows, 'authentik_policies_expression.expressionpolicy', { name: 'tak-mfa-fewer-than-two-passkeys' });
+    expect(policy.attrs?.expression).toBe('return False');
+    // nothing in the file binds it any more
+    const bound = flows.filter(
+      (e) => e.model === 'authentik_policies.policybinding' && JSON.stringify(e.identifiers?.policy).includes('tak-mfa-fewer-than-two-passkeys')
+    );
+    expect(bound).toEqual([]);
   });
   test('the policies read the user who signs in and count what the rules name', () => {
     const expr = (name: string) =>
       String(entry(flows, 'authentik_policies_expression.expressionpolicy', { name }).attrs?.expression);
     expect(expr('tak-mfa-is-admin')).toContain('request.user.is_superuser');
     expect(expr('tak-mfa-is-break-glass')).toContain("name='tak-break-glass'");
-    expect(expr('tak-mfa-fewer-than-two-passkeys')).toContain('passkeys < 2');
     // recovery codes are one authenticator, and only while codes are left
     expect(expr('tak-mfa-fewer-than-two-authenticators')).toContain('passkeys + apps + (1 if codes else 0) < 2');
     expect(expr('tak-mfa-fewer-than-two-authenticators')).toContain('StaticToken.objects.filter');
@@ -531,10 +533,8 @@ describe('activation and recovery flow (tak-flows.yaml)', () => {
       [40, 'tak-recovery-user-write', []],
       [45, 'tak-recovery-enrol-intro', ['tak-mfa-needs-enrolment']],
       [50, 'tak-authentication-mfa-enrol', ['not tak-mfa-is-admin', 'not tak-mfa-has-passkey-or-app']],
-      [51, 'tak-admin-passkey-intro', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys', 'tak-mfa-has-no-passkey']],
-      [52, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys', 'tak-mfa-has-no-passkey']],
-      [53, 'tak-admin-passkey-intro', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys', 'tak-mfa-has-no-passkey']],
-      [54, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-passkeys', 'tak-mfa-has-no-passkey']],
+      [55, 'tak-admin-passkey-intro', ['tak-mfa-is-admin', 'tak-mfa-has-no-passkey']],
+      [56, 'default-authenticator-webauthn-setup', ['tak-mfa-is-admin', 'tak-mfa-has-no-passkey']],
       [60, 'default-authenticator-static-setup', ['not tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
       [61, 'default-authenticator-static-setup', ['tak-mfa-is-admin', 'tak-mfa-fewer-than-two-authenticators']],
       [90, 'tak-recovery-finished', []],

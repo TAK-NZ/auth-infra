@@ -493,22 +493,18 @@ entries:
       apps = TOTPDevice.objects.filter(user=user, confirmed=True).count()
       codes = StaticToken.objects.filter(device__user=user, device__confirmed=True).exists()
       return passkeys + apps + (1 if codes else 0) < 2
+# RETIRED. An administrator used to need two passkeys, and this policy (fewer than two) gated the bindings that asked for a
+# second one. Authentik does not exclude the existing passkeys from a registration, so a second passkey made on the same
+# device replaces the first, and the rule is now one passkey plus the recovery codes (see the end of this file). A
+# blueprint cannot delete a binding, so an instance that had those bindings keeps them; this policy never passes, which
+# keeps them from running. Do not delete this policy while any instance may still have those bindings: they would then
+# run for every administrator.
 - model: authentik_policies_expression.expressionpolicy
   identifiers:
     name: tak-mfa-fewer-than-two-passkeys
   attrs:
     execution_logging: false
-    expression: |-
-      from authentik.stages.authenticator_static.models import StaticToken
-      from authentik.stages.authenticator_totp.models import TOTPDevice
-      from authentik.stages.authenticator_webauthn.models import WebAuthnDevice
-      user = request.user
-      passkeys = WebAuthnDevice.objects.filter(user=user, confirmed=True).count()
-      apps = TOTPDevice.objects.filter(user=user, confirmed=True).count()
-      codes = StaticToken.objects.filter(device__user=user, device__confirmed=True).exists()
-      return passkeys < 2
-# Setup stages from Authentik's default blueprints, renamed and tightened in place: a passkey must be
-# discoverable and verified by the user (PIN or biometrics), and there are 10 recovery codes.
+    expression: return False
 - model: authentik_policies_expression.expressionpolicy
   identifiers:
     name: tak-mfa-has-no-passkey
@@ -549,7 +545,6 @@ entries:
 #   20  ordinary user with any authenticator: asked for one (a passkey, an authenticator app or a recovery code)
 #   21  administrator with authenticators but no passkey: proves an authenticator before a new passkey is registered
 #   22  administrator: asked for a passkey, or enrols the first one
-#   25  retired: asks for a passkey only when there is none (22 has done it by then)
 #   30  ordinary user without a passkey or authenticator app: enrols one (passkey or authenticator app)
 #   40  ordinary user with fewer than two authenticators: receives recovery codes
 #   41  administrator with fewer than two authenticators: receives recovery codes
@@ -743,68 +738,6 @@ entries:
     failure_result: false
     negate: false
     timeout: 30
-- id: binding-intro-auth
-  model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-auth]]
-    stage: !Find [authentik_stages_prompt.promptstage, [name, tak-admin-passkey-intro]]
-    order: 24
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: all
-    re_evaluate_policies: true
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-auth'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-auth'
-    order: 1
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- id: binding-mfa-admin-second-passkey
-  model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-auth]]
-    stage: !Find [authentik_stages_authenticator_webauthn.authenticatorwebauthnstage, [name, default-authenticator-webauthn-setup]]
-    order: 25
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: all
-    re_evaluate_policies: true
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-mfa-admin-second-passkey'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-mfa-admin-second-passkey'
-    order: 1
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
 - id: binding-mfa-enrol
   model: authentik_flows.flowstagebinding
   identifiers:
@@ -885,68 +818,6 @@ entries:
     target: !KeyOf 'binding-break-glass-passkey'
     order: 0
     policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-break-glass]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- id: binding-intro-passkey
-  model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-passkey]]
-    stage: !Find [authentik_stages_prompt.promptstage, [name, tak-admin-passkey-intro]]
-    order: 13
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: all
-    re_evaluate_policies: true
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-passkey'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-passkey'
-    order: 1
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- id: binding-passkey-admin-second-passkey
-  model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-passkey]]
-    stage: !Find [authentik_stages_authenticator_webauthn.authenticatorwebauthnstage, [name, default-authenticator-webauthn-setup]]
-    order: 14
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: all
-    re_evaluate_policies: true
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-passkey-admin-second-passkey'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-passkey-admin-second-passkey'
-    order: 1
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
   attrs:
     enabled: true
     failure_result: false
@@ -1863,130 +1734,6 @@ entries:
     failure_result: false
     negate: true
     timeout: 30
-- id: binding-intro-recovery-1
-  model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
-    stage: !Find [authentik_stages_prompt.promptstage, [name, tak-admin-passkey-intro]]
-    order: 51
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: all
-    re_evaluate_policies: true
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-recovery-1'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-recovery-1'
-    order: 1
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- id: binding-recovery-passkey-1
-  model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
-    stage: !Find [authentik_stages_authenticator_webauthn.authenticatorwebauthnstage, [name, default-authenticator-webauthn-setup]]
-    order: 52
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: all
-    re_evaluate_policies: true
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-recovery-passkey-1'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-recovery-passkey-1'
-    order: 1
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- id: binding-intro-recovery-2
-  model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
-    stage: !Find [authentik_stages_prompt.promptstage, [name, tak-admin-passkey-intro]]
-    order: 53
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: all
-    re_evaluate_policies: true
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-recovery-2'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-recovery-2'
-    order: 1
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- id: binding-recovery-passkey-2
-  model: authentik_flows.flowstagebinding
-  identifiers:
-    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
-    stage: !Find [authentik_stages_authenticator_webauthn.authenticatorwebauthnstage, [name, default-authenticator-webauthn-setup]]
-    order: 54
-  attrs:
-    evaluate_on_plan: false
-    invalid_response_action: retry
-    policy_engine_mode: all
-    re_evaluate_policies: true
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-recovery-passkey-2'
-    order: 0
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-recovery-passkey-2'
-    order: 1
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-fewer-than-two-passkeys]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
 - id: binding-recovery-codes
   model: authentik_flows.flowstagebinding
   identifiers:
@@ -2229,15 +1976,25 @@ entries:
     policy_engine_mode: any
     re_evaluate_policies: false
 # --- Administrators: one passkey and one more authenticator -----------------------------------------------------
-# An administrator used to need two passkeys. A second passkey made on the same device replaces the first (Authentik does
-# not exclude the existing ones from a registration), so the rule is now: at least one passkey, and at least two
-# authenticators in all, the second being the recovery codes. The bindings that asked for a second passkey stay, and
-# the extra policy below makes them ask for a passkey only when there is none (a blueprint cannot delete a binding).
+# An administrator needs a passkey (the only thing an administrator login accepts) and at least two authenticators in
+# all, the second being the recovery codes. The first passkey is registered at order 22 of `tak-auth`; a first
+# activation through `tak-recovery-flow` registers it at 56, after a screen at 55.
+- id: binding-recovery-admin-intro
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_prompt.promptstage, [name, tak-admin-passkey-intro]]
+    order: 55
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
 - model: authentik_policies.policybinding
   identifiers:
-    target: !KeyOf 'binding-intro-auth'
-    order: 2
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-no-passkey]]
+    target: !KeyOf 'binding-recovery-admin-intro'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
   attrs:
     enabled: true
     failure_result: false
@@ -2245,9 +2002,30 @@ entries:
     timeout: 30
 - model: authentik_policies.policybinding
   identifiers:
-    target: !KeyOf 'binding-mfa-admin-second-passkey'
-    order: 2
+    target: !KeyOf 'binding-recovery-admin-intro'
+    order: 1
     policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-no-passkey]]
+  attrs:
+    enabled: true
+    failure_result: false
+    negate: false
+    timeout: 30
+- id: binding-recovery-admin-passkey
+  model: authentik_flows.flowstagebinding
+  identifiers:
+    target: !Find [authentik_flows.flow, [slug, tak-recovery-flow]]
+    stage: !Find [authentik_stages_authenticator_webauthn.authenticatorwebauthnstage, [name, default-authenticator-webauthn-setup]]
+    order: 56
+  attrs:
+    evaluate_on_plan: false
+    invalid_response_action: retry
+    policy_engine_mode: all
+    re_evaluate_policies: true
+- model: authentik_policies.policybinding
+  identifiers:
+    target: !KeyOf 'binding-recovery-admin-passkey'
+    order: 0
+    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-is-admin]]
   attrs:
     enabled: true
     failure_result: false
@@ -2255,58 +2033,8 @@ entries:
     timeout: 30
 - model: authentik_policies.policybinding
   identifiers:
-    target: !KeyOf 'binding-intro-passkey'
-    order: 2
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-no-passkey]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-passkey-admin-second-passkey'
-    order: 2
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-no-passkey]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-recovery-1'
-    order: 2
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-no-passkey]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-recovery-passkey-1'
-    order: 2
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-no-passkey]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-intro-recovery-2'
-    order: 2
-    policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-no-passkey]]
-  attrs:
-    enabled: true
-    failure_result: false
-    negate: false
-    timeout: 30
-- model: authentik_policies.policybinding
-  identifiers:
-    target: !KeyOf 'binding-recovery-passkey-2'
-    order: 2
+    target: !KeyOf 'binding-recovery-admin-passkey'
+    order: 1
     policy: !Find [authentik_policies_expression.expressionpolicy, [name, tak-mfa-has-no-passkey]]
   attrs:
     enabled: true
