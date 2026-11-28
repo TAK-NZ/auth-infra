@@ -5,7 +5,11 @@
 #     deletes its binding and the policy binding on the `authentik Admins` group);
 #   - the second passkey login flow `tak-passwordless-flow`, a copy of `tak-passkey` that nothing refers to;
 #   - the password change flow `tak-password-change`, replaced by `tak-change-password` (it ran the shared
-#     default prompt and write stages, which cannot be unbound by a blueprint).
+#     default prompt and write stages, which cannot be unbound by a blueprint);
+#   - the two refusal policies of the recovery flow, replaced by `tak-recovery-refuse`
+#     (`tak-recovery-user-inactive`, `tak-recovery-not-activatable`);
+#   - the login stage of the recovery flow, `tak-recovery-user-login` (deleting it also deletes its binding): the
+#     recovery flow no longer logs the user in.
 # A blueprint only creates and updates objects, so removing them from tak-flows.yaml alone leaves them behind
 # on an instance that already has them (and deleting a source also deletes the links that users have to it).
 # On a new instance every entry here is a no-op.
@@ -67,3 +71,15 @@ entries:
   state: absent
   identifiers:
     slug: tak-password-change
+- model: authentik_stages_user_login.userloginstage
+  state: absent
+  identifiers:
+    name: tak-recovery-user-login
+- model: authentik_policies_expression.expressionpolicy
+  state: absent
+  identifiers:
+    name: tak-recovery-user-inactive
+- model: authentik_policies_expression.expressionpolicy
+  state: absent
+  identifiers:
+    name: tak-recovery-not-activatable
