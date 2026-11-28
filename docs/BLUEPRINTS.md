@@ -15,6 +15,7 @@ custom resource depends on the server and worker ECS services, so it starts afte
 Authentik has not registered a file yet, the Lambda creates the blueprint instance.
 `tak-cloudtak-setup.yaml` and `tak-teammanager-setup.yaml` are left to Authentik's own discovery: they need
 objects that other stacks create, and do not apply on an instance without them.
+A change to either file therefore reaches the instance only when Authentik's hourly discovery applies it, not at the end of the deploy. (Observed on Test: after a deploy the Team Manager role still had its old permission list until the blueprint was applied by hand with `POST /managed/blueprints/<pk>/apply/`.) After changing `tak-teammanager-setup.yaml`, wait for the next discovery run or apply it from the Authentik admin interface.
 
 | File | Blueprint name | What it manages |
 |---|---|---|
