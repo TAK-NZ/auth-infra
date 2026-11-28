@@ -6,8 +6,9 @@ metadata:
       Creates a dedicated, least-privilege service account and API token for
       TAKTeamManager. Scoped to exactly the object types TAKTeamManager's code
       calls: Users (including password resets for human and BCH
-      service-account users, via reset_user_password), Groups, and Tokens
-      (for its device-enrollment app-password feature). No access to
+      service-account users, via reset_user_password), Groups, Tokens
+      (for its device-enrollment app-password feature), and the
+      authenticators and sessions of a user whose MFA an administrator resets. No access to
       Applications, Providers, Outposts, Flows, Stages, Policies, or
       Blueprints is granted.
 
@@ -43,6 +44,16 @@ entries:
         - authentik_core.add_token
         - authentik_core.delete_token
         - authentik_core.view_token_key
+        # Reset of a user's MFA (an administrator confirmed who the person is): list and delete the user's
+        # authenticators (passkeys, authenticator apps, recovery codes) and end the user's sessions.
+        - authentik_stages_authenticator_webauthn.view_webauthndevice
+        - authentik_stages_authenticator_webauthn.delete_webauthndevice
+        - authentik_stages_authenticator_totp.view_totpdevice
+        - authentik_stages_authenticator_totp.delete_totpdevice
+        - authentik_stages_authenticator_static.view_staticdevice
+        - authentik_stages_authenticator_static.delete_staticdevice
+        - authentik_core.view_authenticatedsession
+        - authentik_core.delete_authenticatedsession
   - model: authentik_core.user
     state: created
     id: teammanager-service-account

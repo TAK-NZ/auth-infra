@@ -69,6 +69,7 @@ CloudFormation output for the consuming app's own CDK stack to import.
 | `authentik_core.add_user` | Create internal users and BCH service accounts |
 | `authentik_core.change_user` | Push local-authoritative attribute/name/status changes |
 | `authentik_core.delete_user` | Orphan cleanup, service-account teardown |
+| `authentik_core.reset_user_password` | Password resets for human and BCH service-account users |
 | `authentik_core.view_group` | List/lookup channel, team, and agency groups |
 | `authentik_core.add_group` | Create team/BCH/region/vendor/deployment/agency groups |
 | `authentik_core.change_group` | Rename/update group attributes |
@@ -79,7 +80,14 @@ CloudFormation output for the consuming app's own CDK stack to import.
 | `authentik_core.add_token` | Create device-enrollment app-password tokens |
 | `authentik_core.delete_token` | Compensating delete on enrollment failure |
 | `authentik_core.view_token_key` | Read back a created token's plaintext key (the only way to hand it to the enrolling device) |
+| `authentik_stages_authenticator_webauthn.view_webauthndevice`, `authentik_stages_authenticator_totp.view_totpdevice`, `authentik_stages_authenticator_static.view_staticdevice` | List a user's passkeys, authenticator apps and recovery codes (`GET /authenticators/admin/all/?user=<id>`) when an administrator resets the user's MFA |
+| `authentik_stages_authenticator_webauthn.delete_webauthndevice`, `authentik_stages_authenticator_totp.delete_totpdevice`, `authentik_stages_authenticator_static.delete_staticdevice` | Delete those authenticators in a reset |
+| `authentik_core.view_authenticatedsession`, `authentik_core.delete_authenticatedsession` | End the user's sessions in a reset, so a session that was open when the devices were removed does not survive it |
 
+The device permissions are global: a leaked Team Manager token could remove the authenticators of any
+user, including an administrator, and then (with `reset_user_password` and the recovery link) take the account over.
+Team Manager's own checks (who may reset whom, the confirmation, the audit entry and the email to the user) are
+the control, and the token is stored as a secret. Nothing in Authentik restricts it further.
 No permissions on Applications, Providers, Outposts, Flows, Stages, Policies,
 or Blueprints are granted — TAKTeamManager's code never calls those
 endpoints.

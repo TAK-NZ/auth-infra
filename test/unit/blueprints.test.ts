@@ -651,3 +651,26 @@ describe('activation and recovery flow (tak-flows.yaml)', () => {
     expect(deleted).toContain('authentik_policies_expression.expressionpolicy:{"name":"tak-recovery-not-activatable"}');
   });
 });
+describe('TAKTeamManager service role (tak-teammanager-setup.yaml)', () => {
+  const entries = loadBlueprint('tak-teammanager-setup.yaml').entries;
+  const role = entry(entries, 'authentik_rbac.role', { name: 'TAKTeamManager Service Role' });
+  const permissions = role.attrs?.permissions as string[];
+  test('may reset a user\'s MFA: list and delete the three kinds of authenticator, and end sessions', () => {
+    for (const kind of ['webauthn.webauthndevice', 'totp.totpdevice', 'static.staticdevice']) {
+      const [app, model] = kind.split('.');
+      expect(permissions).toContain(`authentik_stages_authenticator_${app}.view_${model}`);
+      expect(permissions).toContain(`authentik_stages_authenticator_${app}.delete_${model}`);
+    }
+    expect(permissions).toContain('authentik_core.view_authenticatedsession');
+    expect(permissions).toContain('authentik_core.delete_authenticatedsession');
+  });
+  test('may not change authenticators or sessions, or touch flows, stages, providers or policies', () => {
+    // a reset only deletes: nothing here lets the role add a device or edit a session
+    for (const verb of ['add', 'change']) {
+      expect(permissions.filter((p) => p.startsWith('authentik_stages_authenticator_') && p.includes(`.${verb}_`))).toEqual([]);
+      expect(permissions).not.toContain(`authentik_core.${verb}_authenticatedsession`);
+    }
+    const other = permissions.filter((p) => /authentik_(flows|stages_(?!authenticator_)|policies|providers|outposts|blueprints)/.test(p));
+    expect(other).toEqual([]);
+  });
+});
